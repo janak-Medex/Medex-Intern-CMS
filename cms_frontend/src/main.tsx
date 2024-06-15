@@ -10,6 +10,7 @@ import {
 import Login from "./login/cms.login.tsx";
 import Template from "./template/Template.tsx";
 import CreateTemplate from "./template/CreateTemplate.tsx";
+import CreateComponent from "./components/createComponents.tsx";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -17,6 +18,7 @@ const router = createBrowserRouter(
       <Route path="/" element={<Login />} />
       <Route path="/template" element={<Template />} />
       <Route path="/create-template" element={<CreateTemplate />} />
+      <Route path="/create-component" element={<CreateComponent />} />
     </>
   )
 );
