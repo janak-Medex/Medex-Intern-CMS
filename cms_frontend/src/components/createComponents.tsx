@@ -2,18 +2,14 @@ import React, { useState } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
 
 interface Props {
-  // Define your props here
+  onClose: () => void;
 }
 
 interface FormField {
   name: string;
 }
 
-const CreateComponent: React.FC<Props> = (
-  {
-    /* Destructure props here */
-  }
-) => {
+const CreateComponent: React.FC<Props> = ({ onClose }) => {
   const [templateName, setTemplateName] = useState("");
   const [componentName, setComponentName] = useState("");
   const [formFields, setFormFields] = useState<FormField[]>([]);
@@ -36,7 +32,11 @@ const CreateComponent: React.FC<Props> = (
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-lg shadow-md p-6 relative">
+      <button
+        className="absolute top-2 right-2 text-gray-500"
+        onClick={onClose}
+      ></button>
       <h2 className="text-xl font-semibold mb-4">Create Component</h2>
       <form>
         <div className="mb-4">

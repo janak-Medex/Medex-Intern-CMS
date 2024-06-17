@@ -18,7 +18,16 @@ const router = createBrowserRouter(
       <Route path="/" element={<Login />} />
       <Route path="/template" element={<Template />} />
       <Route path="/create-template" element={<CreateTemplate />} />
-      <Route path="/create-component" element={<CreateComponent />} />
+      <Route
+        path="/create-component"
+        element={
+          <CreateComponent
+            onClose={function (): void {
+              throw new Error("Function not implemented.");
+            }}
+          />
+        }
+      />
     </>
   )
 );

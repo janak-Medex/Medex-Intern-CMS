@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { FaPlus, FaToggleOn, FaToggleOff } from "react-icons/fa";
+import Modal from "../utils/Modal";
+import CreateComponent from "../components/createComponents";
 
 interface Props {
   // Define your props here
@@ -8,14 +10,22 @@ interface Props {
 const CreateTemplate: React.FC<Props> = (/* Destructure props here */) => {
   const [toggleStates, setToggleStates] = useState({
     component1: false,
-    component2: false,
   });
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleToggle = (component: keyof typeof toggleStates) => {
     setToggleStates((prevState) => ({
       ...prevState,
       [component]: !prevState[component],
     }));
+  };
+
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
   };
 
   return (
@@ -31,7 +41,10 @@ const CreateTemplate: React.FC<Props> = (/* Destructure props here */) => {
         <div className="col-span-12 md:col-span-3">
           <div className="bg-white rounded-lg shadow-md p-6 h-full">
             <h2 className="text-xl font-semibold mb-4">Create Component</h2>
-            <button className="w-full flex items-center justify-center px-4 py-2 text-white bg-teal-600 rounded-md hover:bg-teal-700 transition duration-200">
+            <button
+              className="w-full flex items-center justify-center px-4 py-2 text-white bg-teal-600 rounded-md hover:bg-teal-700 transition duration-200"
+              onClick={handleOpenModal}
+            >
               <FaPlus className="mr-2" /> Create
             </button>
             <div className="mt-8">
@@ -92,6 +105,9 @@ const CreateTemplate: React.FC<Props> = (/* Destructure props here */) => {
           </div>
         </div>
       </main>
+      <Modal show={isModalOpen} onClose={handleCloseModal}>
+        <CreateComponent onClose={handleCloseModal} />
+      </Modal>
     </div>
   );
 };
