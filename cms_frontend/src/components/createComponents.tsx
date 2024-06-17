@@ -1,19 +1,35 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
 
-interface Props {
-  onClose: () => void;
-}
-
-interface FormField {
+export interface FormField {
   name: string;
 }
 
-const CreateComponent: React.FC<Props> = ({ onClose }) => {
-  const [templateName, setTemplateName] = useState("");
+export interface Component {
+  componentName: string;
+  fields: FormField[];
+}
+
+interface Props {
+  onClose: () => void;
+  onCreate: (newComponent: Component) => void;
+  initialComponent: Component | null; // Add initialComponent prop
+}
+
+const CreateComponent: React.FC<Props> = ({
+  onClose,
+  onCreate,
+  initialComponent, // Destructure initialComponent from props
+}) => {
   const [componentName, setComponentName] = useState("");
-  const [formFields, setFormFields] = useState<FormField[]>([]);
-  const [imageUrl, setImageUrl] = useState("");
+  const [formFields, setFormFields] = useState<FormField[]>([{ name: "" }]);
+
+  useEffect(() => {
+    if (initialComponent) {
+      setComponentName(initialComponent.componentName);
+      setFormFields(initialComponent.fields);
+    }
+  }, [initialComponent]);
 
   const handleAddField = () => {
     setFormFields([...formFields, { name: "" }]);
@@ -31,31 +47,23 @@ const CreateComponent: React.FC<Props> = ({ onClose }) => {
     setFormFields(updatedFields);
   };
 
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const newComponent: Component = {
+      componentName: componentName,
+      fields: formFields.filter((field) => field.name.trim() !== ""),
+    };
+
+    onCreate(newComponent); // Pass the created or updated component back to parent
+
+    onClose(); // Close the modal
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6 relative">
-      <button
-        className="absolute top-2 right-2 text-gray-500"
-        onClick={onClose}
-      ></button>
       <h2 className="text-xl font-semibold mb-4">Create Component</h2>
-      <form>
-        <div className="mb-4">
-          <label
-            htmlFor="templateName"
-            className="block text-gray-700 font-bold mb-2"
-          >
-            Template Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="templateName"
-            className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
-            placeholder="Enter template name"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            required
-          />
-        </div>
+      <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label
             htmlFor="componentName"
@@ -103,27 +111,11 @@ const CreateComponent: React.FC<Props> = ({ onClose }) => {
             <FaPlus className="mr-1" /> Add Field
           </button>
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="imageUrl"
-            className="block text-gray-700 font-bold mb-2"
-          >
-            Image URL
-          </label>
-          <input
-            type="text"
-            id="imageUrl"
-            className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
-            placeholder="Enter image URL"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-          />
-        </div>
         <button
           type="submit"
           className="px-4 py-2 text-white bg-teal-600 rounded-lg hover:bg-teal-700 focus:outline-none"
         >
-          Create Component
+          {initialComponent ? "Update Component" : "Create Component"}
         </button>
       </form>
     </div>

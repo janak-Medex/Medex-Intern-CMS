@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Component } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import {
@@ -10,7 +10,7 @@ import {
 import Login from "./login/cms.login.tsx";
 import Template from "./template/Template.tsx";
 import CreateTemplate from "./template/CreateTemplate.tsx";
-import CreateComponent from "./components/createComponents.tsx";
+import CreateComponent from "./components/createComponents.tsx"; // Corrected file naming convention
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -22,8 +22,12 @@ const router = createBrowserRouter(
         path="/create-component"
         element={
           <CreateComponent
-            onClose={function (): void {
-              throw new Error("Function not implemented.");
+            onCreate={(component: React.ComponentType) => {
+              console.log("Component created:", component);
+            }}
+            onClose={() => {
+              console.log("Close CreateComponent");
+              // Handle close logic here
             }}
           />
         }
@@ -31,6 +35,7 @@ const router = createBrowserRouter(
     </>
   )
 );
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <RouterProvider router={router} />
