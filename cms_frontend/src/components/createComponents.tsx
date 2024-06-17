@@ -19,7 +19,7 @@ interface Props {
 const CreateComponent: React.FC<Props> = ({
   onClose,
   onCreate,
-  initialComponent, // Destructure initialComponent from props
+  initialComponent,
 }) => {
   const [componentName, setComponentName] = useState("");
   const [formFields, setFormFields] = useState<FormField[]>([{ name: "" }]);

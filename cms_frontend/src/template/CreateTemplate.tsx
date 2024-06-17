@@ -195,13 +195,12 @@ const CreateTemplate: React.FC = () => {
             <div className="space-y-4">
               <div className="bg-gray-100 rounded-md p-4 flex flex-col items-center">
                 <img
-                  src="../../public/images/component1.jpg"
+                  src="../images/component1.jpg"
                   alt="Component 1"
                   className="max-w-full h-auto mb-2 rounded-md"
                 />
                 <span className="text-center">Component 1</span>
               </div>
-              {/* Add more components as needed */}
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import {
@@ -22,13 +22,13 @@ const router = createBrowserRouter(
         path="/create-component"
         element={
           <CreateComponent
-            onCreate={(component: React.ComponentType) => {
-              console.log("Component created:", component);
+            onClose={function (): void {
+              throw new Error("Function not implemented.");
             }}
-            onClose={() => {
-              console.log("Close CreateComponent");
-              // Handle close logic here
+            onCreate={function (): void {
+              throw new Error("Function not implemented.");
             }}
+            initialComponent={null}
           />
         }
       />
