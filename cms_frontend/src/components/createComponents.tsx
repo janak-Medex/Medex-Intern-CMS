@@ -21,7 +21,7 @@ const CreateComponent: React.FC<Props> = ({
   onCreate,
   initialComponent,
 }) => {
-  const [componentName, setComponentName] = useState("");
+  const [componentName, setComponentName] = useState<string>("");
   const [formFields, setFormFields] = useState<FormField[]>([{ name: "" }]);
 
   useEffect(() => {

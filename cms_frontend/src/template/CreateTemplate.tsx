@@ -12,12 +12,12 @@ const CreateTemplate: React.FC = () => {
   const [toggleStates, setToggleStates] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [components, setComponents] = useState<ComponentType[]>([]);
   const [activeComponent, setActiveComponent] = useState<ComponentType | null>(
     null
   );
-  const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
+  const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
 
   const handleToggle = (componentName: string) => {
     setToggleStates((prevState) => ({

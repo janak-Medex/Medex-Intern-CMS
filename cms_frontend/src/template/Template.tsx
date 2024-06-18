@@ -5,8 +5,8 @@ import Modal from "../utils/Modal"; // Assuming you have a Modal component for p
 
 const Template: React.FC = () => {
   const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [templateName, setTemplateName] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [templateName, setTemplateName] = useState<string>("");
   const [templates, setTemplates] = useState<string[]>([]); // Array to store template names
 
   // Function to handle opening modal for creating new template
