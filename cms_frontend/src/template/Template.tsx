@@ -1,38 +1,53 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
-import Modal from "../utils/Modal"; // Assuming you have a Modal component for popup
+import Modal from "../utils/Modal";
+import axiosInstance from "../http/axiosInstance";
 
 const Template: React.FC = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [templateName, setTemplateName] = useState<string>("");
-  const [templates, setTemplates] = useState<string[]>([]); // Array to store template names
+  const [templates, setTemplates] = useState<any[]>([]); // Array to store template objects
 
-  // Function to handle opening modal for creating new template
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await axiosInstance.get("/templates"); // Adjust endpoint as per your API
+      setTemplates(response.data); // Assuming response.data is an array of template objects
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+    }
+  };
+
   const handleCreateTemplate = () => {
     setIsModalOpen(true);
   };
 
-  // Function to handle closing modal
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setTemplateName(""); // Clear template name input when modal is closed
+    setTemplateName("");
   };
 
-  // Function to handle changes in the template name input field
   const handleTemplateNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTemplateName(e.target.value);
   };
 
-  // Function to handle saving a new template
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     if (templateName.trim() !== "") {
-      setTemplates((prevTemplates) => [...prevTemplates, templateName.trim()]);
-      setTemplateName(""); // Clear template name input after saving
-      setIsModalOpen(false); // Close modal after saving
-
-      navigate(`/create-template`);
+      try {
+        // Assuming your backend API supports creating a new template
+        await axiosInstance.post("/templates", { name: templateName.trim() });
+        fetchTemplates(); // Fetch templates again to update the list
+        setTemplateName("");
+        setIsModalOpen(false);
+        navigate(`/create-template`);
+      } catch (error) {
+        console.error("Error saving template:", error);
+      }
     }
   };
 
@@ -60,10 +75,15 @@ const Template: React.FC = () => {
           {templates.length === 0 ? (
             <p className="text-gray-600">No templates created yet.</p>
           ) : (
-            templates.map((template, index) => (
-              <Link key={index} to={`/create-template/${template}`}>
+            templates.map((template) => (
+              <Link
+                key={template._id}
+                to={`/create-template/${template.template_name}`}
+              >
                 <div className="bg-white rounded-md p-4 shadow-md flex justify-between items-center cursor-pointer">
-                  <span className="text-lg font-semibold">{template}</span>
+                  <span className="text-lg font-semibold">
+                    {template.template_name}
+                  </span>
                 </div>
               </Link>
             ))
