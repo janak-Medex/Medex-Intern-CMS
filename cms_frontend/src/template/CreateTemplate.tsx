@@ -30,21 +30,23 @@ const CreateTemplate: React.FC = () => {
   const fetchTemplateDetails = async () => {
     try {
       const response = await axiosInstance.get(`/templates/${templateName}`);
-      setTemplateDetails(response.data); // Assuming response.data contains detailed information about the template
+      setTemplateDetails(response.data);
+      setComponents(response.data.components);
+      console.log(response.data.components);
     } catch (error) {
       console.error("Error fetching template details:", error);
     }
   };
 
-  const handleToggle = (componentName: string) => {
+  const handleToggle = (component_name: string) => {
     setToggleStates((prevState) => ({
       ...prevState,
-      [componentName]: !prevState[componentName],
+      [component_name]: !prevState[component_name],
     }));
 
-    if (!toggleStates[componentName]) {
+    if (!toggleStates[component_name]) {
       const component = components.find(
-        (comp) => comp.componentName === componentName
+        (comp) => comp.component_name === component_name
       );
       setActiveComponent(component || null);
     } else {
@@ -67,7 +69,7 @@ const CreateTemplate: React.FC = () => {
 
   const onCreateComponent = (newComponent: ComponentType) => {
     const index = components.findIndex(
-      (comp) => comp.componentName === newComponent.componentName
+      (comp) => comp.component_name === newComponent.component_name
     );
     if (index === -1) {
       // Create new component
@@ -81,9 +83,9 @@ const CreateTemplate: React.FC = () => {
     setIsModalOpen(false); // Close the modal after creating or updating component
   };
 
-  const onDeleteComponent = (componentName: string) => {
+  const onDeleteComponent = (component_name: string) => {
     setComponents((prevComponents) =>
-      prevComponents.filter((comp) => comp.componentName !== componentName)
+      prevComponents.filter((comp) => comp.component_name !== component_name)
     );
   };
 
@@ -190,7 +192,7 @@ const CreateTemplate: React.FC = () => {
           {activeComponent && (
             <div className="bg-white rounded-lg shadow-md p-6 flex-1">
               <h2 className="text-xl font-semibold mb-4">
-                {activeComponent.componentName}
+                {activeComponent.component_name}
               </h2>
               <div>{renderForm(activeComponent.fields)}</div>
             </div>
@@ -207,6 +209,7 @@ const CreateTemplate: React.FC = () => {
         <div className="col-span-12 md:col-span-5 flex flex-col">
           <div className="bg-white rounded-lg shadow-md p-4 flex-1">
             <h2 className="text-xl font-semibold mb-4">Component Images</h2>
+            <img src="../images/component1.jpg" alt="" />
             <div className="space-y-4">
               {/* Display additional details or components related to the template */}
             </div>

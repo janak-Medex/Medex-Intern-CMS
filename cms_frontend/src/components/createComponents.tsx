@@ -6,7 +6,7 @@ export interface FormField {
 }
 
 export interface Component {
-  componentName: string;
+  component_name: string;
   fields: FormField[];
 }
 
@@ -21,12 +21,12 @@ const CreateComponent: React.FC<Props> = ({
   onCreate,
   initialComponent,
 }) => {
-  const [componentName, setComponentName] = useState<string>("");
+  const [component_name, setComponentName] = useState<string>("");
   const [formFields, setFormFields] = useState<FormField[]>([{ name: "" }]);
 
   useEffect(() => {
     if (initialComponent) {
-      setComponentName(initialComponent.componentName);
+      setComponentName(initialComponent.component_name);
       setFormFields(initialComponent.fields);
     }
   }, [initialComponent]);
@@ -51,7 +51,7 @@ const CreateComponent: React.FC<Props> = ({
     event.preventDefault();
 
     const newComponent: Component = {
-      componentName: componentName,
+      component_name: component_name,
       fields: formFields.filter((field) => field.name.trim() !== ""),
     };
 
@@ -66,17 +66,17 @@ const CreateComponent: React.FC<Props> = ({
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label
-            htmlFor="componentName"
+            htmlFor="component_name"
             className="block text-gray-700 font-bold mb-2"
           >
             Component Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
-            id="componentName"
+            id="component_name"
             className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
             placeholder="Enter component name"
-            value={componentName}
+            value={component_name}
             onChange={(e) => setComponentName(e.target.value)}
             required
           />
