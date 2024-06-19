@@ -20,22 +20,30 @@ function App() {
         <Route
           path="/"
           element={
-            isAuthenticated ? (
-              <Navigate to="/create-template" replace />
-            ) : (
-              <Login />
-            )
+            isAuthenticated ? <Navigate to="/template" replace /> : <Login />
           }
         />
 
         {/* Protected Routes */}
         <Route
           path="/template"
-          element={<ProtectedRoute element={<Template />} />}
+          element={
+            isAuthenticated ? (
+              <ProtectedRoute element={<Template />} />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
         />
         <Route
-          path="/create-template"
-          element={<ProtectedRoute element={<CreateTemplate />} />}
+          path="/create-template/:templateName"
+          element={
+            isAuthenticated ? (
+              <ProtectedRoute element={<CreateTemplate />} />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
         />
       </Routes>
     </Router>

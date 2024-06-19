@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
+import { useParams } from "react-router-dom";
 import Modal from "../utils/Modal";
 import CreateComponent, {
   Component as ComponentType,
@@ -7,8 +8,10 @@ import CreateComponent, {
 } from "../components/createComponents";
 import ComponentList from "../template/ComponentList";
 import SchemaRuleModal from "../template/SchemaRule";
+import axiosInstance from "../http/axiosInstance";
 
 const CreateTemplate: React.FC = () => {
+  const { templateName } = useParams<{ templateName: string }>();
   const [toggleStates, setToggleStates] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -18,6 +21,20 @@ const CreateTemplate: React.FC = () => {
     null
   );
   const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
+  const [templateDetails, setTemplateDetails] = useState<any>(null); // State to store template details
+
+  useEffect(() => {
+    fetchTemplateDetails();
+  }, [templateName]);
+
+  const fetchTemplateDetails = async () => {
+    try {
+      const response = await axiosInstance.get(`/templates/${templateName}`);
+      setTemplateDetails(response.data); // Assuming response.data contains detailed information about the template
+    } catch (error) {
+      console.error("Error fetching template details:", error);
+    }
+  };
 
   const handleToggle = (componentName: string) => {
     setToggleStates((prevState) => ({
@@ -88,7 +105,6 @@ const CreateTemplate: React.FC = () => {
             type="file"
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500"
             accept="image/*"
-            // required={field.required}
           />
         );
       case "is_active":
@@ -105,7 +121,6 @@ const CreateTemplate: React.FC = () => {
             type="text"
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500"
             placeholder={`Enter ${field.name}`}
-            // required={field.required}
           />
         );
     }
@@ -141,7 +156,7 @@ const CreateTemplate: React.FC = () => {
       <header className="bg-teal-600 py-4">
         <div className="container mx-auto">
           <h1 className="text-white text-2xl font-semibold text-center">
-            Template Management System
+            {templateDetails ? templateDetails.template_name : "Loading..."}
           </h1>
         </div>
       </header>
@@ -193,14 +208,7 @@ const CreateTemplate: React.FC = () => {
           <div className="bg-white rounded-lg shadow-md p-4 flex-1">
             <h2 className="text-xl font-semibold mb-4">Component Images</h2>
             <div className="space-y-4">
-              <div className="bg-gray-100 rounded-md p-4 flex flex-col items-center">
-                <img
-                  src="../images/component1.jpg"
-                  alt="Component 1"
-                  className="max-w-full h-auto mb-2 rounded-md"
-                />
-                <span className="text-center">Component 1</span>
-              </div>
+              {/* Display additional details or components related to the template */}
             </div>
           </div>
         </div>
