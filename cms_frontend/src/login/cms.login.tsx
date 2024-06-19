@@ -1,33 +1,32 @@
-import axios from "axios";
 import React, { useState } from "react";
 import { MdLockOutline, MdPersonOutline } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
+import axiosInstance from "../http/axiosInstance";
+import Cookies from "js-cookie";
 
 const LoginForm: React.FC = () => {
   const [user_name, setUser_name] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
   const navigate = useNavigate();
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     try {
-      const response = await axios.post(
+      const response = await axiosInstance.post(
         `${import.meta.env.VITE_API_BASE_URL}user/login`,
         {
           user_name,
           password,
-        },
-        {
-          withCredentials: true, // Send cookies with the request
         }
       );
-
-      console.log("Login response:", response);
-
       if (response.status === 200) {
-        // Redirect to the template page upon successful login
+        const { accessToken } = response.data;
+        Cookies.set("access_token", accessToken, {
+          expires: 7,
+          path: "/",
+        });
+
         navigate("/template");
       }
     } catch (error) {

@@ -1,25 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { getCookie } from "../utils/cookie";
+import React from "react";
+import { Navigate } from "react-router-dom";
+import Cookies from "js-cookie";
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  element: React.ReactNode;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const location = useLocation();
-
-  useEffect(() => {
-    const accessToken = getCookie("access_token");
-    setIsAuthenticated(!!accessToken);
-  }, []);
-
-  if (!isAuthenticated) {
-    return <Navigate to="/" state={{ from: location }} replace />;
-  }
-
-  return <>{children}</>;
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element }) => {
+  const isAuthenticated = !!Cookies.get("access_token");
+  return isAuthenticated ? <>{element}</> : <Navigate to="/" replace />;
 };
 
 export default ProtectedRoute;
