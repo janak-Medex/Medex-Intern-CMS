@@ -7,7 +7,7 @@ import CreateComponent, {
 import ComponentList from "../template/ComponentList";
 import SchemaRuleModal from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
-import FormComponent from "./FormComponent"; // Adjust the path as necessary
+import FormComponent, { FormField } from "../template/FormComponent"; // Adjust the path as necessary
 
 interface TemplateDetails {
   _id: string;
@@ -31,7 +31,7 @@ const CreateTemplate: React.FC = () => {
   const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
   const [templateDetails, setTemplateDetails] =
     useState<TemplateDetails | null>(null);
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<{ [key: string]: any }>({});
   const [isCreatingComponent, setIsCreatingComponent] =
     useState<boolean>(false);
   const [editingComponent, setEditingComponent] =
@@ -199,7 +199,7 @@ const CreateTemplate: React.FC = () => {
               src="../images/component1.jpg"
               alt="Banner"
               className="max-w-full h-auto rounded-lg"
-            />{" "}
+            />
           </div>
         </div>
       </main>

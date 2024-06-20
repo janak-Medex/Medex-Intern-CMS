@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
-import { useParams } from "react-router-dom"; // Import useParams from react-router-dom
+import { useParams } from "react-router-dom";
 import SchemaRuleModal, { SchemaRule } from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
 import Cookies from "js-cookie";
@@ -10,15 +10,15 @@ export interface FormField {
 }
 
 export interface InitialData {
-  [key: string]: any; // Define any type for the values
+  [key: string]: any;
 }
 
 export interface Component {
   component_name: string;
-  data: string; // Change data type to string
+  data: InitialData; // Change data type to InitialData
   isActive: boolean;
-  _id?: string; // Optional if it's included in the response
-  __v?: number; // Optional if it's included in the response
+  _id?: string;
+  __v?: number;
 }
 
 interface Props {
@@ -32,14 +32,24 @@ const CreateComponent: React.FC<Props> = ({
   onCreate,
   initialComponent,
 }) => {
-  const { template_name } = useParams<{ template_name: string }>(); // Get template_name from URL params
+  const { template_name } = useParams<{ template_name: string }>();
   const [component_name, setComponentName] = useState<string>("");
-  const [formFields, setFormFields] = useState<FormField[]>([{ name: "" }]);
+  const [formFields, setFormFields] = useState<FormField[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (initialComponent) {
       setComponentName(initialComponent.component_name);
+      try {
+        const parsedData = initialComponent.data || {}; // Check if data is already an object
+        setFormFields(
+          Object.keys(parsedData).map((key) => ({
+            name: key,
+          }))
+        );
+      } catch (error) {
+        console.error("Error parsing component data:", error);
+      }
     }
   }, [initialComponent]);
 
@@ -65,7 +75,7 @@ const CreateComponent: React.FC<Props> = ({
     // Serialize formFields data to JSON
     const initialDataJSON = JSON.stringify(
       formFields.reduce((acc, field) => {
-        acc[field.name] = null;
+        acc[field.name] = null; // Initialize with null or default value
         return acc;
       }, {})
     );
@@ -77,14 +87,24 @@ const CreateComponent: React.FC<Props> = ({
     };
 
     try {
-      const response = await axiosInstance.post(`components`, {
-        ...newComponent,
-        template_name: template_name, // Pass template_name from URL
-      });
+      let response;
+      if (initialComponent) {
+        // Update existing component
+        response = await axiosInstance.post("components", {
+          ...newComponent,
+          template_name: template_name,
+        });
+        console.log("Updated Component:", response.data);
+      } else {
+        // Create new component
+        response = await axiosInstance.post("components", {
+          ...newComponent,
+          template_name: template_name,
+        });
+        console.log("Created Component:", response.data);
+      }
 
-      console.log("Response:", response.data);
-
-      onCreate(response.data); // Assuming response.data is the created/updated component
+      onCreate(response.data);
       onClose();
 
       if (response.status === 200) {
@@ -93,7 +113,6 @@ const CreateComponent: React.FC<Props> = ({
       }
     } catch (error) {
       console.error("Error:", error);
-      // Handle error as needed
     }
   };
 
@@ -112,7 +131,9 @@ const CreateComponent: React.FC<Props> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 relative">
-      <h2 className="text-xl font-semibold mb-4">Create Component</h2>
+      <h2 className="text-xl font-semibold mb-4">
+        {initialComponent ? "Edit Component" : "Create Component"}
+      </h2>
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label
@@ -164,14 +185,14 @@ const CreateComponent: React.FC<Props> = ({
         <div className="flex justify-center mb-8">
           <button
             type="submit"
-            className="px-4 py-3 text-lg text-white bg-teal-600 rounded-lg hover:bg-teal-700 focus:outline-none mr-4"
+            className="px-4 py-3 text-sm text-white bg-teal-600 rounded-lg hover:bg-teal-700 focus:outline-none mr-4"
           >
             {initialComponent ? "Update Field" : "Create Field"}
           </button>
           <button
             type="button"
             onClick={handleInsertRule}
-            className="px-6 py-3 text-lg text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none transition-colors duration-300"
+            className="px-4 py-3 text-sm text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none transition-colors duration-300"
           >
             Adds New Schema Rule
           </button>

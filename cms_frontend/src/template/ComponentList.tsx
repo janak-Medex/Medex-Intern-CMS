@@ -1,4 +1,3 @@
-// ComponentList.tsx
 import React from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { Component as ComponentType } from "../components/createComponents";
@@ -48,7 +47,12 @@ const ComponentList: React.FC<ComponentListProps> = ({
                 isActive={toggleStates[component.component_name]}
                 onToggle={() => onToggle(component.component_name)}
               />
-              <button onClick={() => onDelete(component.component_name)}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(component.component_name);
+                }}
+              >
                 <FaTrash className="text-red-600" />
               </button>
               <button
