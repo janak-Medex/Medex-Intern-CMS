@@ -7,6 +7,7 @@ import Cookies from "js-cookie";
 
 export interface FormField {
   name: string;
+  value: any;
 }
 
 export interface InitialData {
@@ -15,7 +16,7 @@ export interface InitialData {
 
 export interface Component {
   component_name: string;
-  data: InitialData; // Change data type to InitialData
+  data: InitialData;
   isActive: boolean;
   _id?: string;
   __v?: number;
@@ -41,11 +42,11 @@ const CreateComponent: React.FC<Props> = ({
     if (initialComponent) {
       setComponentName(initialComponent.component_name);
       try {
-        // Parse initial data into formFields
-        const parsedData = initialComponent.data || {}; // Check if data is already an object
+        const parsedData = initialComponent.data || {};
         setFormFields(
-          Object.keys(parsedData).map((key) => ({
+          Object.entries(parsedData).map(([key, value]) => ({
             name: key,
+            value: value,
           }))
         );
       } catch (error) {
@@ -55,7 +56,7 @@ const CreateComponent: React.FC<Props> = ({
   }, [initialComponent]);
 
   const handleAddField = () => {
-    setFormFields([...formFields, { name: "" }]);
+    setFormFields([...formFields, { name: "", value: null }]);
   };
 
   const handleRemoveField = (index: number) => {
@@ -64,40 +65,44 @@ const CreateComponent: React.FC<Props> = ({
     setFormFields(updatedFields);
   };
 
-  const handleFieldChange = (index: number, value: string) => {
+  const handleFieldChange = (
+    index: number,
+    fieldName: string,
+    fieldValue: any = null
+  ) => {
     const updatedFields = [...formFields];
-    updatedFields[index].name = value;
+    if (fieldName !== undefined) {
+      updatedFields[index].name = fieldName;
+    }
+    if (fieldValue !== undefined) {
+      updatedFields[index].value = fieldValue;
+    }
     setFormFields(updatedFields);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    // Serialize formFields data to JSON
-    const initialDataJSON = JSON.stringify(
-      formFields.reduce((acc, field) => {
-        acc[field.name] = null; // Initialize with null or default value
-        return acc;
-      }, {})
-    );
+    const initialData = formFields.reduce((acc, field) => {
+      acc[field.name] = field.value;
+      return acc;
+    }, {} as InitialData);
 
     const newComponent: Component = {
       component_name: component_name,
-      data: initialDataJSON,
+      data: JSON.stringify(initialData), // Stringify the data
       isActive: true,
     };
 
     try {
       let response;
       if (initialComponent) {
-        // Update existing component
         response = await axiosInstance.post("components", {
           ...newComponent,
           template_name: template_name,
         });
         console.log("Updated Component:", response.data);
       } else {
-        // Create new component
         response = await axiosInstance.post("components", {
           ...newComponent,
           template_name: template_name,
@@ -164,7 +169,9 @@ const CreateComponent: React.FC<Props> = ({
                 className="flex-1 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
                 placeholder="Field name"
                 value={field.name}
-                onChange={(e) => handleFieldChange(index, e.target.value)}
+                onChange={(e) =>
+                  handleFieldChange(index, e.target.value, undefined)
+                }
               />
               <button
                 type="button"
@@ -188,14 +195,14 @@ const CreateComponent: React.FC<Props> = ({
             type="submit"
             className="px-4 py-3 text-sm text-white bg-teal-600 rounded-lg hover:bg-teal-700 focus:outline-none mr-4"
           >
-            {initialComponent ? "Update Field" : "Create Field"}
+            {initialComponent ? "Update Component" : "Create Component"}
           </button>
           <button
             type="button"
             onClick={handleInsertRule}
             className="px-4 py-3 text-sm text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none transition-colors duration-300"
           >
-            Adds New Schema Rule
+            Add New Schema Rule
           </button>
         </div>
       </form>
