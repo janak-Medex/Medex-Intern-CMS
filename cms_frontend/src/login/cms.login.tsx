@@ -4,11 +4,16 @@ import { useNavigate } from "react-router-dom";
 import axiosInstance from "../http/axiosInstance";
 import Cookies from "js-cookie";
 
-const LoginForm: React.FC = () => {
+interface LoginFormProps {
+  onLogin: () => void;
+}
+
+const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [user_name, setUser_name] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
   const navigate = useNavigate();
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -27,6 +32,7 @@ const LoginForm: React.FC = () => {
           path: "/",
         });
 
+        onLogin(); // Update isAuthenticated state in App component
         navigate("/template");
       }
     } catch (error) {
@@ -46,7 +52,7 @@ const LoginForm: React.FC = () => {
                 <MdPersonOutline />
               </span>
               <input
-                type="user_name"
+                type="text"
                 value={user_name}
                 onChange={(e) => setUser_name(e.target.value)}
                 className="block w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"

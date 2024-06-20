@@ -3,6 +3,7 @@ import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
 import axiosInstance from "../http/axiosInstance";
+import Cookies from "js-cookie";
 
 const Template: React.FC = () => {
   const navigate = useNavigate();
@@ -16,8 +17,8 @@ const Template: React.FC = () => {
 
   const fetchTemplates = async () => {
     try {
-      const response = await axiosInstance.get("/templates"); // Adjust endpoint as per your API
-      setTemplates(response.data); // Assuming response.data is an array of template objects
+      const response = await axiosInstance.get("/templates");
+      setTemplates(response.data);
     } catch (error) {
       console.error("Error fetching templates:", error);
     }
@@ -41,19 +42,39 @@ const Template: React.FC = () => {
   const handleSaveTemplate = async () => {
     if (template_name.trim() !== "") {
       try {
-        // Assuming your backend API supports creating a new template
-        await axiosInstance.post("/templates", {
-          template_name: template_name.trim(),
-        });
-        fetchTemplates();
-        settemplate_name("");
-        setIsModalOpen(false);
-        navigate(`/create-template/${template_name}`);
+        const accessToken = Cookies.get("access_token");
+        console.log("Access Token:", accessToken);
+        if (!accessToken) {
+          console.error("Access token not found in cookie");
+          return;
+        }
+
+        // Send POST request to create a new template
+        const response = await axiosInstance.post(
+          "/templates",
+          { template_name: template_name.trim() },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`, // Include access token in Authorization header
+            },
+          }
+        );
+
+        // Check if response is successful
+        if (response.status === 200 || response.status === 201) {
+          console.log("Template saved successfully:", response.data);
+          fetchTemplates(); // Update templates list
+          settemplate_name(""); // Clear input field
+          setIsModalOpen(false); // Close modal
+          navigate(`/create-template/${template_name}`); // Navigate to new template page
+        } else {
+          console.error("Failed to save template:", response.statusText);
+        }
       } catch (error) {
         console.error("Error saving template:", error);
       }
     } else {
-      console.error("Template name is required"); // Log the error if template_name is empty
+      console.error("Template name is required");
     }
   };
 

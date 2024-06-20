@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -11,7 +12,18 @@ import Cookies from "js-cookie";
 import Template from "./template/Template.tsx";
 
 function App() {
-  const isAuthenticated = !!Cookies.get("access_token");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
+    !!Cookies.get("access_token")
+  );
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    Cookies.remove("access_token");
+    setIsAuthenticated(false);
+  };
 
   return (
     <Router>
@@ -20,7 +32,11 @@ function App() {
         <Route
           path="/"
           element={
-            isAuthenticated ? <Navigate to="/template" replace /> : <Login />
+            isAuthenticated ? (
+              <Navigate to="/template" replace />
+            ) : (
+              <Login onLogin={handleLogin} />
+            )
           }
         />
 
