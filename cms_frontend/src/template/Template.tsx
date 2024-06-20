@@ -7,7 +7,7 @@ import axiosInstance from "../http/axiosInstance";
 const Template: React.FC = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [templateName, setTemplateName] = useState<string>("");
+  const [template_name, settemplate_name] = useState<string>("");
   const [templates, setTemplates] = useState<any[]>([]); // Array to store template objects
 
   useEffect(() => {
@@ -29,25 +29,31 @@ const Template: React.FC = () => {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setTemplateName("");
+    settemplate_name("");
   };
 
-  const handleTemplateNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTemplateName(e.target.value);
+  const handletemplate_nameChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    settemplate_name(e.target.value);
   };
 
   const handleSaveTemplate = async () => {
-    if (templateName.trim() !== "") {
+    if (template_name.trim() !== "") {
       try {
         // Assuming your backend API supports creating a new template
-        await axiosInstance.post("/templates", { name: templateName.trim() });
-        fetchTemplates(); // Fetch templates again to update the list
-        setTemplateName("");
+        await axiosInstance.post("/templates", {
+          template_name: template_name.trim(),
+        });
+        fetchTemplates();
+        settemplate_name("");
         setIsModalOpen(false);
-        navigate(`/create-template`);
+        navigate(`/create-template/${template_name}`);
       } catch (error) {
         console.error("Error saving template:", error);
       }
+    } else {
+      console.error("Template name is required"); // Log the error if template_name is empty
     }
   };
 
@@ -97,8 +103,8 @@ const Template: React.FC = () => {
             type="text"
             className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-teal-500 w-full"
             placeholder="Template Name"
-            value={templateName}
-            onChange={handleTemplateNameChange}
+            value={template_name}
+            onChange={handletemplate_nameChange}
           />
           <div className="mt-4 flex justify-end">
             <button

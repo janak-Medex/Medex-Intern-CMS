@@ -6,6 +6,7 @@ export interface FormField {
 }
 
 export interface Component {
+  [x: string]: any;
   component_name: string;
   fields: FormField[];
 }

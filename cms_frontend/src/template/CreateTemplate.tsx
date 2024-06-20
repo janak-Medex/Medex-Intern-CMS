@@ -1,38 +1,53 @@
 import React, { useState, useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import Modal from "../utils/Modal";
 import CreateComponent, {
   Component as ComponentType,
-  FormField,
 } from "../components/createComponents";
 import ComponentList from "../template/ComponentList";
 import SchemaRuleModal from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
+import FormComponent from "./FormComponent"; // Adjust the path as necessary
+
+interface TemplateDetails {
+  _id: string;
+  template_name: string;
+  component_name: string;
+  data: { [key: string]: any };
+  isActive: boolean;
+  __v: number;
+  components: ComponentType[];
+}
 
 const CreateTemplate: React.FC = () => {
-  const { templateName } = useParams<{ templateName: string }>();
+  const { template_name } = useParams<{ template_name: string }>();
   const [toggleStates, setToggleStates] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [components, setComponents] = useState<ComponentType[]>([]);
   const [activeComponent, setActiveComponent] = useState<ComponentType | null>(
     null
   );
   const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
-  const [templateDetails, setTemplateDetails] = useState<any>(null); // State to store template details
+  const [templateDetails, setTemplateDetails] =
+    useState<TemplateDetails | null>(null);
+  const [formData, setFormData] = useState<any>({});
+  const [isCreatingComponent, setIsCreatingComponent] =
+    useState<boolean>(false);
+  const [editingComponent, setEditingComponent] =
+    useState<ComponentType | null>(null);
 
   useEffect(() => {
     fetchTemplateDetails();
-  }, [templateName]);
+  }, [template_name]);
 
   const fetchTemplateDetails = async () => {
     try {
-      const response = await axiosInstance.get(`/templates/${templateName}`);
+      const response = await axiosInstance.get<TemplateDetails>(
+        `/templates/${template_name}`
+      );
       setTemplateDetails(response.data);
-      setComponents(response.data.components);
-      console.log(response.data.components);
+      setComponents(response.data.components || []);
     } catch (error) {
       console.error("Error fetching template details:", error);
     }
@@ -49,18 +64,20 @@ const CreateTemplate: React.FC = () => {
         (comp) => comp.component_name === component_name
       );
       setActiveComponent(component || null);
+      setIsCreatingComponent(false); // Hide CreateComponent form when a component is selected
     } else {
       setActiveComponent(null);
     }
   };
 
-  const handleOpenModal = () => {
-    setIsModalOpen(true);
-    setActiveComponent(null); // Reset active component when opening modal for creation
+  const handleOpenCreateComponent = () => {
+    setIsCreatingComponent(true);
+    setEditingComponent(null);
+    setActiveComponent(null);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleCloseCreateComponent = () => {
+    setIsCreatingComponent(false);
   };
 
   const addComponent = (component: ComponentType) => {
@@ -72,21 +89,22 @@ const CreateTemplate: React.FC = () => {
       (comp) => comp.component_name === newComponent.component_name
     );
     if (index === -1) {
-      // Create new component
       addComponent(newComponent);
     } else {
-      // Update existing component
       const updatedComponents = [...components];
       updatedComponents[index] = newComponent;
       setComponents(updatedComponents);
     }
-    setIsModalOpen(false); // Close the modal after creating or updating component
+    setIsCreatingComponent(false);
   };
 
   const onDeleteComponent = (component_name: string) => {
     setComponents((prevComponents) =>
       prevComponents.filter((comp) => comp.component_name !== component_name)
     );
+    if (activeComponent?.component_name === component_name) {
+      setActiveComponent(null);
+    }
   };
 
   const handleAddRule = (newRule: {
@@ -94,64 +112,14 @@ const CreateTemplate: React.FC = () => {
     type: string;
     required: boolean;
   }) => {
-    // Add logic to handle adding new rule (e.g., API call, state update)
     console.log("New Rule:", newRule);
     setIsRuleModalOpen(false);
   };
 
-  const getFieldComponent = (field: FormField) => {
-    switch (field.name) {
-      case "image":
-        return (
-          <input
-            type="file"
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500"
-            accept="image/*"
-          />
-        );
-      case "is_active":
-        return (
-          <input
-            type="checkbox"
-            className="form-checkbox h-5 w-5 text-teal-600"
-            id="is_active"
-          />
-        );
-      default:
-        return (
-          <input
-            type="text"
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500"
-            placeholder={`Enter ${field.name}`}
-          />
-        );
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Form Submitted", formData);
   };
-
-  const renderForm = (fields: FormField[]) => (
-    <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-      {fields.map((field, index) => (
-        <div key={index} className="flex flex-col space-y-2">
-          <label className="text-gray-700 font-bold">{field.name}</label>
-          {getFieldComponent(field)}
-        </div>
-      ))}
-      <div className="flex justify-between items-center">
-        <button
-          type="submit"
-          className="px-4 py-2 text-white bg-teal-600 rounded-lg hover:bg-teal-700 focus:outline-none"
-        >
-          Submit
-        </button>
-        <button
-          onClick={() => setIsRuleModalOpen(true)}
-          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none"
-        >
-          Insert New Schema Rule
-        </button>
-      </div>
-    </form>
-  );
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -168,7 +136,7 @@ const CreateTemplate: React.FC = () => {
             <h2 className="text-xl font-semibold mb-4">Create Component</h2>
             <button
               className="w-full flex items-center justify-center px-4 py-2 text-white bg-teal-600 rounded-md hover:bg-teal-700 transition duration-200 mb-4"
-              onClick={handleOpenModal}
+              onClick={handleOpenCreateComponent}
             >
               <FaPlus className="mr-2" /> Create
             </button>
@@ -177,27 +145,45 @@ const CreateTemplate: React.FC = () => {
               toggleStates={toggleStates}
               onToggle={handleToggle}
               onEdit={(component) => {
-                setActiveComponent(component);
-                setIsModalOpen(true); // Open modal for editing component
+                setEditingComponent(component as ComponentType);
+                setIsCreatingComponent(true);
+                setActiveComponent(null);
               }}
               onDelete={onDeleteComponent}
               onShowComponentForm={(component) => {
                 setActiveComponent(component);
+                setIsCreatingComponent(false);
               }}
             />
           </div>
         </div>
 
         <div className="col-span-12 md:col-span-4 flex flex-col">
-          {activeComponent && (
+          {isCreatingComponent && (
+            <div className="bg-white rounded-lg shadow-md p-6 flex-1">
+              <CreateComponent
+                onClose={handleCloseCreateComponent}
+                onCreate={onCreateComponent}
+                initialComponent={editingComponent}
+              />
+            </div>
+          )}
+
+          {activeComponent && !isCreatingComponent && (
             <div className="bg-white rounded-lg shadow-md p-6 flex-1">
               <h2 className="text-xl font-semibold mb-4">
                 {activeComponent.component_name}
               </h2>
-              <div>{renderForm(activeComponent.fields)}</div>
+              <FormComponent
+                formData={activeComponent.data}
+                setFormData={setFormData}
+                handleSubmit={handleSubmit}
+                handleInsertRule={() => setIsRuleModalOpen(true)}
+              />
             </div>
           )}
-          {!activeComponent && (
+
+          {!activeComponent && !isCreatingComponent && (
             <div className="bg-white rounded-lg shadow-md p-6 flex-1 flex items-center justify-center">
               <p className="text-gray-600">
                 Select a component to view details.
@@ -209,20 +195,15 @@ const CreateTemplate: React.FC = () => {
         <div className="col-span-12 md:col-span-5 flex flex-col">
           <div className="bg-white rounded-lg shadow-md p-4 flex-1">
             <h2 className="text-xl font-semibold mb-4">Component Images</h2>
-            <img src="../images/component1.jpg" alt="" />
-            <div className="space-y-4">
-              {/* Display additional details or components related to the template */}
-            </div>
+            {/* Display additional details or components related to the template */}
+            <img
+              src="../images/component1.jpg"
+              alt="Banner"
+              className="max-w-full h-auto rounded-lg"
+            />{" "}
           </div>
         </div>
       </main>
-      <Modal show={isModalOpen} onClose={handleCloseModal}>
-        <CreateComponent
-          onClose={handleCloseModal}
-          onCreate={onCreateComponent}
-          initialComponent={activeComponent} // Pass active component for editing
-        />
-      </Modal>
 
       <SchemaRuleModal
         isOpen={isRuleModalOpen}

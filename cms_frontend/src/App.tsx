@@ -36,7 +36,7 @@ function App() {
           }
         />
         <Route
-          path="/create-template/:templateName"
+          path="/create-template/:template_name"
           element={
             isAuthenticated ? (
               <ProtectedRoute element={<CreateTemplate />} />
