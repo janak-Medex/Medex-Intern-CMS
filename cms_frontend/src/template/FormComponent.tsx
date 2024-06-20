@@ -12,16 +12,18 @@ const FormComponent: React.FC<{
   );
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
+  const handleFieldChange = (key: string, value: any) => {
+    setFormData({ ...formData, [key]: value });
+  };
+
   const getFieldComponent = (key: string, value: any) => {
     if (key.includes("image")) {
-      let imageUrl = value ? (
-        value.replace(
-          /^D:\\intern\\backend_cms_template\\Medex-Intern-Backend\\public\\uploads\\/,
-          baseImageUrl
-        )
-      ) : (
-        <img src="../images/image.svg" alt="" />
-      ); // Use placeholder SVG if value is empty or null
+      let imageUrl = value
+        ? value.replace(
+            /^D:\\intern\\backend_cms_template\\Medex-Intern-Backend\\public\\uploads\\/,
+            baseImageUrl
+          )
+        : baseImageUrl + "image.svg"; // Use placeholder SVG if value is empty or null
 
       return (
         <div key={key} className="mb-8 flex items-center">
@@ -41,7 +43,7 @@ const FormComponent: React.FC<{
                 </p>
               </div>
             ) : (
-              <img src="../images/image.svg" alt="" />
+              <img src={baseImageUrl + "image.svg"} alt="" />
             )}
           </div>
           <div className="flex-1">
@@ -95,13 +97,14 @@ const FormComponent: React.FC<{
       );
     }
 
+    // Regular input field handling
     return (
       <div key={key} className="mb-4">
         <label className="block text-gray-800 font-semibold mb-2">{key}</label>
         <input
           type="text"
-          value={value}
-          onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+          value={value ?? ""} // Display empty string if value is null or undefined
+          onChange={(e) => handleFieldChange(key, e.target.value)}
           className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500"
         />
       </div>

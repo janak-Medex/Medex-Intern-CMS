@@ -3,11 +3,11 @@ import { FaPlus } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import CreateComponent, {
   Component as ComponentType,
-} from "../components/createComponents";
+} from "../components/createComponents"; // Adjust path as necessary
 import ComponentList from "../template/ComponentList";
 import SchemaRuleModal from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
-import FormComponent, { FormField } from "../template/FormComponent"; // Adjust the path as necessary
+import FormComponent from "../template/FormComponent";
 
 interface TemplateDetails {
   _id: string;
@@ -50,6 +50,7 @@ const CreateTemplate: React.FC = () => {
       setComponents(response.data.components || []);
     } catch (error) {
       console.error("Error fetching template details:", error);
+      // Handle error (e.g., show error message to user)
     }
   };
 
@@ -98,12 +99,18 @@ const CreateTemplate: React.FC = () => {
     setIsCreatingComponent(false);
   };
 
-  const onDeleteComponent = (component_name: string) => {
-    setComponents((prevComponents) =>
-      prevComponents.filter((comp) => comp.component_name !== component_name)
-    );
-    if (activeComponent?.component_name === component_name) {
-      setActiveComponent(null);
+  const onDeleteComponent = async (component_name: string) => {
+    try {
+      await axiosInstance.delete(`/components/${component_name}`);
+      setComponents((prevComponents) =>
+        prevComponents.filter((comp) => comp.component_name !== component_name)
+      );
+      if (activeComponent?.component_name === component_name) {
+        setActiveComponent(null);
+      }
+    } catch (error) {
+      console.error("Error deleting component:", error);
+      // Handle error (e.g., show error message to user)
     }
   };
 
@@ -116,9 +123,32 @@ const CreateTemplate: React.FC = () => {
     setIsRuleModalOpen(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form Submitted", formData);
+
+    if (!activeComponent) return; // Ensure there's an active component
+
+    try {
+      const response = await axiosInstance.post<ComponentType>("/components", {
+        component_name: activeComponent.component_name,
+        data: JSON.stringify(formData), // Serialize formData to JSON string
+        isActive: true,
+        template_name: template_name,
+      });
+
+      console.log("Component saved:", response.data);
+
+      // Update components state with the updated component
+      const updatedComponents = components.map((comp) =>
+        comp.component_name === response.data.component_name
+          ? response.data
+          : comp
+      );
+      setComponents(updatedComponents);
+    } catch (error) {
+      console.error("Error saving component:", error);
+      // Handle error (e.g., show error message to user)
+    }
   };
 
   return (
@@ -133,7 +163,7 @@ const CreateTemplate: React.FC = () => {
       <main className="container mx-auto py-8 grid grid-cols-12 gap-8 p-4">
         <div className="col-span-12 md:col-span-3 flex flex-col">
           <div className="bg-white rounded-lg shadow-md p-6 flex-1 flex flex-col">
-            <h2 className="text-xl font-semibold mb-4">Create Component</h2>
+            <h2 className="text-xl font-semibold mb-4">Manage Components</h2>
             <button
               className="w-full flex items-center justify-center px-4 py-2 text-white bg-teal-600 rounded-md hover:bg-teal-700 transition duration-200 mb-4"
               onClick={handleOpenCreateComponent}
@@ -176,7 +206,9 @@ const CreateTemplate: React.FC = () => {
               </h2>
               <FormComponent
                 formData={activeComponent.data}
-                setFormData={setFormData}
+                setFormData={(updatedFormData) =>
+                  setFormData({ ...formData, ...updatedFormData })
+                }
                 handleSubmit={handleSubmit}
               />
             </div>
