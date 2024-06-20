@@ -41,6 +41,7 @@ const CreateComponent: React.FC<Props> = ({
     if (initialComponent) {
       setComponentName(initialComponent.component_name);
       try {
+        // Parse initial data into formFields
         const parsedData = initialComponent.data || {}; // Check if data is already an object
         setFormFields(
           Object.keys(parsedData).map((key) => ({

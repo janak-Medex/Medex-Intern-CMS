@@ -31,122 +31,113 @@ const FormComponent: React.FC<{
       />
       <path
         fill="#0478ed"
-        d="m20.82 25.43-9-13a1 1 0 0 0-1.57-.1l-9 10A1 1 0 0 0 1 23v1a3 3 0 0 0 3 3h16a1 1 0 0 0 .82-1.57Z"
+        d="m20.82 25.43-9-13a1 1 0 0 1 1.52-1.29l7.89 11.35 5.59-4.28 4.15 4.23Z"
       />
-      <circle cx="20" cy="12" r="2" fill="#fff" />
     </svg>
   );
 
-  const getFieldComponent = (key: string, value: any) => {
-    if (key.includes("image")) {
-      let imageUrl = value
-        ? value.replace(
-            /^D:\\intern\\backend_cms_template\\Medex-Intern-Backend\\public\\uploads\\/,
-            baseImageUrl
-          )
-        : placeholderImage; // Use placeholder SVG if value is empty or null
-
-      return (
-        <div key={key} className="mb-8 flex items-center">
-          <div className="mr-4">
-            <label className="block text-gray-800 font-semibold mb-2">
-              {key}
-            </label>
-            {value ? (
-              <div>
-                <img
-                  src={imageUrl}
-                  alt="Current Image"
-                  className="w-24 h-24 object-cover rounded-lg"
-                />
-                <p className="mt-1 text-sm text-gray-600">
-                  Currently Used Image
-                </p>
-              </div>
-            ) : (
-              placeholderImage
-            )}
-          </div>
-          <div className="flex-1">
-            <label
-              className="flex items-center justify-center px-4 py-2 bg-[#39AF9F] text-white rounded-lg cursor-pointer hover:bg-green-500"
-              htmlFor={`${key}-file-input`}
-            >
-              <AiOutlineFileImage className="mr-2" />
-              <span>Select Image</span>
-            </label>
-            <input
-              type="file"
-              id={`${key}-file-input`}
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  const file = e.target.files[0];
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    setFormData({
-                      ...formData,
-                      [key]: `${baseImageUrl}${file.name}`,
-                    });
-                    setSelectedFileName(file.name);
-                    setSelectedFilePreview(reader.result as string);
-                  };
-                  reader.readAsDataURL(file);
-                } else {
-                  setSelectedFileName("");
-                  setSelectedFilePreview(null);
-                }
-              }}
-            />
-            {selectedFilePreview && (
-              <div className="mt-4 flex items-center">
-                <img
-                  src={selectedFilePreview}
-                  alt="Selected File Preview"
-                  className="w-24 h-24 object-cover rounded-lg mr-4"
-                />
-                <div>
-                  <p className="text-sm text-gray-600">Newly Selected Image</p>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {selectedFileName}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      );
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedFilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
+  };
 
-    return (
-      <div key={key} className="mb-4">
-        <label className="block text-gray-800 font-semibold mb-2">{key}</label>
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-          className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500"
-        />
-      </div>
-    );
+  const handleClearFile = () => {
+    setSelectedFileName("");
+    setSelectedFilePreview(null);
+  };
+
+  const handleFormDataChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto font-sans">
-      <div className="mb-8">
-        {Object.entries(formData).map(([key, value]) =>
-          getFieldComponent(key, value)
-        )}
-      </div>
-      <div className="flex justify-center mb-8">
-        <button
-          type="submit"
-          className="px-6 py-3 w-full text-white bg-[#39AF9F] rounded-lg hover:bg-teal-700 focus:outline-none transition-colors duration-300"
-        >
-          Submit
-        </button>
-      </div>
-    </form>
+    <div className="bg-white rounded-lg shadow-md p-6 relative">
+      <h2 className="text-xl font-semibold mb-4">Form Component</h2>
+      <form onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label className="block text-gray-700 font-bold mb-2">
+            Component Name
+          </label>
+          <input
+            type="text"
+            name="component_name"
+            className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
+            value={formData.component_name || ""}
+            onChange={handleFormDataChange}
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 font-bold mb-2">Data</label>
+          {/* Example fields, adjust based on actual form fields */}
+          {Object.keys(formData).map((key, index) => (
+            <div key={index} className="mb-2">
+              <label className="text-gray-700">{key}</label>
+              <input
+                type="text"
+                name={key}
+                className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
+                value={formData[key] || ""}
+                onChange={handleFormDataChange}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 font-bold mb-2">Image</label>
+          <div className="flex items-center">
+            {selectedFilePreview ? (
+              <img
+                src={selectedFilePreview}
+                alt="Selected File"
+                className="w-24 h-24 object-cover rounded-lg mr-4"
+              />
+            ) : (
+              placeholderImage
+            )}
+            <div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+                id="file-input"
+              />
+              <label
+                htmlFor="file-input"
+                className="cursor-pointer text-teal-600 font-semibold"
+              >
+                Choose File
+              </label>
+              {selectedFileName && (
+                <button
+                  type="button"
+                  className="ml-2 text-red-500 focus:outline-none"
+                  onClick={handleClearFile}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-center">
+          <button
+            type="submit"
+            className="px-4 py-3 text-sm text-white bg-teal-600 rounded-lg hover:bg-teal-700 focus:outline-none"
+          >
+            Submit
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 
