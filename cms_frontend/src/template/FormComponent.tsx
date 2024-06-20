@@ -1,30 +1,55 @@
-import React, { useState } from "react";
+// FormComponent.tsx
+import React, { useState, useEffect } from "react";
 import { AiOutlineFileImage } from "react-icons/ai";
 
-const FormComponent: React.FC<{
-  formData: any;
-  setFormData: (data: any) => void;
+interface FormData {
+  [key: string]: string | null;
+}
+
+interface FormComponentProps {
+  formData: FormData;
+  setFormData: (data: FormData) => void;
   handleSubmit: (e: React.FormEvent) => void;
-}> = ({ formData, setFormData, handleSubmit }) => {
-  const [selectedFileName, setSelectedFileName] = useState("");
+}
+
+const FormComponent: React.FC<FormComponentProps> = ({
+  formData,
+  setFormData,
+  handleSubmit,
+}) => {
+  const [selectedFileName, setSelectedFileName] = useState<string>("");
   const [selectedFilePreview, setSelectedFilePreview] = useState<string | null>(
     null
   );
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
-  const handleFieldChange = (key: string, value: any) => {
-    setFormData({ ...formData, [key]: value });
+  useEffect(() => {
+    console.log("Current formData:", formData);
+  }, [formData]);
+
+  const handleFieldChange = (key: string, value: string) => {
+    console.log(`Changing field ${key} to value:`, value);
+    setFormData({
+      ...formData,
+      [key]: value === "" ? null : value,
+    });
   };
 
-  const getFieldComponent = (key: string, value: any) => {
-    if (key.includes("image")) {
-      let imageUrl = value
-        ? value.replace(
-            /^D:\\intern\\backend_cms_template\\Medex-Intern-Backend\\public\\uploads\\/,
-            baseImageUrl
-          )
-        : baseImageUrl + "image.svg"; // Use placeholder SVG if value is empty or null
+  const handleFileChange = (key: string, file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData({
+        ...formData,
+        [key]: `${baseImageUrl}${file.name}`,
+      });
+      setSelectedFileName(file.name);
+      setSelectedFilePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
+  const getFieldComponent = (key: string, value: string | null) => {
+    if (key.includes("image")) {
       return (
         <div key={key} className="mb-8 flex items-center">
           <div className="mr-4">
@@ -34,7 +59,11 @@ const FormComponent: React.FC<{
             {value ? (
               <div>
                 <img
-                  src={imageUrl}
+                  src={
+                    value.startsWith(baseImageUrl)
+                      ? value
+                      : `${baseImageUrl}${value}`
+                  }
                   alt="Current Image"
                   className="w-24 h-24 object-cover rounded-lg"
                 />
@@ -43,7 +72,7 @@ const FormComponent: React.FC<{
                 </p>
               </div>
             ) : (
-              <img src={baseImageUrl + "image.svg"} alt="" />
+              <img src={`${baseImageUrl}image.svg`} alt="" />
             )}
           </div>
           <div className="flex-1">
@@ -60,17 +89,7 @@ const FormComponent: React.FC<{
               className="hidden"
               onChange={(e) => {
                 if (e.target.files && e.target.files[0]) {
-                  const file = e.target.files[0];
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    setFormData({
-                      ...formData,
-                      [key]: `${baseImageUrl}${file.name}`,
-                    });
-                    setSelectedFileName(file.name);
-                    setSelectedFilePreview(reader.result as string);
-                  };
-                  reader.readAsDataURL(file);
+                  handleFileChange(key, e.target.files[0]);
                 } else {
                   setSelectedFileName("");
                   setSelectedFilePreview(null);
@@ -95,20 +114,24 @@ const FormComponent: React.FC<{
           </div>
         </div>
       );
+    } else {
+      return (
+        <div key={key} className="mb-4">
+          <label className="block text-gray-800 font-semibold mb-2">
+            {key}
+          </label>
+          <input
+            type="text"
+            value={value ?? ""}
+            onChange={(e) => {
+              console.log("Current value:", e.target.value);
+              handleFieldChange(key, e.target.value);
+            }}
+            className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500"
+          />
+        </div>
+      );
     }
-
-    // Regular input field handling
-    return (
-      <div key={key} className="mb-4">
-        <label className="block text-gray-800 font-semibold mb-2">{key}</label>
-        <input
-          type="text"
-          value={value ?? ""} // Display empty string if value is null or undefined
-          onChange={(e) => handleFieldChange(key, e.target.value)}
-          className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500"
-        />
-      </div>
-    );
   };
 
   return (

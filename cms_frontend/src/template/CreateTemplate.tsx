@@ -1,9 +1,10 @@
+// CreateTemplate.tsx
 import React, { useState, useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import CreateComponent, {
   Component as ComponentType,
-} from "../components/createComponents"; // Adjust path as necessary
+} from "../components/createComponents";
 import ComponentList from "../template/ComponentList";
 import SchemaRuleModal from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
@@ -31,7 +32,6 @@ const CreateTemplate: React.FC = () => {
   const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
   const [templateDetails, setTemplateDetails] =
     useState<TemplateDetails | null>(null);
-  const [formData, setFormData] = useState<{ [key: string]: any }>({});
   const [isCreatingComponent, setIsCreatingComponent] =
     useState<boolean>(false);
   const [editingComponent, setEditingComponent] =
@@ -50,7 +50,6 @@ const CreateTemplate: React.FC = () => {
       setComponents(response.data.components || []);
     } catch (error) {
       console.error("Error fetching template details:", error);
-      // Handle error (e.g., show error message to user)
     }
   };
 
@@ -65,7 +64,7 @@ const CreateTemplate: React.FC = () => {
         (comp) => comp.component_name === component_name
       );
       setActiveComponent(component || null);
-      setIsCreatingComponent(false); // Hide CreateComponent form when a component is selected
+      setIsCreatingComponent(false);
     } else {
       setActiveComponent(null);
     }
@@ -110,7 +109,6 @@ const CreateTemplate: React.FC = () => {
       }
     } catch (error) {
       console.error("Error deleting component:", error);
-      // Handle error (e.g., show error message to user)
     }
   };
 
@@ -126,19 +124,18 @@ const CreateTemplate: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!activeComponent) return; // Ensure there's an active component
+    if (!activeComponent) return;
 
     try {
       const response = await axiosInstance.post<ComponentType>("/components", {
         component_name: activeComponent.component_name,
-        data: JSON.stringify(formData), // Serialize formData to JSON string
+        data: JSON.stringify(activeComponent.data),
         isActive: true,
         template_name: template_name,
       });
 
       console.log("Component saved:", response.data);
 
-      // Update components state with the updated component
       const updatedComponents = components.map((comp) =>
         comp.component_name === response.data.component_name
           ? response.data
@@ -147,7 +144,6 @@ const CreateTemplate: React.FC = () => {
       setComponents(updatedComponents);
     } catch (error) {
       console.error("Error saving component:", error);
-      // Handle error (e.g., show error message to user)
     }
   };
 
@@ -206,9 +202,15 @@ const CreateTemplate: React.FC = () => {
               </h2>
               <FormComponent
                 formData={activeComponent.data}
-                setFormData={(updatedFormData) =>
-                  setFormData({ ...formData, ...updatedFormData })
-                }
+                setFormData={(updatedFormData) => {
+                  setActiveComponent((prevActiveComponent) => ({
+                    ...prevActiveComponent!,
+                    data: {
+                      ...prevActiveComponent!.data,
+                      ...updatedFormData,
+                    },
+                  }));
+                }}
                 handleSubmit={handleSubmit}
               />
             </div>
@@ -226,7 +228,6 @@ const CreateTemplate: React.FC = () => {
         <div className="col-span-12 md:col-span-5 flex flex-col">
           <div className="bg-white rounded-lg shadow-md p-4 flex-1">
             <h2 className="text-xl font-semibold mb-4">Component Images</h2>
-            {/* Display additional details or components related to the template */}
             <img
               src="../images/component1.jpg"
               alt="Banner"
