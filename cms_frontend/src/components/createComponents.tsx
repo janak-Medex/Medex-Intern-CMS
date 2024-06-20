@@ -1,20 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
+import { useParams } from "react-router-dom"; // Import useParams from react-router-dom
+import SchemaRuleModal, { SchemaRule } from "../template/SchemaRule";
+import axiosInstance from "../http/axiosInstance";
+import Cookies from "js-cookie";
 
 export interface FormField {
   name: string;
 }
 
+export interface InitialData {
+  [key: string]: any; // Define any type for the values
+}
+
 export interface Component {
-  [x: string]: any;
   component_name: string;
-  fields: FormField[];
+  data: string; // Change data type to string
+  isActive: boolean;
+  _id?: string; // Optional if it's included in the response
+  __v?: number; // Optional if it's included in the response
 }
 
 interface Props {
   onClose: () => void;
   onCreate: (newComponent: Component) => void;
-  initialComponent: Component | null; // Add initialComponent prop
+  initialComponent: Component | null;
 }
 
 const CreateComponent: React.FC<Props> = ({
@@ -22,13 +32,14 @@ const CreateComponent: React.FC<Props> = ({
   onCreate,
   initialComponent,
 }) => {
+  const { template_name } = useParams<{ template_name: string }>(); // Get template_name from URL params
   const [component_name, setComponentName] = useState<string>("");
   const [formFields, setFormFields] = useState<FormField[]>([{ name: "" }]);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (initialComponent) {
       setComponentName(initialComponent.component_name);
-      setFormFields(initialComponent.fields);
     }
   }, [initialComponent]);
 
@@ -48,17 +59,55 @@ const CreateComponent: React.FC<Props> = ({
     setFormFields(updatedFields);
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    // Serialize formFields data to JSON
+    const initialDataJSON = JSON.stringify(
+      formFields.reduce((acc, field) => {
+        acc[field.name] = null;
+        return acc;
+      }, {})
+    );
 
     const newComponent: Component = {
       component_name: component_name,
-      fields: formFields.filter((field) => field.name.trim() !== ""),
+      data: initialDataJSON,
+      isActive: true,
     };
 
-    onCreate(newComponent); // Pass the created or updated component back to parent
+    try {
+      const response = await axiosInstance.post(`components`, {
+        ...newComponent,
+        template_name: template_name, // Pass template_name from URL
+      });
 
-    onClose(); // Close the modal
+      console.log("Response:", response.data);
+
+      onCreate(response.data); // Assuming response.data is the created/updated component
+      onClose();
+
+      if (response.status === 200) {
+        const accessToken = Cookies.get("access_token");
+        console.log("Access Token:", accessToken);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      // Handle error as needed
+    }
+  };
+
+  const handleInsertRule = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleAddSchemaRule = (newRule: SchemaRule) => {
+    console.log("Adding schema rule:", newRule);
+    setIsModalOpen(false);
   };
 
   return (
@@ -112,13 +161,27 @@ const CreateComponent: React.FC<Props> = ({
             <FaPlus className="mr-1" /> Add Field
           </button>
         </div>
-        <button
-          type="submit"
-          className="px-4 py-2 text-white bg-teal-600 rounded-lg hover:bg-teal-700 focus:outline-none"
-        >
-          {initialComponent ? "Update Component" : "Create Component"}
-        </button>
+        <div className="flex justify-center mb-8">
+          <button
+            type="submit"
+            className="px-4 py-3 text-lg text-white bg-teal-600 rounded-lg hover:bg-teal-700 focus:outline-none mr-4"
+          >
+            {initialComponent ? "Update Field" : "Create Field"}
+          </button>
+          <button
+            type="button"
+            onClick={handleInsertRule}
+            className="px-6 py-3 text-lg text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none transition-colors duration-300"
+          >
+            Adds New Schema Rule
+          </button>
+        </div>
       </form>
+      <SchemaRuleModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onAddRule={handleAddSchemaRule}
+      />
     </div>
   );
 };

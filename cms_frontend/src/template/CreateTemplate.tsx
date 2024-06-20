@@ -178,7 +178,6 @@ const CreateTemplate: React.FC = () => {
                 formData={activeComponent.data}
                 setFormData={setFormData}
                 handleSubmit={handleSubmit}
-                handleInsertRule={() => setIsRuleModalOpen(true)}
               />
             </div>
           )}
