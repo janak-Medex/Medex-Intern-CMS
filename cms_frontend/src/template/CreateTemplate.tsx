@@ -200,8 +200,11 @@ const CreateTemplate: React.FC = () => {
               <h2 className="text-xl font-semibold mb-4">
                 {activeComponent.component_name}
               </h2>
+
               <FormComponent
                 formData={activeComponent.data}
+                component_name={activeComponent.component_name}
+                template_name={template_name}
                 setFormData={(updatedFormData) => {
                   setActiveComponent((prevActiveComponent) => ({
                     ...prevActiveComponent!,

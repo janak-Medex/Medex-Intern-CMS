@@ -37,7 +37,7 @@ const CreateComponent: React.FC<Props> = ({
   const [component_name, setComponentName] = useState<string>("");
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-
+  // debugger;
   useEffect(() => {
     if (initialComponent) {
       setComponentName(initialComponent.component_name);
@@ -88,9 +88,10 @@ const CreateComponent: React.FC<Props> = ({
       return acc;
     }, {} as InitialData);
 
-    const newComponent: Component = {
+    const newComponent = {
       component_name: component_name,
-      data: JSON.stringify(initialData), // Stringify the data
+      template_name: template_name,
+      data: initialData, // This should be an object, not a string
       isActive: true,
     };
 
@@ -182,6 +183,7 @@ const CreateComponent: React.FC<Props> = ({
               </button>
             </div>
           ))}
+
           <button
             type="button"
             className="flex items-center text-teal-600 focus:outline-none"

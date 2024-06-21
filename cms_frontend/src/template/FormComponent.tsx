@@ -1,21 +1,25 @@
-// FormComponent.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, ChangeEvent, FormEvent } from "react";
 import { AiOutlineFileImage } from "react-icons/ai";
+import axiosInstance from "../http/axiosInstance";
 
 interface FormData {
-  [key: string]: string | null;
+  [key: string]: string | null | File;
 }
 
 interface FormComponentProps {
-  formData: FormData;
-  setFormData: (data: FormData) => void;
-  handleSubmit: (e: React.FormEvent) => void;
+  template_name: string;
+  component_name: string;
+  formData: {
+    [key: string]: string | null | File;
+  };
+  setFormData: (data: { [key: string]: string | null | File }) => void;
 }
 
 const FormComponent: React.FC<FormComponentProps> = ({
+  template_name,
+  component_name,
   formData,
   setFormData,
-  handleSubmit,
 }) => {
   const [selectedFileName, setSelectedFileName] = useState<string>("");
   const [selectedFilePreview, setSelectedFilePreview] = useState<string | null>(
@@ -23,46 +27,80 @@ const FormComponent: React.FC<FormComponentProps> = ({
   );
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
-  useEffect(() => {
-    console.log("Current formData:", formData);
-  }, [formData]);
-
   const handleFieldChange = (key: string, value: string) => {
-    console.log(`Changing field ${key} to value:`, value);
     setFormData({
       ...formData,
       [key]: value === "" ? null : value,
     });
   };
 
-  const handleFileChange = (key: string, file: File) => {
+  const handleFileSelect = (key: string, file: File) => {
+    setFormData({
+      ...formData,
+      [key]: file,
+    });
+
     const reader = new FileReader();
     reader.onloadend = () => {
-      setFormData({
-        ...formData,
-        [key]: `${baseImageUrl}${file.name}`,
-      });
       setSelectedFileName(file.name);
       setSelectedFilePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
   };
 
-  const getFieldComponent = (key: string, value: string | null) => {
-    if (key.includes("image")) {
+  const handleFormSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const formPayload = new FormData();
+
+    formPayload.append("template_name", template_name);
+    formPayload.append("component_name", component_name);
+
+    for (const key in formData) {
+      const value = formData[key];
+      if (value instanceof File) {
+        formPayload.append(key, value);
+      } else if (value !== null) {
+        formPayload.append(key, value);
+      }
+    }
+
+    try {
+      const response = await axiosInstance.post("/components", formPayload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      console.log(response.data);
+
+      if (response.status === 201) {
+        console.log("Form submitted successfully:", response.data);
+      } else {
+        console.error("Form submission failed");
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
+  };
+
+  const getFieldComponent = (key: string, value: string | null | File) => {
+    if (
+      key.includes("image") ||
+      key.includes("file") ||
+      key.includes("video")
+    ) {
       return (
         <div key={key} className="mb-8 flex items-center">
           <div className="mr-4">
             <label className="block text-gray-800 font-semibold mb-2">
               {key}
             </label>
-            {value ? (
+            {value && typeof value === "string" ? (
               <div>
                 <img
                   src={
                     value.startsWith(baseImageUrl)
                       ? value
-                      : `${baseImageUrl}${value}`
+                      : selectedFilePreview || `${baseImageUrl}image.svg`
                   }
                   alt="Current Image"
                   className="w-24 h-24 object-cover rounded-lg"
@@ -89,7 +127,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
               className="hidden"
               onChange={(e) => {
                 if (e.target.files && e.target.files[0]) {
-                  handleFileChange(key, e.target.files[0]);
+                  handleFileSelect(key, e.target.files[0]);
                 } else {
                   setSelectedFileName("");
                   setSelectedFilePreview(null);
@@ -122,11 +160,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
           </label>
           <input
             type="text"
-            value={value ?? ""}
-            onChange={(e) => {
-              console.log("Current value:", e.target.value);
-              handleFieldChange(key, e.target.value);
-            }}
+            value={typeof value === "string" ? value : ""}
+            onChange={(e) => handleFieldChange(key, e.target.value)}
             className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500"
           />
         </div>
@@ -134,8 +169,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }
   };
 
+  // debugger;
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto font-sans">
+    <form onSubmit={handleFormSubmit} className="max-w-2xl mx-auto font-sans">
       <div className="mb-8">
         {Object.entries(formData).map(([key, value]) =>
           getFieldComponent(key, value)
