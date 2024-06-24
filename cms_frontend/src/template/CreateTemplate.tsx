@@ -1,4 +1,3 @@
-// CreateTemplate.tsx
 import React, { useState, useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
 import { useParams } from "react-router-dom";
@@ -9,6 +8,7 @@ import ComponentList from "../template/ComponentList";
 import SchemaRuleModal from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
 import FormComponent from "../template/FormComponent";
+import { toast } from "react-toastify";
 
 interface TemplateDetails {
   _id: string;
@@ -98,17 +98,23 @@ const CreateTemplate: React.FC = () => {
     setIsCreatingComponent(false);
   };
 
-  const onDeleteComponent = async (component_name: string) => {
+  const onDeleteComponent = async (componentId: string) => {
     try {
-      await axiosInstance.delete(`/components/${component_name}`);
-      setComponents((prevComponents) =>
-        prevComponents.filter((comp) => comp.component_name !== component_name)
+      await axiosInstance.delete(
+        `/templates/${templateDetails?._id}/components/${componentId}`
       );
-      if (activeComponent?.component_name === component_name) {
+      // Update local state after successful deletion
+      setComponents((prevComponents) =>
+        prevComponents.filter((comp) => comp._id !== componentId)
+      );
+      if (activeComponent?._id === componentId) {
         setActiveComponent(null);
       }
+      // Show toast notification for successful deletion
+      toast.success("Component deleted successfully");
     } catch (error) {
       console.error("Error deleting component:", error);
+      toast.error("Failed to delete component");
     }
   };
 
@@ -175,7 +181,7 @@ const CreateTemplate: React.FC = () => {
                 setIsCreatingComponent(true);
                 setActiveComponent(null);
               }}
-              onDelete={onDeleteComponent}
+              onDelete={(componentId) => onDeleteComponent(componentId)}
               onShowComponentForm={(component) => {
                 setActiveComponent(component);
                 setIsCreatingComponent(false);

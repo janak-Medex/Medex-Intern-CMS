@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -20,10 +20,10 @@ function App() {
     setIsAuthenticated(true);
   };
 
-  const handleLogout = () => {
-    Cookies.remove("access_token");
-    setIsAuthenticated(false);
-  };
+  // const handleLogout = () => {
+  //   Cookies.remove("access_token");
+  //   setIsAuthenticated(false);
+  // };
 
   return (
     <Router>
