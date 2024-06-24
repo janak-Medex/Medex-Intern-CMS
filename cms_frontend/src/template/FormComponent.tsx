@@ -1,14 +1,24 @@
-import React, { useState, FormEvent, useEffect, useCallback } from "react";
+import React, { useState, FormEvent, useEffect } from "react";
 import {
   AiOutlineFileImage,
   AiOutlineClose,
   AiOutlineVideoCamera,
+  AiOutlineFile,
 } from "react-icons/ai";
 import axiosInstance from "../http/axiosInstance";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// ... (keep the DefaultImageSVG and interfaces)
+interface FormComponentProps {
+  template_name: string;
+  component_name: string;
+  formData: {
+    [key: string]: string | null | (File | string)[];
+  };
+  setFormData: (data: {
+    [key: string]: string | null | (File | string)[];
+  }) => void;
+}
 
 const FormComponent: React.FC<FormComponentProps> = ({
   template_name,
@@ -17,81 +27,97 @@ const FormComponent: React.FC<FormComponentProps> = ({
   setFormData,
 }) => {
   const [selectedFilePreviews, setSelectedFilePreviews] = useState<{
-    [key: string]: string[];
+    [key: string]: {
+      src: string;
+      type: "image" | "video" | "file";
+      name: string;
+    }[];
   }>({});
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
-  const initializePreviews = useCallback(() => {
-    const initialPreviews: { [key: string]: string[] } = {};
+  useEffect(() => {
+    const initialPreviews: {
+      [key: string]: {
+        src: string;
+        type: "image" | "video" | "file";
+        name: string;
+      }[];
+    } = {};
     Object.entries(formData || {}).forEach(([key, value]) => {
       if (Array.isArray(value) && value.length > 0) {
-        if (typeof value[0] === "string") {
-          initialPreviews[key] = value
-            .map((item) => {
-              if (item.startsWith("http")) return item;
-              const splitUrl = item.split("uploads\\")?.[1];
-              return splitUrl ? `${baseImageUrl}${splitUrl}` : "";
-            })
-            .filter(Boolean);
-        } else if (value[0] instanceof File) {
-          initialPreviews[key] = value.map((file) =>
-            URL.createObjectURL(file as File)
-          );
-        }
+        initialPreviews[key] = value.map((item) => {
+          if (typeof item === "string") {
+            const src = item.startsWith("http")
+              ? item
+              : `${baseImageUrl}${item.split("uploads\\")[1]}`;
+            const type = src.match(/\.(mp4|webm|ogg)$/i)
+              ? "video"
+              : src.match(/\.(jpg|jpeg|png|gif)$/i)
+              ? "image"
+              : "file";
+            return { src, type, name: item.split("\\").pop() || "" };
+          }
+          return {
+            src: URL.createObjectURL(item as File),
+            type: (item as File).type.startsWith("video/")
+              ? "video"
+              : (item as File).type.startsWith("image/")
+              ? "image"
+              : "file",
+            name: (item as File).name,
+          };
+        });
       }
     });
     setSelectedFilePreviews(initialPreviews);
-    console.log("Initial previews set:", initialPreviews);
   }, [formData, baseImageUrl]);
 
-  useEffect(() => {
-    initializePreviews();
-  }, [initializePreviews]);
-
   const handleFieldChange = (key: string, value: string) => {
-    setFormData((prevData) => ({
-      ...prevData,
+    setFormData({
+      ...formData,
       [key]: value === "" ? null : value,
-    }));
+    });
     setErrors((prevErrors) => ({ ...prevErrors, [key]: "" }));
-    console.log(`Field ${key} changed to:`, value);
   };
 
   const handleFileSelect = (key: string, files: FileList) => {
     const fileArray = Array.from(files);
-    setFormData((prevData) => ({
-      ...prevData,
-      [key]: [...((prevData[key] as File[]) || []), ...fileArray],
-    }));
+    setFormData({
+      ...formData,
+      [key]: [...((formData[key] as (File | string)[]) || []), ...fileArray],
+    });
 
-    const newPreviews = fileArray.map((file) => URL.createObjectURL(file));
+    const newPreviews = fileArray.map((file) => ({
+      src: URL.createObjectURL(file),
+      type: file.type.startsWith("video/")
+        ? ("video" as const)
+        : file.type.startsWith("image/")
+        ? ("image" as const)
+        : ("file" as const),
+      name: file.name,
+    }));
     setSelectedFilePreviews((prev) => ({
       ...prev,
       [key]: [...(prev[key] || []), ...newPreviews],
     }));
 
     setErrors((prevErrors) => ({ ...prevErrors, [key]: "" }));
-    console.log(`Files selected for ${key}:`, fileArray);
   };
 
   const handleClearFile = (key: string, index: number) => {
-    setFormData((prevData) => {
-      const newData = { ...prevData };
-      if (Array.isArray(newData[key])) {
-        (newData[key] as (File | string)[]).splice(index, 1);
-      }
-      return newData;
+    const updatedFiles = (formData[key] as (File | string)[]).filter(
+      (_, i) => i !== index
+    );
+    setFormData({
+      ...formData,
+      [key]: updatedFiles.length > 0 ? updatedFiles : null,
     });
 
-    setSelectedFilePreviews((prev) => {
-      const newPreviews = { ...prev };
-      if (Array.isArray(newPreviews[key])) {
-        newPreviews[key].splice(index, 1);
-      }
-      return newPreviews;
-    });
-    console.log(`File cleared for ${key} at index ${index}`);
+    setSelectedFilePreviews((prev) => ({
+      ...prev,
+      [key]: prev[key].filter((_, i) => i !== index),
+    }));
   };
 
   const validateForm = () => {
@@ -100,14 +126,12 @@ const FormComponent: React.FC<FormComponentProps> = ({
       if (
         value === null ||
         value === undefined ||
-        (Array.isArray(value) && value.length === 0) ||
-        (typeof value === "string" && value.trim() === "")
+        (Array.isArray(value) && value.length === 0)
       ) {
         newErrors[key] = `${key} is required`;
       }
     });
     setErrors(newErrors);
-    console.log("Form validation errors:", newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -115,7 +139,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
     e.preventDefault();
     if (!validateForm()) {
       toast.error("Please fill in all required fields");
-      console.log("Form submission failed due to validation errors");
       return;
     }
 
@@ -126,7 +149,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
     Object.entries(formData || {}).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        value.forEach((item, index) => {
+        value.forEach((item) => {
           if (item instanceof File) {
             formPayload.append(`${key}`, item);
           } else if (typeof item === "string") {
@@ -139,7 +162,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
     });
 
     try {
-      console.log("Submitting form data:", Object.fromEntries(formPayload));
       const response = await axiosInstance.post("/components", formPayload, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -149,10 +171,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
       if (response.status === 201) {
         toast.success("Form submitted successfully");
         console.log("Form submitted successfully:", response.data);
-        initializePreviews(); // Refresh previews after successful submission
       } else {
         toast.error("Form submission failed");
-        console.error("Form submission failed:", response);
+        console.error("Form submission failed");
       }
     } catch (error: any) {
       console.error("Error submitting form:", error);
@@ -170,16 +191,24 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
   const getFieldComponent = (
     key: string,
-    value: string | null | File[] | string[]
+    value: string | null | (File | string)[]
   ) => {
     if (
       key.includes("image") ||
-      key.includes("file") ||
-      key.includes("video")
+      key.includes("video") ||
+      key.includes("file")
     ) {
-      const isVideo = key.includes("video");
-      const Icon = isVideo ? AiOutlineVideoCamera : AiOutlineFileImage;
+      const Icon = key.includes("video")
+        ? AiOutlineVideoCamera
+        : key.includes("image")
+        ? AiOutlineFileImage
+        : AiOutlineFile;
       const previews = selectedFilePreviews[key] || [];
+      const acceptType = key.includes("video")
+        ? "video/*"
+        : key.includes("image")
+        ? "image/*"
+        : "*/*";
 
       return (
         <div key={key} className="mb-8">
@@ -187,51 +216,52 @@ const FormComponent: React.FC<FormComponentProps> = ({
             {key}
           </label>
           <div className="grid grid-cols-3 gap-4 mb-4">
-            {previews.length > 0 ? (
-              previews.map((preview, index) => (
-                <div key={index} className="relative">
-                  {isVideo ? (
-                    <video
-                      src={preview}
-                      className="w-full h-32 object-cover rounded-lg"
-                      controls
-                    />
-                  ) : (
-                    <img
-                      src={preview}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleClearFile(key, index)}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
-                  >
-                    <AiOutlineClose />
-                  </button>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-3">
-                <DefaultImageSVG />
+            {previews.map((preview, index) => (
+              <div key={index} className="relative bg-gray-100 p-2 rounded-lg">
+                {preview.type === "video" && (
+                  <video
+                    src={preview.src}
+                    className="w-full h-32 object-cover rounded"
+                    controls
+                  />
+                )}
+                {preview.type === "image" && (
+                  <img
+                    src={preview.src}
+                    alt={`Preview ${index}`}
+                    className="w-full h-32 object-cover rounded"
+                  />
+                )}
+                {preview.type === "file" && (
+                  <div className="w-full h-32 flex items-center justify-center bg-gray-200 rounded">
+                    <AiOutlineFile size={32} />
+                    <span className="ml-2 text-sm">{preview.name}</span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleClearFile(key, index)}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                >
+                  <AiOutlineClose />
+                </button>
               </div>
-            )}
+            ))}
           </div>
-          <div className="flex-1">
+          <div className="flex items-center">
             <label
-              className="flex items-center justify-center px-4 py-2 bg-[#39AF9F] text-white rounded-lg cursor-pointer hover:bg-green-500"
+              className="flex items-center justify-center px-4 py-2 bg-[#39AF9F] text-white rounded-lg cursor-pointer hover:bg-green-500 transition-colors duration-300"
               htmlFor={`${key}-file-input`}
             >
               <Icon className="mr-2" />
-              <span>Add {isVideo ? "Video" : "Image"}(s)</span>
+              <span>Select {key}</span>
             </label>
             <input
               type="file"
               id={`${key}-file-input`}
               className="hidden"
               multiple
-              accept={isVideo ? "video/*" : "image/*"}
+              accept={acceptType}
               onChange={(e) => {
                 if (e.target.files && e.target.files.length > 0) {
                   handleFileSelect(key, e.target.files);
@@ -279,7 +309,10 @@ const FormComponent: React.FC<FormComponentProps> = ({
   return (
     <>
       <ToastContainer position="top-right" autoClose={5000} />
-      <form onSubmit={handleFormSubmit} className="max-w-2xl mx-auto font-sans">
+      <form
+        onSubmit={handleFormSubmit}
+        className="max-w-2xl mx-auto font-sans bg-white p-6 rounded-lg shadow-md"
+      >
         <div className="mb-8">
           {Object.entries(formData).map(([key, value]) =>
             getFieldComponent(key, value)

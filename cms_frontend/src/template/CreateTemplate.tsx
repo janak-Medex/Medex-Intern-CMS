@@ -110,14 +110,18 @@ const CreateTemplate: React.FC = () => {
       if (activeComponent?._id === componentId) {
         setActiveComponent(null);
       }
-      // Show toast notification for successful deletion
-      toast.success("Component deleted successfully");
+      toast.success("Component deleted successfully", {
+        className:
+          "bg-green-500 text-white font-bold py-2 px-4 rounded-md shadow-md",
+      });
     } catch (error) {
       console.error("Error deleting component:", error);
-      toast.error("Failed to delete component");
+      toast.error("Failed to delete component", {
+        className:
+          "bg-red-500 text-white font-bold py-2 px-4 rounded-md shadow-md",
+      });
     }
   };
-
   const handleAddRule = (newRule: {
     fieldName: string;
     type: string;
