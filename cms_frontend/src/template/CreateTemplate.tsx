@@ -127,7 +127,6 @@ const CreateTemplate: React.FC = () => {
     type: string;
     required: boolean;
   }) => {
-    console.log("New Rule:", newRule);
     setIsRuleModalOpen(false);
   };
 
@@ -143,8 +142,6 @@ const CreateTemplate: React.FC = () => {
         isActive: true,
         template_name: template_name,
       });
-
-      console.log("Component saved:", response.data);
 
       const updatedComponents = components.map((comp) =>
         comp.component_name === response.data.component_name

@@ -102,13 +102,11 @@ const CreateComponent: React.FC<Props> = ({
           ...newComponent,
           template_name: template_name,
         });
-        console.log("Updated Component:", response.data);
       } else {
         response = await axiosInstance.post("components", {
           ...newComponent,
           template_name: template_name,
         });
-        console.log("Created Component:", response.data);
       }
 
       onCreate(response.data);
@@ -116,11 +114,8 @@ const CreateComponent: React.FC<Props> = ({
 
       if (response.status === 200) {
         const accessToken = Cookies.get("access_token");
-        console.log("Access Token:", accessToken);
       }
-    } catch (error) {
-      console.error("Error:", error);
-    }
+    } catch (error) {}
   };
 
   const handleInsertRule = () => {
@@ -132,7 +127,6 @@ const CreateComponent: React.FC<Props> = ({
   };
 
   const handleAddSchemaRule = (newRule: SchemaRule) => {
-    console.log("Adding schema rule:", newRule);
     setIsModalOpen(false);
   };
 

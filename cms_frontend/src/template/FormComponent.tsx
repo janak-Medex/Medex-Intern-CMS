@@ -172,10 +172,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
       if (response.status === 201) {
         toast.success("Form submitted successfully");
-        console.log("Form submitted successfully:", response.data);
       } else {
         toast.error("Form submission failed");
-        console.error("Form submission failed");
       }
     } catch (error: any) {
       console.error("Error submitting form:", error);

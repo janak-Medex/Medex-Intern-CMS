@@ -43,9 +43,7 @@ const Template: React.FC = () => {
     if (template_name.trim() !== "") {
       try {
         const accessToken = Cookies.get("access_token");
-        console.log("Access Token:", accessToken);
         if (!accessToken) {
-          console.error("Access token not found in cookie");
           return;
         }
 
@@ -62,19 +60,14 @@ const Template: React.FC = () => {
 
         // Check if response is successful
         if (response.status === 200 || response.status === 201) {
-          console.log("Template saved successfully:", response.data);
           fetchTemplates(); // Update templates list
           settemplate_name(""); // Clear input field
           setIsModalOpen(false); // Close modal
           navigate(`/create-template/${template_name}`); // Navigate to new template page
         } else {
-          console.error("Failed to save template:", response.statusText);
         }
-      } catch (error) {
-        console.error("Error saving template:", error);
-      }
+      } catch (error) {}
     } else {
-      console.error("Template name is required");
     }
   };
 
