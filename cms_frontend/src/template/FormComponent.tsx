@@ -1,4 +1,4 @@
-import React, { useState, FormEvent, useEffect } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 import {
   AiOutlineFileImage,
   AiOutlineClose,
@@ -34,6 +34,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }[];
   }>({});
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [isFullscreenActive, setIsFullscreenActive] = useState(false);
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
   useEffect(() => {
@@ -189,6 +191,39 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }
   };
 
+  const toggleFullscreen = (src: string) => {
+    if (isFullscreenActive && fullscreenImage === src) {
+      closeFullscreen();
+    } else {
+      setFullscreenImage(src);
+      openFullscreen();
+    }
+  };
+
+  const openFullscreen = () => {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) {
+      elem.msRequestFullscreen();
+    }
+    setIsFullscreenActive(true);
+  };
+
+  const closeFullscreen = () => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+    setIsFullscreenActive(false);
+    setFullscreenImage(null);
+  };
+
   const getFieldComponent = (
     key: string,
     value: string | null | (File | string)[]
@@ -217,11 +252,15 @@ const FormComponent: React.FC<FormComponentProps> = ({
           </label>
           <div className="grid grid-cols-3 gap-4 mb-4">
             {previews.map((preview, index) => (
-              <div key={index} className="relative bg-gray-100 p-2 rounded-lg">
+              <div
+                key={index}
+                className="relative bg-gray-100 p-2 rounded-lg"
+                onClick={() => toggleFullscreen(preview.src)}
+              >
                 {preview.type === "video" && (
                   <video
                     src={preview.src}
-                    className="w-full h-32 object-cover rounded"
+                    className="w-full h-32 object-cover rounded cursor-pointer"
                     controls
                   />
                 )}
@@ -229,18 +268,21 @@ const FormComponent: React.FC<FormComponentProps> = ({
                   <img
                     src={preview.src}
                     alt={`Preview ${index}`}
-                    className="w-full h-32 object-cover rounded"
+                    className="w-full h-32 object-cover rounded cursor-pointer"
                   />
                 )}
                 {preview.type === "file" && (
-                  <div className="w-full h-32 flex items-center justify-center bg-gray-200 rounded">
+                  <div className="w-full h-32 flex items-center justify-center bg-gray-200 rounded cursor-pointer">
                     <AiOutlineFile size={32} />
                     <span className="ml-2 text-sm">{preview.name}</span>
                   </div>
                 )}
                 <button
                   type="button"
-                  onClick={() => handleClearFile(key, index)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearFile(key, index);
+                  }}
                   className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
                 >
                   <AiOutlineClose />
@@ -327,6 +369,25 @@ const FormComponent: React.FC<FormComponentProps> = ({
           </button>
         </div>
       </form>
+      {fullscreenImage && isFullscreenActive && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50"
+          onClick={closeFullscreen}
+        >
+          <img
+            src={fullscreenImage}
+            alt="Fullscreen"
+            className="max-w-full max-h-full"
+          />
+          <button
+            type="button"
+            onClick={closeFullscreen}
+            className="absolute top-4 right-4 bg-red-500 text-white rounded-full p-2"
+          >
+            <AiOutlineClose size={24} />
+          </button>
+        </div>
+      )}
     </>
   );
 };
