@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import Modal from "../utils/Modal";
 
-interface SchemaRule {
+// Define the SchemaRule interface here
+export interface SchemaRule {
   fieldName: string;
   type: string;
   required: boolean;

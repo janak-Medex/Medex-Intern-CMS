@@ -1,38 +1,73 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
-import Modal from "../utils/Modal"; // Assuming you have a Modal component for popup
+import Modal from "../utils/Modal";
+import axiosInstance from "../http/axiosInstance";
+import Cookies from "js-cookie";
 
 const Template: React.FC = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [templateName, setTemplateName] = useState<string>("");
-  const [templates, setTemplates] = useState<string[]>([]); // Array to store template names
+  const [template_name, settemplate_name] = useState<string>("");
+  const [templates, setTemplates] = useState<any[]>([]); // Array to store template objects
 
-  // Function to handle opening modal for creating new template
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await axiosInstance.get("/templates");
+      setTemplates(response.data);
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+    }
+  };
+
   const handleCreateTemplate = () => {
     setIsModalOpen(true);
   };
 
-  // Function to handle closing modal
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setTemplateName(""); // Clear template name input when modal is closed
+    settemplate_name("");
   };
 
-  // Function to handle changes in the template name input field
-  const handleTemplateNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTemplateName(e.target.value);
+  const handletemplate_nameChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    settemplate_name(e.target.value);
   };
 
-  // Function to handle saving a new template
-  const handleSaveTemplate = () => {
-    if (templateName.trim() !== "") {
-      setTemplates((prevTemplates) => [...prevTemplates, templateName.trim()]);
-      setTemplateName(""); // Clear template name input after saving
-      setIsModalOpen(false); // Close modal after saving
+  const handleSaveTemplate = async () => {
+    if (template_name.trim() !== "") {
+      try {
+        const accessToken = Cookies.get("access_token");
+        if (!accessToken) {
+          return;
+        }
 
-      navigate(`/create-template`);
+        // Send POST request to create a new template
+        const response = await axiosInstance.post(
+          "/templates",
+          { template_name: template_name.trim() },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`, // Include access token in Authorization header
+            },
+          }
+        );
+
+        // Check if response is successful
+        if (response.status === 200 || response.status === 201) {
+          fetchTemplates(); // Update templates list
+          settemplate_name(""); // Clear input field
+          setIsModalOpen(false); // Close modal
+          navigate(`/create-template/${template_name}`); // Navigate to new template page
+        } else {
+        }
+      } catch (error) {}
+    } else {
     }
   };
 
@@ -60,10 +95,15 @@ const Template: React.FC = () => {
           {templates.length === 0 ? (
             <p className="text-gray-600">No templates created yet.</p>
           ) : (
-            templates.map((template, index) => (
-              <Link key={index} to={`/create-template/${template}`}>
+            templates.map((template) => (
+              <Link
+                key={template._id}
+                to={`/create-template/${template.template_name}`}
+              >
                 <div className="bg-white rounded-md p-4 shadow-md flex justify-between items-center cursor-pointer">
-                  <span className="text-lg font-semibold">{template}</span>
+                  <span className="text-lg font-semibold">
+                    {template.template_name}
+                  </span>
                 </div>
               </Link>
             ))
@@ -77,8 +117,8 @@ const Template: React.FC = () => {
             type="text"
             className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-teal-500 w-full"
             placeholder="Template Name"
-            value={templateName}
-            onChange={handleTemplateNameChange}
+            value={template_name}
+            onChange={handletemplate_nameChange}
           />
           <div className="mt-4 flex justify-end">
             <button
