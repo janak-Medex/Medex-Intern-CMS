@@ -18,13 +18,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     event.preventDefault();
 
     try {
-      const response = await axiosInstance.post(
-        `${import.meta.env.VITE_API_BASE_URL}user/login`,
-        {
-          user_name,
-          password,
-        }
-      );
+      const response = await axiosInstance.post(`user/login`, {
+        user_name,
+        password,
+      });
       if (response.status === 200) {
         const { accessToken } = response.data;
         Cookies.set("access_token", accessToken, {
