@@ -12,12 +12,8 @@ import "react-toastify/dist/ReactToastify.css";
 interface FormComponentProps {
   template_name: string;
   component_name: string;
-  formData: {
-    [key: string]: string | null | (File | string)[];
-  };
-  setFormData: (data: {
-    [key: string]: string | null | (File | string)[];
-  }) => void;
+  formData: { [key: string]: any }[];
+  setFormData: (data: { [key: string]: any }[]) => void;
 }
 
 const FormComponent: React.FC<FormComponentProps> = ({
@@ -27,26 +23,24 @@ const FormComponent: React.FC<FormComponentProps> = ({
   setFormData,
 }) => {
   const [selectedFilePreviews, setSelectedFilePreviews] = useState<{
-    [key: string]: {
-      src: string;
-      type: "image" | "video" | "file";
-      name: string;
-    }[];
+    [key: string]: any[];
   }>({});
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  const [isFullscreenActive, setIsFullscreenActive] = useState(false);
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
   useEffect(() => {
-    const initialPreviews: {
-      [key: string]: {
-        src: string;
-        type: "image" | "video" | "file";
-        name: string;
-      }[];
-    } = {};
-    Object.entries(formData || {}).forEach(([key, value]) => {
+    console.log("FormComponent rendered with formData:", formData);
+  }, [formData]);
+
+  useEffect(() => {
+    if (!Array.isArray(formData) || formData.length === 0) {
+      setSelectedFilePreviews({});
+      return;
+    }
+
+    const initialPreviews: { [key: string]: any[] } = {};
+
+    Object.entries(formData[0]).forEach(([key, value]) => {
       if (Array.isArray(value) && value.length > 0) {
         initialPreviews[key] = value.map((item) => {
           if (typeof item === "string") {
@@ -59,72 +53,84 @@ const FormComponent: React.FC<FormComponentProps> = ({
               ? "image"
               : "file";
             return { src, type, name: item.split("\\").pop() || "" };
+          } else {
+            return {
+              src: URL.createObjectURL(item as File),
+              type: (item as File).type.startsWith("video/")
+                ? "video"
+                : (item as File).type.startsWith("image/")
+                ? "image"
+                : "file",
+              name: (item as File).name,
+            };
           }
-          return {
-            src: URL.createObjectURL(item as File),
-            type: (item as File).type.startsWith("video/")
-              ? "video"
-              : (item as File).type.startsWith("image/")
-              ? "image"
-              : "file",
-            name: (item as File).name,
-          };
         });
       }
     });
+
     setSelectedFilePreviews(initialPreviews);
   }, [formData, baseImageUrl]);
 
-  const handleFieldChange = (key: string, value: string) => {
-    setFormData({
-      ...formData,
-      [key]: value === "" ? null : value,
-    });
+  const handleFieldChange = (key: string, value: any) => {
+    console.log(`Updating field: key=${key}, value=`, value);
+    const newData = [...formData];
+    newData[0] = { ...newData[0], [key]: value === "" ? null : value };
+    console.log("Updated formData:", newData);
+    setFormData(newData);
     setErrors((prevErrors) => ({ ...prevErrors, [key]: "" }));
   };
 
+  // In FormComponent.tsx
+
   const handleFileSelect = (key: string, files: FileList) => {
+    console.log(`Selecting files: key=${key}, files=`, files);
     const fileArray = Array.from(files);
-    setFormData({
-      ...formData,
-      [key]: [...((formData[key] as (File | string)[]) || []), ...fileArray],
-    });
+    const newData = [...formData];
+    newData[0] = {
+      ...newData[0],
+      [key]: [...((newData[0][key] as (File | string)[]) || []), ...fileArray],
+    };
+    console.log("Updated formData after file selection:", newData);
+    setFormData(newData);
 
     const newPreviews = fileArray.map((file) => ({
       src: URL.createObjectURL(file),
       type: file.type.startsWith("video/")
-        ? ("video" as const)
+        ? "video"
         : file.type.startsWith("image/")
-        ? ("image" as const)
-        : ("file" as const),
+        ? "image"
+        : "file",
       name: file.name,
     }));
     setSelectedFilePreviews((prev) => ({
       ...prev,
       [key]: [...(prev[key] || []), ...newPreviews],
     }));
-
     setErrors((prevErrors) => ({ ...prevErrors, [key]: "" }));
   };
 
-  const handleClearFile = (key: string, index: number) => {
-    const updatedFiles = (formData[key] as (File | string)[]).filter(
-      (_, i) => i !== index
+  const handleClearFile = (key: string, fileIndex: number) => {
+    console.log(`Clearing file: key=${key}, fileIndex=${fileIndex}`);
+    const newData = [...formData];
+    const updatedFiles = (newData[0][key] as (File | string)[]).filter(
+      (_, i) => i !== fileIndex
     );
-    setFormData({
-      ...formData,
+    newData[0] = {
+      ...newData[0],
       [key]: updatedFiles.length > 0 ? updatedFiles : null,
-    });
+    };
+    console.log("Updated formData after clearing file:", newData);
+    setFormData(newData);
 
     setSelectedFilePreviews((prev) => ({
       ...prev,
-      [key]: prev[key].filter((_, i) => i !== index),
+      [key]: prev[key].filter((_, i) => i !== fileIndex),
     }));
   };
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
-    Object.entries(formData || {}).forEach(([key, value]) => {
+    Object.entries(formData[0]).forEach(([key, value]) => {
       if (
         value === null ||
         value === undefined ||
@@ -145,11 +151,10 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }
 
     const formPayload = new FormData();
-
     formPayload.append("template_name", template_name);
     formPayload.append("component_name", component_name);
 
-    Object.entries(formData || {}).forEach(([key, value]) => {
+    Object.entries(formData[0]).forEach(([key, value]) => {
       if (Array.isArray(value)) {
         value.forEach((item) => {
           if (item instanceof File) {
@@ -165,11 +170,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
     try {
       const response = await axiosInstance.post("/components", formPayload, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
       if (response.status === 201) {
         toast.success("Form submitted successfully");
       } else {
@@ -177,55 +179,13 @@ const FormComponent: React.FC<FormComponentProps> = ({
       }
     } catch (error: any) {
       console.error("Error submitting form:", error);
-      if (error.response && error.response.data) {
-        const { message, errors } = error.response.data;
-        toast.error(message || "An error occurred");
-        if (errors && Array.isArray(errors)) {
-          errors.forEach((err: string) => toast.error(err));
-        }
-      } else {
-        toast.error("An unexpected error occurred");
-      }
+      toast.error(
+        error.response?.data?.message || "An unexpected error occurred"
+      );
     }
   };
 
-  const toggleFullscreen = (src: string) => {
-    if (isFullscreenActive && fullscreenImage === src) {
-      closeFullscreen();
-    } else {
-      setFullscreenImage(src);
-      openFullscreen();
-    }
-  };
-
-  const openFullscreen = () => {
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) {
-      elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) {
-      elem.msRequestFullscreen();
-    }
-    setIsFullscreenActive(true);
-  };
-
-  const closeFullscreen = () => {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    } else if (document.msExitFullscreen) {
-      document.msExitFullscreen();
-    }
-    setIsFullscreenActive(false);
-    setFullscreenImage(null);
-  };
-
-  const getFieldComponent = (
-    key: string,
-    value: string | null | (File | string)[]
-  ) => {
+  const getFieldComponent = (key: string, value: any) => {
     if (
       key.includes("image") ||
       key.includes("video") ||
@@ -249,28 +209,27 @@ const FormComponent: React.FC<FormComponentProps> = ({
             {key}
           </label>
           <div className="grid grid-cols-3 gap-4 mb-4">
-            {previews.map((preview, index) => (
+            {previews.map((preview, fileIndex) => (
               <div
-                key={index}
+                key={fileIndex}
                 className="relative bg-gray-100 p-2 rounded-lg"
-                onClick={() => toggleFullscreen(preview.src)}
               >
                 {preview.type === "video" && (
                   <video
                     src={preview.src}
-                    className="w-full h-32 object-cover rounded cursor-pointer"
+                    className="w-full h-32 object-cover rounded"
                     controls
                   />
                 )}
                 {preview.type === "image" && (
                   <img
                     src={preview.src}
-                    alt={`Preview ${index}`}
-                    className="w-full h-32 object-cover rounded cursor-pointer"
+                    alt={`Preview ${fileIndex}`}
+                    className="w-full h-32 object-cover rounded"
                   />
                 )}
                 {preview.type === "file" && (
-                  <div className="w-full h-32 flex items-center justify-center bg-gray-200 rounded cursor-pointer">
+                  <div className="w-full h-32 flex items-center justify-center bg-gray-200 rounded">
                     <AiOutlineFile size={32} />
                     <span className="ml-2 text-sm">{preview.name}</span>
                   </div>
@@ -279,7 +238,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleClearFile(key, index);
+                    handleClearFile(key, fileIndex);
                   }}
                   className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
                 >
@@ -303,9 +262,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
               multiple
               accept={acceptType}
               onChange={(e) => {
-                if (e.target.files && e.target.files.length > 0) {
+                if (e.target.files && e.target.files.length > 0)
                   handleFileSelect(key, e.target.files);
-                }
               }}
             />
           </div>
@@ -322,13 +280,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
           </label>
           <input
             type="text"
-            value={
-              typeof value === "string"
-                ? value
-                : Array.isArray(value)
-                ? value[0] || ""
-                : ""
-            }
+            value={value || ""}
             onChange={(e) => handleFieldChange(key, e.target.value)}
             className={`w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500 ${
               errors[key] ? "border-red-500" : ""
@@ -342,8 +294,15 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }
   };
 
-  if (!formData || Object.keys(formData).length === 0) {
-    return <div>No form data available</div>;
+  console.log("Rendering FormComponent with formData:", formData);
+
+  if (
+    !Array.isArray(formData) ||
+    formData.length === 0 ||
+    typeof formData[0] !== "object"
+  ) {
+    console.error("Invalid formData:", formData);
+    return <div>No valid form data available</div>;
   }
 
   return (
@@ -354,7 +313,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         className="max-w-2xl mx-auto font-sans bg-white p-6 rounded-lg shadow-md"
       >
         <div className="mb-8">
-          {Object.entries(formData).map(([key, value]) =>
+          {Object.entries(formData[0]).map(([key, value]) =>
             getFieldComponent(key, value)
           )}
         </div>
@@ -367,25 +326,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
           </button>
         </div>
       </form>
-      {fullscreenImage && isFullscreenActive && (
-        <div
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50"
-          onClick={closeFullscreen}
-        >
-          <img
-            src={fullscreenImage}
-            alt="Fullscreen"
-            className="max-w-full max-h-full"
-          />
-          <button
-            type="button"
-            onClick={closeFullscreen}
-            className="absolute top-4 right-4 bg-red-500 text-white rounded-full p-2"
-          >
-            <AiOutlineClose size={24} />
-          </button>
-        </div>
-      )}
     </>
   );
 };

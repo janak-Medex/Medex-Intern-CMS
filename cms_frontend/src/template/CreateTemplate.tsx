@@ -63,7 +63,16 @@ const CreateTemplate: React.FC = () => {
       const component = components.find(
         (comp) => comp.component_name === component_name
       );
-      setActiveComponent(component || null);
+      if (component) {
+        setActiveComponent({
+          ...component,
+          data: Array.isArray(component.data)
+            ? component.data
+            : [component.data],
+        });
+      } else {
+        setActiveComponent(null);
+      }
       setIsCreatingComponent(false);
     } else {
       setActiveComponent(null);
@@ -122,12 +131,14 @@ const CreateTemplate: React.FC = () => {
       });
     }
   };
+
   const handleAddRule = (newRule: {
     fieldName: string;
     type: string;
     required: boolean;
   }) => {
     setIsRuleModalOpen(false);
+    // Implement the logic to add the new rule
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,8 +160,16 @@ const CreateTemplate: React.FC = () => {
           : comp
       );
       setComponents(updatedComponents);
+      toast.success("Component saved successfully", {
+        className:
+          "bg-green-500 text-white font-bold py-2 px-4 rounded-md shadow-md",
+      });
     } catch (error) {
       console.error("Error saving component:", error);
+      toast.error("Failed to save component", {
+        className:
+          "bg-red-500 text-white font-bold py-2 px-4 rounded-md shadow-md",
+      });
     }
   };
 
@@ -207,25 +226,31 @@ const CreateTemplate: React.FC = () => {
               <h2 className="text-xl font-semibold mb-4">
                 {activeComponent.component_name}
               </h2>
-
+              // In CreateTemplate.tsx
               <FormComponent
-                formData={activeComponent.data}
+                formData={
+                  Array.isArray(activeComponent.data)
+                    ? activeComponent.data
+                    : [activeComponent.data]
+                }
                 component_name={activeComponent.component_name}
-                template_name={template_name}
+                template_name={template_name || ""}
                 setFormData={(updatedFormData) => {
-                  setActiveComponent((prevActiveComponent) => ({
-                    ...prevActiveComponent!,
-                    data: {
-                      ...prevActiveComponent!.data,
-                      ...updatedFormData,
-                    },
-                  }));
+                  console.log(
+                    "Parent received updated formData:",
+                    updatedFormData
+                  );
+                  setActiveComponent((prevActiveComponent) => {
+                    if (!prevActiveComponent) return null;
+                    return {
+                      ...prevActiveComponent,
+                      data: updatedFormData,
+                    };
+                  });
                 }}
-                handleSubmit={handleSubmit}
               />
             </div>
           )}
-
           {!activeComponent && !isCreatingComponent && (
             <div className="bg-white rounded-lg shadow-md p-6 flex-1 flex items-center justify-center">
               <p className="text-gray-600">
