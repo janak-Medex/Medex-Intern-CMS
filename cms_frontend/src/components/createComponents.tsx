@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import SchemaRuleModal, { SchemaRule } from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
-import Cookies from "js-cookie";
 
 export interface FormField {
   name: string;
@@ -36,7 +34,7 @@ const CreateComponent: React.FC<Props> = ({
   const { template_name } = useParams<{ template_name: string }>();
   const [component_name, setComponentName] = useState<string>("");
   const [formFields, setFormFields] = useState<FormField[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  // const [setIsModalOpen] = useState<boolean>(false);
   // debugger;
   useEffect(() => {
     if (initialComponent) {
@@ -113,22 +111,21 @@ const CreateComponent: React.FC<Props> = ({
       onClose();
 
       if (response.status === 200) {
-        const accessToken = Cookies.get("access_token");
       }
     } catch (error) {}
   };
 
-  const handleInsertRule = () => {
-    setIsModalOpen(true);
-  };
+  // const handleInsertRule = () => {
+  //   setIsModalOpen(true);
+  // };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
+  // const handleCloseModal = () => {
+  //   setIsModalOpen(false);
+  // };
 
-  const handleAddSchemaRule = (newRule: SchemaRule) => {
-    setIsModalOpen(false);
-  };
+  // const handleAddSchemaRule = (newRule: SchemaRule) => {
+  //   setIsModalOpen(false);
+  // };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 relative">
@@ -195,18 +192,18 @@ const CreateComponent: React.FC<Props> = ({
           </button>
           <button
             type="button"
-            onClick={handleInsertRule}
+            // onClick={handleInsertRule}
             className="px-4 py-3 text-sm text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none transition-colors duration-300"
           >
             Add New Schema Rule
           </button>
         </div>
       </form>
-      <SchemaRuleModal
+      {/* <SchemaRuleModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onAddRule={handleAddSchemaRule}
-      />
+      /> */}
     </div>
   );
 };

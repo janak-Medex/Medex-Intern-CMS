@@ -10,7 +10,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 interface FormComponentProps {
-  template_name: string;
+  template_name: any;
   component_name: string;
   formData: {
     [key: string]: string | null | (File | string)[];
@@ -18,6 +18,7 @@ interface FormComponentProps {
   setFormData: (data: {
     [key: string]: string | null | (File | string)[];
   }) => void;
+  handleSubmit: (e: React.FormEvent) => Promise<void>; // Make sure this line exists
 }
 
 const FormComponent: React.FC<FormComponentProps> = ({
@@ -34,8 +35,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }[];
   }>({});
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  const [isFullscreenActive, setIsFullscreenActive] = useState(false);
+  // const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  // const [isFullscreenActive, setIsFullscreenActive] = useState(false);
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
   useEffect(() => {
@@ -189,38 +190,38 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }
   };
 
-  const toggleFullscreen = (src: string) => {
-    if (isFullscreenActive && fullscreenImage === src) {
-      closeFullscreen();
-    } else {
-      setFullscreenImage(src);
-      openFullscreen();
-    }
-  };
+  // const toggleFullscreen = (src: string) => {
+  //   if (isFullscreenActive && fullscreenImage === src) {
+  //     closeFullscreen();
+  //   } else {
+  //     setFullscreenImage(src);
+  //     openFullscreen();
+  //   }
+  // };
 
-  const openFullscreen = () => {
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) {
-      elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) {
-      elem.msRequestFullscreen();
-    }
-    setIsFullscreenActive(true);
-  };
+  // const openFullscreen = () => {
+  //   const elem = document.documentElement;
+  //   if (elem.requestFullscreen) {
+  //     elem.requestFullscreen();
+  //   } else if (elem.webkitRequestFullscreen) {
+  //     elem.webkitRequestFullscreen();
+  //   } else if (elem.msRequestFullscreen) {
+  //     elem.msRequestFullscreen();
+  //   }
+  //   setIsFullscreenActive(true);
+  // };
 
-  const closeFullscreen = () => {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    } else if (document.msExitFullscreen) {
-      document.msExitFullscreen();
-    }
-    setIsFullscreenActive(false);
-    setFullscreenImage(null);
-  };
+  // const closeFullscreen = () => {
+  //   if (document.exitFullscreen) {
+  //     document.exitFullscreen();
+  //   } else if (document.webkitExitFullscreen) {
+  //     document.webkitExitFullscreen();
+  //   } else if (document.msExitFullscreen) {
+  //     document.msExitFullscreen();
+  //   }
+  //   setIsFullscreenActive(false);
+  //   setFullscreenImage(null);
+  // };
 
   const getFieldComponent = (
     key: string,
@@ -253,7 +254,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
               <div
                 key={index}
                 className="relative bg-gray-100 p-2 rounded-lg"
-                onClick={() => toggleFullscreen(preview.src)}
+                // onClick={() => toggleFullscreen(preview.src)}
               >
                 {preview.type === "video" && (
                   <video
@@ -325,7 +326,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
             value={
               typeof value === "string"
                 ? value
-                : Array.isArray(value)
+                : Array.isArray(value) && typeof value[0] === "string"
                 ? value[0] || ""
                 : ""
             }
@@ -367,10 +368,10 @@ const FormComponent: React.FC<FormComponentProps> = ({
           </button>
         </div>
       </form>
-      {fullscreenImage && isFullscreenActive && (
+      {/* {fullscreenImage && isFullscreenActive && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50"
-          onClick={closeFullscreen}
+          // onClick={closeFullscreen}
         >
           <img
             src={fullscreenImage}
@@ -379,13 +380,13 @@ const FormComponent: React.FC<FormComponentProps> = ({
           />
           <button
             type="button"
-            onClick={closeFullscreen}
+            // onClick={closeFullscreen}
             className="absolute top-4 right-4 bg-red-500 text-white rounded-full p-2"
           >
             <AiOutlineClose size={24} />
           </button>
         </div>
-      )}
+      )} */}
     </>
   );
 };

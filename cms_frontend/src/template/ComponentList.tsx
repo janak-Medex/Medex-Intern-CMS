@@ -2,7 +2,6 @@ import React from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { Component as ComponentType } from "../components/createComponents";
 import ToggleButton from "./ToogleButton";
-import { toast } from "react-toastify";
 import { confirmAlert } from "react-confirm-alert";
 
 interface ComponentListProps {
@@ -22,7 +21,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
   onDelete,
   onShowComponentForm,
 }) => {
-  const handleDelete = (componentId: string) => {
+  const handleDelete = (componentId: any) => {
     confirmAlert({
       title: "Confirm to delete",
       message: "Are you sure you want to delete this component?",
