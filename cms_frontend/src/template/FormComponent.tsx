@@ -8,6 +8,7 @@ import {
 import axiosInstance from "../http/axiosInstance";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Image } from "antd";
 
 interface FormComponentProps {
   template_name: string;
@@ -250,7 +251,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
           <label className="block text-gray-800 font-semibold mb-2">
             {key}
           </label>
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             {previews.map((preview, fileIndex) => (
               <div
                 key={fileIndex}
@@ -264,11 +265,20 @@ const FormComponent: React.FC<FormComponentProps> = ({
                   />
                 )}
                 {preview.type === "image" && (
-                  <img
-                    src={preview.src}
-                    alt={`Preview ${fileIndex}`}
-                    className="w-full h-32 object-cover rounded"
-                  />
+                  <div className="flex justify-center items-center h-32">
+                    <img
+                      src={preview.src}
+                      alt={`Preview ${fileIndex}`}
+                      className="object-contain rounded"
+                      style={{ height: "100%", width: "100%" }}
+                    />
+                  </div>
+                )}
+                {preview.type === "svg" && (
+                  <div className="flex justify-center items-center h-32">
+                    {/* Assuming preview.src contains the SVG content */}
+                    <div dangerouslySetInnerHTML={{ __html: preview.src }} />
+                  </div>
                 )}
                 {preview.type === "file" && (
                   <div className="w-full h-32 flex items-center justify-center bg-gray-200 rounded">

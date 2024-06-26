@@ -236,7 +236,7 @@ const CreateTemplate: React.FC = () => {
               <h2 className="text-xl font-semibold mb-4">
                 {activeComponent.component_name}
               </h2>
-              // In CreateTemplate.tsx
+
               <FormComponent
                 formData={
                   Array.isArray(activeComponent.data)
