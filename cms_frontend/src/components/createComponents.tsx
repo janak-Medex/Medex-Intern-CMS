@@ -6,13 +6,15 @@ import axiosInstance from "../http/axiosInstance";
 import Cookies from "js-cookie";
 
 export interface FormField {
-  [key: string]: null;
+  [key: string]: any;
 }
 
 export interface Component {
   component_name: string;
+  template_name: string;
   data: FormField[];
   isActive: boolean;
+  inner_component: number;
   _id?: string;
   __v?: number;
 }
@@ -30,60 +32,53 @@ const CreateComponent: React.FC<Props> = ({
 }) => {
   const { template_name } = useParams<{ template_name: string }>();
   const [component_name, setComponentName] = useState<string>("");
-  const [formFields, setFormFields] = useState<FormField[]>([]);
+  const [formFields, setFormFields] = useState<FormField>({});
+  const [innerComponent, setInnerComponent] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (initialComponent) {
       setComponentName(initialComponent.component_name);
-      setFormFields(initialComponent.data || []);
+      setFormFields(initialComponent.data[0] || {});
+      setInnerComponent(initialComponent.inner_component || 1);
     }
   }, [initialComponent]);
 
   const handleAddField = () => {
-    setFormFields([...formFields, {}]);
+    setFormFields({ ...formFields, "": null });
   };
 
-  const handleRemoveField = (index: number) => {
-    const updatedFields = [...formFields];
-    updatedFields.splice(index, 1);
+  const handleRemoveField = (fieldName: string) => {
+    const updatedFields = { ...formFields };
+    delete updatedFields[fieldName];
     setFormFields(updatedFields);
   };
 
-  const handleFieldChange = (index: number, oldKey: string, newKey: string) => {
-    const updatedFields = [...formFields];
-    const { [oldKey]: value, ...rest } = updatedFields[index];
-    updatedFields[index] = { ...rest, [newKey]: null };
-    setFormFields(updatedFields);
-  };
-
-  const handleAddSubField = (index: number) => {
-    const updatedFields = [...formFields];
-    updatedFields[index] = { ...updatedFields[index], "": null };
-    setFormFields(updatedFields);
-  };
-
-  const handleRemoveSubField = (index: number, key: string) => {
-    const updatedFields = [...formFields];
-    const { [key]: removed, ...rest } = updatedFields[index];
-    updatedFields[index] = rest;
+  const handleFieldChange = (oldFieldName: string, newFieldName: string) => {
+    const updatedFields = { ...formFields };
+    if (oldFieldName !== newFieldName) {
+      delete updatedFields[oldFieldName];
+    }
+    updatedFields[newFieldName] = null;
     setFormFields(updatedFields);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const newComponent = {
-      component_name: component_name,
-      template_name: template_name,
-      data: formFields,
+    const newComponent: Component = {
+      component_name,
+      template_name,
+      data: [formFields],
       isActive: true,
+      inner_component: innerComponent,
     };
 
     try {
       const response = await axiosInstance.post("components", newComponent);
 
       if (response.status === 200) {
+        const accessToken = Cookies.get("access_token");
         onCreate(response.data);
         onClose();
       }
@@ -102,6 +97,7 @@ const CreateComponent: React.FC<Props> = ({
 
   const handleAddSchemaRule = (newRule: SchemaRule) => {
     setIsModalOpen(false);
+    // Implement logic to add the new rule if needed
   };
 
   return (
@@ -128,50 +124,46 @@ const CreateComponent: React.FC<Props> = ({
           />
         </div>
         <div className="mb-4">
+          <label
+            htmlFor="inner_component"
+            className="block text-gray-700 font-bold mb-2"
+          >
+            Inner Component
+          </label>
+          <input
+            type="number"
+            id="inner_component"
+            className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
+            value={innerComponent}
+            onChange={(e) => setInnerComponent(parseInt(e.target.value) || 1)}
+            min="1"
+          />
+        </div>
+        <div className="mb-4">
           <label className="block text-gray-700 font-bold mb-2">
             Data Fields
           </label>
-          {formFields.map((field, index) => (
-            <div key={index} className="mb-4 p-4 border rounded">
-              {Object.keys(field).map((key) => (
-                <div key={key} className="flex items-center mb-2">
-                  <input
-                    type="text"
-                    className="flex-1 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500 mr-2"
-                    placeholder="Field name"
-                    value={key}
-                    onChange={(e) =>
-                      handleFieldChange(index, key, e.target.value)
-                    }
-                  />
-                  <button
-                    type="button"
-                    className="ml-2 text-red-500 focus:outline-none"
-                    onClick={() => handleRemoveSubField(index, key)}
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="flex items-center text-teal-600 focus:outline-none mt-2"
-                onClick={() => handleAddSubField(index)}
-              >
-                <FaPlus className="mr-1" /> Add Sub-field
-              </button>
+          {Object.entries(formFields).map(([fieldName, _], index) => (
+            <div key={index} className="flex items-center mb-2">
+              <input
+                type="text"
+                className="flex-1 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
+                placeholder="Field name"
+                value={fieldName}
+                onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+              />
               <button
                 type="button"
                 className="ml-2 text-red-500 focus:outline-none"
-                onClick={() => handleRemoveField(index)}
+                onClick={() => handleRemoveField(fieldName)}
               >
-                <FaTrash /> Remove Field
+                <FaTrash />
               </button>
             </div>
           ))}
           <button
             type="button"
-            className="flex items-center text-teal-600 focus:outline-none"
+            className="flex items-center text-teal-600 focus:outline-none mt-2"
             onClick={handleAddField}
           >
             <FaPlus className="mr-1" /> Add Field
