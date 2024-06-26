@@ -239,6 +239,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         : key.includes("image")
         ? AiOutlineFileImage
         : AiOutlineFile;
+
       const previews = selectedFilePreviews[key]?.[index] || [];
       const acceptType = key.includes("video")
         ? "video/*"
@@ -266,17 +267,16 @@ const FormComponent: React.FC<FormComponentProps> = ({
                 )}
                 {preview.type === "image" && (
                   <div className="flex justify-center items-center h-32">
-                    <img
+                    <Image
                       src={preview.src}
                       alt={`Preview ${fileIndex}`}
                       className="object-contain rounded"
-                      style={{ height: "100%", width: "100%" }}
+                      style={{ maxHeight: "100%", maxWidth: "100%" }}
                     />
                   </div>
                 )}
                 {preview.type === "svg" && (
                   <div className="flex justify-center items-center h-32">
-                    {/* Assuming preview.src contains the SVG content */}
                     <div dangerouslySetInnerHTML={{ __html: preview.src }} />
                   </div>
                 )}
