@@ -6,17 +6,12 @@ import axiosInstance from "../http/axiosInstance";
 import Cookies from "js-cookie";
 
 export interface FormField {
-  name: string;
-  value: any;
-}
-
-export interface InitialData {
-  [key: string]: any;
+  [key: string]: null;
 }
 
 export interface Component {
   component_name: string;
-  data: InitialData;
+  data: FormField[];
   isActive: boolean;
   _id?: string;
   __v?: number;
@@ -37,26 +32,16 @@ const CreateComponent: React.FC<Props> = ({
   const [component_name, setComponentName] = useState<string>("");
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  // debugger;
+
   useEffect(() => {
     if (initialComponent) {
       setComponentName(initialComponent.component_name);
-      try {
-        const parsedData = initialComponent.data || {};
-        setFormFields(
-          Object.entries(parsedData).map(([key, value]) => ({
-            name: key,
-            value: value,
-          }))
-        );
-      } catch (error) {
-        console.error("Error parsing component data:", error);
-      }
+      setFormFields(initialComponent.data || []);
     }
   }, [initialComponent]);
 
   const handleAddField = () => {
-    setFormFields([...formFields, { name: "", value: null }]);
+    setFormFields([...formFields, {}]);
   };
 
   const handleRemoveField = (index: number) => {
@@ -65,57 +50,46 @@ const CreateComponent: React.FC<Props> = ({
     setFormFields(updatedFields);
   };
 
-  const handleFieldChange = (
-    index: number,
-    fieldName: string,
-    fieldValue: any = null
-  ) => {
+  const handleFieldChange = (index: number, oldKey: string, newKey: string) => {
     const updatedFields = [...formFields];
-    if (fieldName !== undefined) {
-      updatedFields[index].name = fieldName;
-    }
-    if (fieldValue !== undefined) {
-      updatedFields[index].value = fieldValue;
-    }
+    const { [oldKey]: value, ...rest } = updatedFields[index];
+    updatedFields[index] = { ...rest, [newKey]: null };
+    setFormFields(updatedFields);
+  };
+
+  const handleAddSubField = (index: number) => {
+    const updatedFields = [...formFields];
+    updatedFields[index] = { ...updatedFields[index], "": null };
+    setFormFields(updatedFields);
+  };
+
+  const handleRemoveSubField = (index: number, key: string) => {
+    const updatedFields = [...formFields];
+    const { [key]: removed, ...rest } = updatedFields[index];
+    updatedFields[index] = rest;
     setFormFields(updatedFields);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const initialData = formFields.reduce((acc, field) => {
-      acc[field.name] = field.value;
-      return acc;
-    }, {} as InitialData);
-
     const newComponent = {
       component_name: component_name,
       template_name: template_name,
-      data: initialData, // This should be an object, not a string
+      data: formFields,
       isActive: true,
     };
 
     try {
-      let response;
-      if (initialComponent) {
-        response = await axiosInstance.post("components", {
-          ...newComponent,
-          template_name: template_name,
-        });
-      } else {
-        response = await axiosInstance.post("components", {
-          ...newComponent,
-          template_name: template_name,
-        });
-      }
-
-      onCreate(response.data);
-      onClose();
+      const response = await axiosInstance.post("components", newComponent);
 
       if (response.status === 200) {
-        const accessToken = Cookies.get("access_token");
+        onCreate(response.data);
+        onClose();
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error("Error creating/updating component:", error);
+    }
   };
 
   const handleInsertRule = () => {
@@ -158,26 +132,43 @@ const CreateComponent: React.FC<Props> = ({
             Data Fields
           </label>
           {formFields.map((field, index) => (
-            <div key={index} className="flex items-center mb-2">
-              <input
-                type="text"
-                className="flex-1 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
-                placeholder="Field name"
-                value={field.name}
-                onChange={(e) =>
-                  handleFieldChange(index, e.target.value, undefined)
-                }
-              />
+            <div key={index} className="mb-4 p-4 border rounded">
+              {Object.keys(field).map((key) => (
+                <div key={key} className="flex items-center mb-2">
+                  <input
+                    type="text"
+                    className="flex-1 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500 mr-2"
+                    placeholder="Field name"
+                    value={key}
+                    onChange={(e) =>
+                      handleFieldChange(index, key, e.target.value)
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="ml-2 text-red-500 focus:outline-none"
+                    onClick={() => handleRemoveSubField(index, key)}
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="flex items-center text-teal-600 focus:outline-none mt-2"
+                onClick={() => handleAddSubField(index)}
+              >
+                <FaPlus className="mr-1" /> Add Sub-field
+              </button>
               <button
                 type="button"
                 className="ml-2 text-red-500 focus:outline-none"
                 onClick={() => handleRemoveField(index)}
               >
-                <FaTrash />
+                <FaTrash /> Remove Field
               </button>
             </div>
           ))}
-
           <button
             type="button"
             className="flex items-center text-teal-600 focus:outline-none"

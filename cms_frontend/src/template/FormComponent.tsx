@@ -42,29 +42,35 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
     Object.entries(formData[0]).forEach(([key, value]) => {
       if (Array.isArray(value) && value.length > 0) {
-        initialPreviews[key] = value.map((item) => {
-          if (typeof item === "string") {
-            const src = item.startsWith("http")
-              ? item
-              : `${baseImageUrl}${item.split("uploads\\")[1]}`;
-            const type = src.match(/\.(mp4|webm|ogg)$/i)
-              ? "video"
-              : src.match(/\.(jpg|jpeg|png|gif)$/i)
-              ? "image"
-              : "file";
-            return { src, type, name: item.split("\\").pop() || "" };
-          } else {
-            return {
-              src: URL.createObjectURL(item as File),
-              type: (item as File).type.startsWith("video/")
+        initialPreviews[key] = value
+          .map((item) => {
+            if (item === null) {
+              return null; // Skip null items
+            }
+            if (typeof item === "string") {
+              const src = item.startsWith("http")
+                ? item
+                : `${baseImageUrl}${item.split("uploads\\")[1]}`;
+              const type = src.match(/\.(mp4|webm|ogg)$/i)
                 ? "video"
-                : (item as File).type.startsWith("image/")
+                : src.match(/\.(jpg|jpeg|png|gif)$/i)
                 ? "image"
-                : "file",
-              name: (item as File).name,
-            };
-          }
-        });
+                : "file";
+              return { src, type, name: item.split("\\").pop() || "" };
+            } else if (item instanceof File) {
+              return {
+                src: URL.createObjectURL(item),
+                type: item.type.startsWith("video/")
+                  ? "video"
+                  : item.type.startsWith("image/")
+                  ? "image"
+                  : "file",
+                name: item.name,
+              };
+            }
+            return null; // Skip invalid items
+          })
+          .filter(Boolean); // Remove null entries
       }
     });
 
