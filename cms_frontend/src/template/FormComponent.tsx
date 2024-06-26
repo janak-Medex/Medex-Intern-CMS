@@ -23,9 +23,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
   setFormData,
 }) => {
   const [selectedFilePreviews, setSelectedFilePreviews] = useState<{
-    [key: string]: any[];
+    [key: string]: any[][];
   }>({});
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [errors, setErrors] = useState<{ [key: string]: string[] }>({});
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
   useEffect(() => {
@@ -38,65 +38,76 @@ const FormComponent: React.FC<FormComponentProps> = ({
       return;
     }
 
-    const initialPreviews: { [key: string]: any[] } = {};
+    const initialPreviews: { [key: string]: any[][] } = {};
 
-    Object.entries(formData[0]).forEach(([key, value]) => {
-      if (Array.isArray(value) && value.length > 0) {
-        initialPreviews[key] = value
-          .map((item) => {
-            if (item === null) {
-              return null; // Skip null items
-            }
-            if (typeof item === "string") {
-              const src = item.startsWith("http")
-                ? item
-                : `${baseImageUrl}${item.split("uploads\\")[1]}`;
-              const type = src.match(/\.(mp4|webm|ogg)$/i)
-                ? "video"
-                : src.match(/\.(jpg|jpeg|png|gif)$/i)
-                ? "image"
-                : "file";
-              return { src, type, name: item.split("\\").pop() || "" };
-            } else if (item instanceof File) {
-              return {
-                src: URL.createObjectURL(item),
-                type: item.type.startsWith("video/")
+    formData.forEach((item, index) => {
+      Object.entries(item).forEach(([key, value]) => {
+        if (Array.isArray(value) && value.length > 0) {
+          if (!initialPreviews[key]) {
+            initialPreviews[key] = [];
+          }
+          initialPreviews[key][index] = value
+            .map((item) => {
+              if (item === null) {
+                return null;
+              }
+              if (typeof item === "string") {
+                const src = item.startsWith("http")
+                  ? item
+                  : `${baseImageUrl}${item.split("uploads\\")[1]}`;
+                const type = src.match(/\.(mp4|webm|ogg)$/i)
                   ? "video"
-                  : item.type.startsWith("image/")
+                  : src.match(/\.(jpg|jpeg|png|gif)$/i)
                   ? "image"
-                  : "file",
-                name: item.name,
-              };
-            }
-            return null; // Skip invalid items
-          })
-          .filter(Boolean); // Remove null entries
-      }
+                  : "file";
+                return { src, type, name: item.split("\\").pop() || "" };
+              } else if (item instanceof File) {
+                return {
+                  src: URL.createObjectURL(item),
+                  type: item.type.startsWith("video/")
+                    ? "video"
+                    : item.type.startsWith("image/")
+                    ? "image"
+                    : "file",
+                  name: item.name,
+                };
+              }
+              return null;
+            })
+            .filter(Boolean);
+        }
+      });
     });
 
     setSelectedFilePreviews(initialPreviews);
   }, [formData, baseImageUrl]);
 
-  const handleFieldChange = (key: string, value: any) => {
-    console.log(`Updating field: key=${key}, value=`, value);
+  const handleFieldChange = (index: number, key: string, value: any) => {
+    console.log(`Updating field: index=${index}, key=${key}, value=`, value);
     const newData = [...formData];
-    newData[0] = { ...newData[0], [key]: value === "" ? null : value };
+    newData[index] = { ...newData[index], [key]: value === "" ? null : value };
     console.log("Updated formData:", newData);
     setFormData(newData);
-    setErrors((prevErrors) => ({ ...prevErrors, [key]: "" }));
+    setErrors((prevErrors) => {
+      const newErrors = { ...prevErrors };
+      if (!newErrors[key]) {
+        newErrors[key] = [];
+      }
+      newErrors[key][index] = "";
+      return newErrors;
+    });
   };
 
-  // In FormComponent.tsx
-
-  const handleFileSelect = (key: string, files: FileList) => {
-    console.log(`Selecting files: key=${key}, files=`, files);
+  const handleFileSelect = (index: number, key: string, files: FileList) => {
     const fileArray = Array.from(files);
     const newData = [...formData];
-    newData[0] = {
-      ...newData[0],
-      [key]: [...((newData[0][key] as (File | string)[]) || []), ...fileArray],
+    newData[index] = {
+      ...newData[index],
+      [key]: [
+        ...((newData[index][key] as (File | string)[]) || []),
+        ...fileArray,
+      ],
     };
-    console.log("Updated formData after file selection:", newData);
     setFormData(newData);
 
     const newPreviews = fileArray.map((file) => ({
@@ -108,45 +119,58 @@ const FormComponent: React.FC<FormComponentProps> = ({
         : "file",
       name: file.name,
     }));
+
     setSelectedFilePreviews((prev) => ({
       ...prev,
-      [key]: [...(prev[key] || []), ...newPreviews],
+      [key]: {
+        ...prev[key],
+        [index]: [...(prev[key]?.[index] || []), ...newPreviews],
+      },
     }));
-    setErrors((prevErrors) => ({ ...prevErrors, [key]: "" }));
   };
 
-  const handleClearFile = (key: string, fileIndex: number) => {
-    console.log(`Clearing file: key=${key}, fileIndex=${fileIndex}`);
+  const handleClearFile = (index: number, key: string, fileIndex: number) => {
+    console.log(
+      `Clearing file: index=${index}, key=${key}, fileIndex=${fileIndex}`
+    );
     const newData = [...formData];
-    const updatedFiles = (newData[0][key] as (File | string)[]).filter(
+    const updatedFiles = (newData[index][key] as (File | string)[]).filter(
       (_, i) => i !== fileIndex
     );
-    newData[0] = {
-      ...newData[0],
+    newData[index] = {
+      ...newData[index],
       [key]: updatedFiles.length > 0 ? updatedFiles : null,
     };
     console.log("Updated formData after clearing file:", newData);
     setFormData(newData);
 
-    setSelectedFilePreviews((prev) => ({
-      ...prev,
-      [key]: prev[key].filter((_, i) => i !== fileIndex),
-    }));
+    setSelectedFilePreviews((prev) => {
+      const newState = { ...prev };
+      newState[key][index] = newState[key][index].filter(
+        (_, i) => i !== fileIndex
+      );
+      return newState;
+    });
   };
 
   const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
-    Object.entries(formData[0]).forEach(([key, value]) => {
-      if (
-        value === null ||
-        value === undefined ||
-        (Array.isArray(value) && value.length === 0)
-      ) {
-        newErrors[key] = `${key} is required`;
-      }
+    const newErrors: { [key: string]: string[] } = {};
+    formData.forEach((item, index) => {
+      Object.entries(item).forEach(([key, value]) => {
+        if (
+          value === null ||
+          value === undefined ||
+          (Array.isArray(value) && value.length === 0)
+        ) {
+          if (!newErrors[key]) {
+            newErrors[key] = [];
+          }
+          newErrors[key][index] = `${key} is required`;
+        }
+      });
     });
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return Object.values(newErrors).every((arr) => arr.every((err) => !err));
   };
 
   const handleFormSubmit = async (e: FormEvent) => {
@@ -160,19 +184,31 @@ const FormComponent: React.FC<FormComponentProps> = ({
     formPayload.append("template_name", template_name);
     formPayload.append("component_name", component_name);
 
-    Object.entries(formData[0]).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        value.forEach((item) => {
-          if (item instanceof File) {
-            formPayload.append(`${key}`, item);
-          } else if (typeof item === "string") {
-            formPayload.append(`${key}`, item);
-          }
-        });
-      } else if (value !== null) {
-        formPayload.append(key, String(value));
-      }
+    // Handle file uploads and create data array
+    const dataArray = formData.map((item, index) => {
+      const dataItem: { [key: string]: any } = {};
+      Object.entries(item).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          dataItem[key] = value.map((fileItem, fileIndex) => {
+            if (fileItem instanceof File) {
+              formPayload.append(`files`, fileItem);
+              return { name: fileItem.name, originalName: fileItem.name };
+            }
+            return fileItem; // For existing files, keep the string path
+          });
+        } else {
+          dataItem[key] = value;
+        }
+      });
+      return dataItem;
     });
+
+    // Append the stringified data array to the FormData
+    formPayload.append("data", JSON.stringify(dataArray));
+
+    // Append other necessary fields
+    formPayload.append("isActive", "true");
+    formPayload.append("inner_component", "1");
 
     try {
       const response = await axiosInstance.post("/components", formPayload, {
@@ -191,7 +227,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }
   };
 
-  const getFieldComponent = (key: string, value: any) => {
+  const getFieldComponent = (index: number, key: string, value: any) => {
     if (
       key.includes("image") ||
       key.includes("video") ||
@@ -202,7 +238,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         : key.includes("image")
         ? AiOutlineFileImage
         : AiOutlineFile;
-      const previews = selectedFilePreviews[key] || [];
+      const previews = selectedFilePreviews[key]?.[index] || [];
       const acceptType = key.includes("video")
         ? "video/*"
         : key.includes("image")
@@ -210,7 +246,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         : "*/*";
 
       return (
-        <div key={key} className="mb-8">
+        <div key={`${index}-${key}`} className="mb-8">
           <label className="block text-gray-800 font-semibold mb-2">
             {key}
           </label>
@@ -244,7 +280,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleClearFile(key, fileIndex);
+                    handleClearFile(index, key, fileIndex);
                   }}
                   className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
                 >
@@ -256,44 +292,44 @@ const FormComponent: React.FC<FormComponentProps> = ({
           <div className="flex items-center">
             <label
               className="flex items-center justify-center px-4 py-2 bg-[#39AF9F] text-white rounded-lg cursor-pointer hover:bg-green-500 transition-colors duration-300"
-              htmlFor={`${key}-file-input`}
+              htmlFor={`${index}-${key}-file-input`}
             >
               <Icon className="mr-2" />
               <span>Select {key}</span>
             </label>
             <input
               type="file"
-              id={`${key}-file-input`}
+              id={`${index}-${key}-file-input`}
               className="hidden"
               multiple
               accept={acceptType}
               onChange={(e) => {
                 if (e.target.files && e.target.files.length > 0)
-                  handleFileSelect(key, e.target.files);
+                  handleFileSelect(index, key, e.target.files);
               }}
             />
           </div>
-          {errors[key] && (
-            <p className="text-red-500 text-sm mt-1">{errors[key]}</p>
+          {errors[key]?.[index] && (
+            <p className="text-red-500 text-sm mt-1">{errors[key][index]}</p>
           )}
         </div>
       );
     } else {
       return (
-        <div key={key} className="mb-4">
+        <div key={`${index}-${key}`} className="mb-4">
           <label className="block text-gray-800 font-semibold mb-2">
             {key}
           </label>
           <input
             type="text"
             value={value || ""}
-            onChange={(e) => handleFieldChange(key, e.target.value)}
+            onChange={(e) => handleFieldChange(index, key, e.target.value)}
             className={`w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500 ${
-              errors[key] ? "border-red-500" : ""
+              errors[key]?.[index] ? "border-red-500" : ""
             }`}
           />
-          {errors[key] && (
-            <p className="text-red-500 text-sm mt-1">{errors[key]}</p>
+          {errors[key]?.[index] && (
+            <p className="text-red-500 text-sm mt-1">{errors[key][index]}</p>
           )}
         </div>
       );
@@ -302,11 +338,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
   console.log("Rendering FormComponent with formData:", formData);
 
-  if (
-    !Array.isArray(formData) ||
-    formData.length === 0 ||
-    typeof formData[0] !== "object"
-  ) {
+  if (!Array.isArray(formData) || formData.length === 0) {
     console.error("Invalid formData:", formData);
     return <div>No valid form data available</div>;
   }
@@ -318,11 +350,14 @@ const FormComponent: React.FC<FormComponentProps> = ({
         onSubmit={handleFormSubmit}
         className="max-w-2xl mx-auto font-sans bg-white p-6 rounded-lg shadow-md"
       >
-        <div className="mb-8">
-          {Object.entries(formData[0]).map(([key, value]) =>
-            getFieldComponent(key, value)
-          )}
-        </div>
+        {formData.map((item, index) => (
+          <div key={index} className="mb-8">
+            <h3 className="text-lg font-semibold mb-4">Item {index + 1}</h3>
+            {Object.entries(item).map(([key, value]) =>
+              getFieldComponent(index, key, value)
+            )}
+          </div>
+        ))}
         <div className="flex justify-center mb-8">
           <button
             type="submit"
