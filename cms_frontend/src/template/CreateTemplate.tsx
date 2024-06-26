@@ -173,6 +173,16 @@ const CreateTemplate: React.FC = () => {
     }
   };
 
+  const handleSetFormData = (updatedFormData: any) => {
+    console.log("Parent received updated formData:", updatedFormData);
+    setActiveComponent((prevActiveComponent) => {
+      if (!prevActiveComponent) return null;
+      return {
+        ...prevActiveComponent,
+        data: updatedFormData,
+      };
+    });
+  };
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-teal-600 py-4">
@@ -235,19 +245,7 @@ const CreateTemplate: React.FC = () => {
                 }
                 component_name={activeComponent.component_name}
                 template_name={template_name || ""}
-                setFormData={(updatedFormData) => {
-                  console.log(
-                    "Parent received updated formData:",
-                    updatedFormData
-                  );
-                  setActiveComponent((prevActiveComponent) => {
-                    if (!prevActiveComponent) return null;
-                    return {
-                      ...prevActiveComponent,
-                      data: updatedFormData,
-                    };
-                  });
-                }}
+                setFormData={handleSetFormData}
               />
             </div>
           )}
