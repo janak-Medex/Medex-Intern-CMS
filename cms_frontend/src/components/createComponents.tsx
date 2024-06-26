@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { FaPlus, FaTrash } from "react-icons/fa";
+import React, { useState, useEffect, useRef } from "react";
+import { FaPlus, FaTrash, FaUpload, FaExpand } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import SchemaRuleModal, { SchemaRule } from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
-import Cookies from "js-cookie";
 
 export interface FormField {
   [key: string]: any;
@@ -15,6 +14,7 @@ export interface Component {
   data: FormField[];
   isActive: boolean;
   inner_component: number;
+  component_image?: string;
   _id?: string;
   __v?: number;
 }
@@ -35,14 +35,28 @@ const CreateComponent: React.FC<Props> = ({
   const [formFields, setFormFields] = useState<FormField>({});
   const [innerComponent, setInnerComponent] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [componentImage, setComponentImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
   useEffect(() => {
     if (initialComponent) {
       setComponentName(initialComponent.component_name);
       setFormFields(initialComponent.data[0] || {});
       setInnerComponent(initialComponent.inner_component || 1);
+      if (initialComponent.component_image) {
+        const src = initialComponent.component_image.startsWith("http")
+          ? initialComponent.component_image
+          : `${baseImageUrl}${
+              initialComponent.component_image.split("uploads\\")[1]
+            }`;
+        setImagePreview(src);
+      }
     }
-  }, [initialComponent]);
+  }, [initialComponent, baseImageUrl]);
 
   const handleAddField = () => {
     setFormFields({ ...formFields, "": null });
@@ -63,22 +77,51 @@ const CreateComponent: React.FC<Props> = ({
     setFormFields(updatedFields);
   };
 
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setComponentImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setComponentImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const newComponent: Component = {
-      component_name,
-      template_name,
-      data: [formFields],
-      isActive: true,
-      inner_component: innerComponent,
-    };
+    const formData = new FormData();
+    formData.append("component_name", component_name);
+    formData.append("template_name", template_name);
+    formData.append("data", JSON.stringify([formFields]));
+    formData.append("isActive", "true");
+    formData.append("inner_component", innerComponent.toString());
+    if (componentImage) {
+      formData.append("component_image", componentImage);
+    }
 
     try {
-      const response = await axiosInstance.post("components", newComponent);
+      const response = await axiosInstance.post("components", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-      if (response.status === 200) {
-        const accessToken = Cookies.get("access_token");
+      if (response.status === 200 || response.status === 201) {
         onCreate(response.data);
         onClose();
       }
@@ -139,6 +182,65 @@ const CreateComponent: React.FC<Props> = ({
             min="1"
           />
         </div>
+        <div className="mb-6">
+          <label className="block text-gray-700 font-bold mb-2">
+            Component Image
+          </label>
+          <div className="flex items-center justify-center w-full">
+            <label
+              htmlFor="component_image"
+              className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+            >
+              {imagePreview ? (
+                <div className="relative w-full h-full">
+                  <img
+                    src={imagePreview}
+                    alt="Component preview"
+                    className="absolute inset-0 w-full h-full object-contain"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 hover:opacity-100 transition-opacity duration-300">
+                    <p className="text-white text-sm">Click to change image</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleFullscreen}
+                    className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md"
+                  >
+                    <FaExpand className="text-gray-600" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <FaUpload className="w-8 h-8 mb-4 text-gray-500" />
+                  <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                    <span className="font-semibold">Click to upload</span> or
+                    drag and drop
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    SVG, PNG, JPG or GIF (MAX. 800x400px)
+                  </p>
+                </div>
+              )}
+              <input
+                id="component_image"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+                ref={fileInputRef}
+              />
+            </label>
+          </div>
+          {imagePreview && (
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              className="mt-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              Remove Image
+            </button>
+          )}
+        </div>
         <div className="mb-4">
           <label className="block text-gray-700 font-bold mb-2">
             Data Fields
@@ -185,6 +287,23 @@ const CreateComponent: React.FC<Props> = ({
           </button>
         </div>
       </form>
+
+      {isFullscreen && imagePreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <img
+            src={imagePreview}
+            alt="Fullscreen preview"
+            className="max-w-full max-h-full object-contain"
+          />
+          <button
+            onClick={toggleFullscreen}
+            className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-md"
+          >
+            <FaExpand className="text-gray-600" />
+          </button>
+        </div>
+      )}
+
       <SchemaRuleModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
