@@ -3,6 +3,7 @@ import { FaPlus, FaTrash, FaUpload, FaExpand } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import SchemaRuleModal, { SchemaRule } from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
+import { toast } from "react-toastify";
 
 export interface FormField {
   [key: string]: any;
@@ -38,6 +39,7 @@ const CreateComponent: React.FC<Props> = ({
   const [componentImage, setComponentImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
@@ -59,22 +61,27 @@ const CreateComponent: React.FC<Props> = ({
   }, [initialComponent, baseImageUrl]);
 
   const handleAddField = () => {
-    setFormFields({ ...formFields, "": null });
+    setFormFields({ ...formFields, "": "" });
+    toast.success("New field added");
   };
 
   const handleRemoveField = (fieldName: string) => {
     const updatedFields = { ...formFields };
     delete updatedFields[fieldName];
     setFormFields(updatedFields);
+    toast.success("Field removed");
   };
 
   const handleFieldChange = (oldFieldName: string, newFieldName: string) => {
-    const updatedFields = { ...formFields };
-    if (oldFieldName !== newFieldName) {
-      delete updatedFields[oldFieldName];
+    if (newFieldName.trim() === "") {
+      toast.error("Field name cannot be empty");
+      return;
     }
-    updatedFields[newFieldName] = null;
+    const updatedFields = { ...formFields };
+    delete updatedFields[oldFieldName];
+    updatedFields[newFieldName.trim()] = "";
     setFormFields(updatedFields);
+    toast.success("Field name updated");
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,6 +93,7 @@ const CreateComponent: React.FC<Props> = ({
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      toast.success("Image uploaded");
     }
   };
 
@@ -95,14 +103,39 @@ const CreateComponent: React.FC<Props> = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    toast.success("Image removed");
   };
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
   };
 
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!component_name.trim()) {
+      newErrors.component_name = "Component name is required";
+    }
+
+    if (!componentImage && !imagePreview) {
+      newErrors.component_image = "Component image is required";
+    }
+
+    if (Object.keys(formFields).length === 0) {
+      newErrors.formFields = "At least one data field is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (!validateForm()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("component_name", component_name);
@@ -110,8 +143,11 @@ const CreateComponent: React.FC<Props> = ({
     formData.append("data", JSON.stringify([formFields]));
     formData.append("isActive", "true");
     formData.append("inner_component", innerComponent.toString());
+
     if (componentImage) {
       formData.append("component_image", componentImage);
+    } else if (imagePreview && initialComponent?.component_image) {
+      formData.append("component_image", initialComponent.component_image);
     }
 
     try {
@@ -122,11 +158,21 @@ const CreateComponent: React.FC<Props> = ({
       });
 
       if (response.status === 200 || response.status === 201) {
+        toast.success(
+          initialComponent
+            ? "Component updated successfully!"
+            : "Component created successfully!"
+        );
         onCreate(response.data);
         onClose();
       }
     } catch (error) {
       console.error("Error creating/updating component:", error);
+      toast.error(
+        `Failed to ${
+          initialComponent ? "update" : "create"
+        } component. Please try again.`
+      );
     }
   };
 
@@ -140,7 +186,7 @@ const CreateComponent: React.FC<Props> = ({
 
   const handleAddSchemaRule = (newRule: SchemaRule) => {
     setIsModalOpen(false);
-    // Implement logic to add the new rule if needed
+    toast.success("New schema rule added successfully!");
   };
 
   return (
@@ -159,12 +205,16 @@ const CreateComponent: React.FC<Props> = ({
           <input
             type="text"
             id="component_name"
-            className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
+            className={`w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500 ${
+              errors.component_name ? "border-red-500" : ""
+            }`}
             placeholder="Enter component name"
             value={component_name}
             onChange={(e) => setComponentName(e.target.value)}
-            required
           />
+          {errors.component_name && (
+            <p className="text-red-500 text-xs mt-1">{errors.component_name}</p>
+          )}
         </div>
         <div className="mb-4">
           <label
@@ -184,12 +234,14 @@ const CreateComponent: React.FC<Props> = ({
         </div>
         <div className="mb-6">
           <label className="block text-gray-700 font-bold mb-2">
-            Component Image
+            Component Image <span className="text-red-500">*</span>
           </label>
           <div className="flex items-center justify-center w-full">
             <label
               htmlFor="component_image"
-              className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+              className={`flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 ${
+                errors.component_image ? "border-red-500" : ""
+              }`}
             >
               {imagePreview ? (
                 <div className="relative w-full h-full">
@@ -231,6 +283,11 @@ const CreateComponent: React.FC<Props> = ({
               />
             </label>
           </div>
+          {errors.component_image && (
+            <p className="text-red-500 text-xs mt-1">
+              {errors.component_image}
+            </p>
+          )}
           {imagePreview && (
             <button
               type="button"
@@ -243,7 +300,7 @@ const CreateComponent: React.FC<Props> = ({
         </div>
         <div className="mb-4">
           <label className="block text-gray-700 font-bold mb-2">
-            Data Fields
+            Data Fields <span className="text-red-500">*</span>
           </label>
           {Object.entries(formFields).map(([fieldName, _], index) => (
             <div key={index} className="flex items-center mb-2">
@@ -270,6 +327,9 @@ const CreateComponent: React.FC<Props> = ({
           >
             <FaPlus className="mr-1" /> Add Field
           </button>
+          {errors.formFields && (
+            <p className="text-red-500 text-xs mt-1">{errors.formFields}</p>
+          )}
         </div>
         <div className="flex justify-center mb-8">
           <button
