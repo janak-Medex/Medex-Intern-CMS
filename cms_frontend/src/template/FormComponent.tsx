@@ -60,6 +60,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
                   ? "video"
                   : src.match(/\.(jpg|jpeg|png|gif)$/i)
                   ? "image"
+                  : src.match(/\.svg$/i)
+                  ? "svg"
                   : "file";
                 return { src, type, name: item.split("\\").pop() || "" };
               } else if (item instanceof File) {
@@ -69,6 +71,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     ? "video"
                     : item.type.startsWith("image/")
                     ? "image"
+                    : item.type === "image/svg+xml"
+                    ? "svg"
                     : "file",
                   name: item.name,
                 };
@@ -116,7 +120,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
       type: file.type.startsWith("video/")
         ? "video"
         : file.type.startsWith("image/")
-        ? "image"
+        ? file.type === "image/svg+xml"
+          ? "svg"
+          : "image"
         : "file",
       name: file.name,
     }));
@@ -256,43 +262,47 @@ const FormComponent: React.FC<FormComponentProps> = ({
             {previews.map((preview, fileIndex) => (
               <div
                 key={fileIndex}
-                className="relative bg-gray-100 p-2 rounded-lg"
+                className="relative bg-gray-100 p-2 rounded-lg h-32 flex items-center justify-center"
               >
-                {preview.type === "video" && (
-                  <video
-                    src={preview.src}
-                    className="w-full h-32 object-cover rounded"
-                    controls
-                  />
-                )}
-                {preview.type === "image" && (
-                  <div className="flex justify-center items-center h-32">
+                <div className="w-full h-full flex items-center justify-center">
+                  {preview.type === "video" && (
+                    <video
+                      src={preview.src}
+                      className="max-w-full max-h-full object-contain rounded"
+                      controls
+                    />
+                  )}
+                  {(preview.type === "image" || preview.type === "svg") && (
                     <Image
                       src={preview.src}
                       alt={`Preview ${fileIndex}`}
-                      className="object-contain rounded"
-                      style={{ maxHeight: "100%", maxWidth: "100%" }}
+                      preview={{
+                        mask: (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white">
+                            Preview
+                          </div>
+                        ),
+                      }}
+                      className="max-w-full max-h-full object-contain"
+                      style={{ minHeight: "32px", maxHeight: "112px" }} // Adjust these values as needed
                     />
-                  </div>
-                )}
-                {preview.type === "svg" && (
-                  <div className="flex justify-center items-center h-32">
-                    <div dangerouslySetInnerHTML={{ __html: preview.src }} />
-                  </div>
-                )}
-                {preview.type === "file" && (
-                  <div className="w-full h-32 flex items-center justify-center bg-gray-200 rounded">
-                    <AiOutlineFile size={32} />
-                    <span className="ml-2 text-sm">{preview.name}</span>
-                  </div>
-                )}
+                  )}
+                  {preview.type === "file" && (
+                    <div className="flex flex-col items-center justify-center">
+                      <AiOutlineFile size={32} />
+                      <span className="mt-2 text-sm text-center break-words max-w-full">
+                        {preview.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleClearFile(index, key, fileIndex);
                   }}
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 z-10"
                 >
                   <AiOutlineClose />
                 </button>
