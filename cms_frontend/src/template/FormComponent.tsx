@@ -9,6 +9,7 @@ import axiosInstance from "../http/axiosInstance";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Image } from "antd";
+import Cookies from "js-cookie";
 
 interface FormComponentProps {
   template_name: string;
@@ -192,11 +193,11 @@ const FormComponent: React.FC<FormComponentProps> = ({
     formPayload.append("component_name", component_name);
 
     // Handle file uploads and create data array
-    const dataArray = formData.map((item, index) => {
+    const dataArray = formData.map((item) => {
       const dataItem: { [key: string]: any } = {};
       Object.entries(item).forEach(([key, value]) => {
         if (Array.isArray(value)) {
-          dataItem[key] = value.map((fileItem, fileIndex) => {
+          dataItem[key] = value.map((fileItem) => {
             if (fileItem instanceof File) {
               formPayload.append(`files`, fileItem);
               return { name: fileItem.name, originalName: fileItem.name };
@@ -222,6 +223,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (response.status === 201) {
+        Cookies.get("access_token");
         toast.success("Form submitted successfully");
       } else {
         toast.error("Form submission failed");
