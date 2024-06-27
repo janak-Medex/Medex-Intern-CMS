@@ -256,6 +256,7 @@ const CreateTemplate: React.FC = () => {
 
     console.log("Component not found");
   };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-teal-600 py-4">
@@ -421,7 +422,7 @@ const CreateTemplate: React.FC = () => {
                   </p>
                   <Image
                     src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                      activeComponent?.component_image.split("uploads\\")[1]
+                      activeComponent?.component_image?.split("uploads\\")[1]
                     }`}
                   />
                 </>

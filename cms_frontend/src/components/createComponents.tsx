@@ -363,7 +363,7 @@ const CreateComponent: React.FC<Props> = ({
         </div>
       )}
 
-      <SchemaRuleModal
+      {/* <SchemaRuleModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onAddRule={handleAddSchemaRule}
