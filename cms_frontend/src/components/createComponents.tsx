@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaPlus, FaTrash, FaUpload, FaExpand } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import SchemaRuleModal, { SchemaRule } from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
 import { toast } from "react-toastify";
 
@@ -176,13 +175,13 @@ const CreateComponent: React.FC<Props> = ({
     }
   };
 
-  const handleInsertRule = () => {
-    setIsModalOpen(true);
-  };
+  // const handleInsertRule = () => {
+  //   setIsModalOpen(true);
+  // };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
+  // const handleCloseModal = () => {
+  //   setIsModalOpen(false);
+  // };
 
   const handleAddSchemaRule = (newRule: SchemaRule) => {
     setIsModalOpen(false);
@@ -340,7 +339,7 @@ const CreateComponent: React.FC<Props> = ({
           </button>
           <button
             type="button"
-            onClick={handleInsertRule}
+            // onClick={handleInsertRule}
             className="px-4 py-3 text-sm text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none transition-colors duration-300"
           >
             Add New Schema Rule
@@ -368,7 +367,7 @@ const CreateComponent: React.FC<Props> = ({
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onAddRule={handleAddSchemaRule}
-      />
+      /> */}
     </div>
   );
 };

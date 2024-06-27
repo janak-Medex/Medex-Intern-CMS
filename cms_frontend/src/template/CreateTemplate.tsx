@@ -5,7 +5,7 @@ import CreateComponent, {
   Component as ComponentType,
 } from "../components/createComponents";
 import ComponentList from "../template/ComponentList";
-import SchemaRuleModal from "../template/SchemaRule";
+// import SchemaRuleModal from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
 import FormComponent from "../template/FormComponent";
 import { toast } from "react-toastify";
@@ -22,6 +22,7 @@ interface TemplateDetails {
   isActive: boolean;
   __v: number;
   components: ComponentType[];
+  handleSubmit: any;
 }
 
 const CreateTemplate: React.FC = () => {
@@ -33,7 +34,7 @@ const CreateTemplate: React.FC = () => {
   const [activeComponent, setActiveComponent] = useState<ComponentType | null>(
     null
   );
-  const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
+  // const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
   const [templateDetails, setTemplateDetails] =
     useState<TemplateDetails | null>(null);
   const [isCreatingComponent, setIsCreatingComponent] =
@@ -163,14 +164,12 @@ const CreateTemplate: React.FC = () => {
       });
     }
   };
-
   const handleAddRule = (newRule: {
     fieldName: string;
     type: string;
     required: boolean;
   }) => {
     setIsRuleModalOpen(false);
-    // Implement the logic to add the new rule
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -363,7 +362,6 @@ const CreateTemplate: React.FC = () => {
               <h2 className="text-xl font-semibold mb-4">
                 {activeComponent.component_name}
               </h2>
-
               <FormComponent
                 formData={
                   Array.isArray(activeComponent.data)
@@ -371,8 +369,17 @@ const CreateTemplate: React.FC = () => {
                     : [activeComponent.data]
                 }
                 component_name={activeComponent.component_name}
-                template_name={template_name || ""}
-                setFormData={handleSetFormData}
+                template_name={template_name}
+                setFormData={(updatedFormData) => {
+                  setActiveComponent((prevActiveComponent) => ({
+                    ...prevActiveComponent!,
+                    data: {
+                      ...prevActiveComponent!.data,
+                      ...updatedFormData,
+                    },
+                  }));
+                }}
+                handleSubmit={handleSubmit}
               />
             </div>
           )}
@@ -424,11 +431,11 @@ const CreateTemplate: React.FC = () => {
         </div>
       </main>
 
-      <SchemaRuleModal
+      {/* <SchemaRuleModal
         isOpen={isRuleModalOpen}
         onClose={() => setIsRuleModalOpen(false)}
         onAddRule={handleAddRule}
-      />
+      /> */}
     </div>
   );
 };

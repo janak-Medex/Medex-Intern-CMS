@@ -12,7 +12,7 @@ import { Image } from "antd";
 import Cookies from "js-cookie";
 
 interface FormComponentProps {
-  template_name: string;
+  template_name: any;
   component_name: string;
   formData: { [key: string]: any }[];
   setFormData: (data: { [key: string]: any }[]) => void;
