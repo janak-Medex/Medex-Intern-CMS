@@ -1,9 +1,8 @@
 import React from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { Component as ComponentType } from "../components/createComponents";
-import ToggleButton from "./ToogleButton";
-import { toast } from "react-toastify";
 import { confirmAlert } from "react-confirm-alert";
+import { Switch } from "antd";
 
 interface ComponentListProps {
   components: ComponentType[];
@@ -22,7 +21,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
   onDelete,
   onShowComponentForm,
 }) => {
-  const handleDelete = (componentId: string) => {
+  const handleDelete = (componentId: any) => {
     confirmAlert({
       title: "Confirm to delete",
       message: "Are you sure you want to delete this component?",
@@ -63,13 +62,18 @@ const ComponentList: React.FC<ComponentListProps> = ({
                       : "text-gray-400"
                   }`}
                 >
-                  {toggleStates[component.component_name]
-                    ? "Active"
-                    : "Inactive"}
+                  {toggleStates[component.component_name]}
                 </span>
-                <ToggleButton
-                  isActive={toggleStates[component.component_name]}
-                  onToggle={() => onToggle(component.component_name)}
+
+                <Switch
+                  size="small"
+                  defaultChecked={toggleStates[component.component_name]}
+                  onChange={() => {
+                    onToggle(component.component_name);
+                    console.log(
+                      `Switch toggled for component: ${component.component_name}`
+                    );
+                  }}
                 />
                 <button
                   onClick={(e) => {

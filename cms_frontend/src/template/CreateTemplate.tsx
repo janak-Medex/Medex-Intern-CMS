@@ -9,6 +9,10 @@ import SchemaRuleModal from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
 import FormComponent from "../template/FormComponent";
 import { toast } from "react-toastify";
+import { Image } from "antd";
+import { Button, Modal } from "antd";
+import { DownloadOutlined } from "@ant-design/icons";
+import Cookies from "js-cookie";
 
 interface TemplateDetails {
   _id: string;
@@ -36,11 +40,16 @@ const CreateTemplate: React.FC = () => {
     useState<boolean>(false);
   const [editingComponent, setEditingComponent] =
     useState<ComponentType | null>(null);
+  const [allComponents, setAllComponents] = useState<ComponentType[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchTemplateDetails();
   }, [template_name]);
 
+  useEffect(() => {
+    fetchAllComponents();
+  }, []);
   const fetchTemplateDetails = async () => {
     try {
       const response = await axiosInstance.get<TemplateDetails>(
@@ -53,6 +62,29 @@ const CreateTemplate: React.FC = () => {
     }
   };
 
+  const fetchAllComponents = async () => {
+    try {
+      const response = await axiosInstance.get("templates ");
+      if (response.status === 200) {
+        setAllComponents(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching components:", error);
+    }
+  };
+
+  // for antd modal
+  const showModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleOk = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleCancel = () => {
+    setIsModalOpen(false);
+  };
   const handleToggle = (component_name: string) => {
     setToggleStates((prevState) => ({
       ...prevState,
@@ -183,6 +215,48 @@ const CreateTemplate: React.FC = () => {
       };
     });
   };
+  // Extract component and templates
+  const tableData = allComponents.map((template) => {
+    const templateName = template.template_name;
+    const isActive = template.is_active;
+    const componentArray = template.components;
+    const components = template.components.map((component) => ({
+      componentName: component.component_name,
+      componentId: component._id,
+      data: component.data,
+      isActive: component.is_active,
+    }));
+    return { templateName, componentArray, isActive, components };
+  });
+
+  console.log(allComponents);
+
+  const handleImportComponent = async (componentId: string) => {
+    console.log("Importing component:", componentId);
+
+    for (const data of tableData) {
+      for (const component of data.componentArray) {
+        if (component._id === componentId) {
+          console.log("Component found:", component);
+          setComponents((prevComponents) => [...prevComponents, component]);
+
+          // Post the component data using Axios
+          try {
+            const response = await axiosInstance.post<ComponentType>(
+              "/components",
+              { ...component, template_name }
+            );
+            console.log("Component posted successfully:", response.data);
+          } catch (error) {
+            console.error("Error posting component:", error);
+          }
+          return;
+        }
+      }
+    }
+
+    console.log("Component not found");
+  };
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-teal-600 py-4">
@@ -217,6 +291,59 @@ const CreateTemplate: React.FC = () => {
                 setIsCreatingComponent(false);
               }}
             />
+
+            {/* Modal to show all components */}
+            <Button type="primary" onClick={showModal}>
+              Show all components
+            </Button>
+            <Modal
+              title="Components from all the templates"
+              open={isModalOpen}
+              onOk={handleOk}
+              onCancel={handleCancel}
+              width={600}
+            >
+              <div>
+                {tableData.map((data, index) => (
+                  <table key={index} className="w-full mb-4 border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="border border-gray-300 px-4 py-2 bg-gray-100 text-left">
+                          {data.templateName}
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 bg-gray-100 text-left">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.components.map((component, idx) => (
+                        <tr key={idx}>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <span className="mr-12">
+                              {component.componentName}
+                            </span>{" "}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <Button
+                              type="primary"
+                              icon={<DownloadOutlined />}
+                              size="middle"
+                              value={component.componentName}
+                              onClick={() => {
+                                handleImportComponent(component.componentId);
+                              }}
+                            >
+                              Import
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ))}
+              </div>
+            </Modal>
           </div>
         </div>
 
@@ -261,11 +388,38 @@ const CreateTemplate: React.FC = () => {
         <div className="col-span-12 md:col-span-5 flex flex-col">
           <div className="bg-white rounded-lg shadow-md p-4 flex-1">
             <h2 className="text-xl font-semibold mb-4">Component Images</h2>
-            <img
-              src="../images/component1.jpg"
-              alt="Banner"
-              className="max-w-full h-auto rounded-lg"
-            />
+
+            <div className="h-screen overflow-y-auto">
+              {/* Preview images */}
+              {!activeComponent ? (
+                components?.map((component, index) => {
+                  return (
+                    <div key={index}>
+                      <p className="text-center uppercase text-base  font-semibold my-2">
+                        {component.component_name}
+                      </p>
+                      <Image
+                        src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
+                          component?.component_image?.split("uploads\\")[1]
+                        }`}
+                        key={index}
+                      />
+                    </div>
+                  );
+                })
+              ) : (
+                <>
+                  <p className="text-center capitalize text-xl ">
+                    {activeComponent?.component_name}
+                  </p>
+                  <Image
+                    src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
+                      activeComponent?.component_image.split("uploads\\")[1]
+                    }`}
+                  />
+                </>
+              )}
+            </div>
           </div>
         </div>
       </main>
