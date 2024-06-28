@@ -43,6 +43,7 @@ const CreateTemplate: React.FC = () => {
     useState<ComponentType | null>(null);
   const [allComponents, setAllComponents] = useState<ComponentType[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [expandedTables, setExpandedTables] = useState({});
 
   useEffect(() => {
     fetchTemplateDetails();
@@ -86,6 +87,15 @@ const CreateTemplate: React.FC = () => {
   const handleCancel = () => {
     setIsModalOpen(false);
   };
+
+  // for table
+  const toggleExpand = (index) => {
+    setExpandedTables((prevState) => ({
+      ...prevState,
+      [index]: !prevState[index],
+    }));
+  };
+
   const handleToggle = (component_name: string) => {
     setToggleStates((prevState) => ({
       ...prevState,
@@ -293,53 +303,62 @@ const CreateTemplate: React.FC = () => {
             />
 
             {/* Modal to show all components */}
-            <Button type="primary" onClick={showModal}>
-              Show all components
+            <Button type="primary" onClick={showModal} size="large">
+              Show other components
             </Button>
             <Modal
-              title="Components from all the templates"
+              title="All Templates (Click to see components)"
               open={isModalOpen}
               onOk={handleOk}
               onCancel={handleCancel}
-              width={600}
+              width={650}
+              centered
             >
               <div>
                 {tableData.map((data, index) => (
-                  <table key={index} className="w-full mb-4 border-collapse">
-                    <thead>
+                  <table
+                    key={index}
+                    className="w-full mb-4 border-collapse table-fixed"
+                  >
+                    <thead
+                      onClick={() => toggleExpand(index)}
+                      className="cursor-pointer"
+                    >
                       <tr>
-                        <th className="border border-gray-300 px-4 py-2 bg-gray-100 text-left">
+                        <th className="border border-gray-300 px-4 py-2 bg-gray-100 text-left w-1/2">
                           {data.templateName}
                         </th>
-                        <th className="border border-gray-300 px-4 py-2 bg-gray-100 text-left">
+                        <th className="border border-gray-300 px-4 py-2 bg-gray-100 text-left w-1/2">
                           Status
                         </th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {data.components.map((component, idx) => (
-                        <tr key={idx}>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <span className="mr-12">
-                              {component.componentName}
-                            </span>{" "}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <Button
-                              type="primary"
-                              icon={<DownloadOutlined />}
-                              size="middle"
-                              value={component.componentName}
-                              onClick={() => {
-                                handleImportComponent(component.componentId);
-                              }}
-                            >
-                              Import
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
+                    {expandedTables[index] && (
+                      <tbody>
+                        {data.components.map((component, idx) => (
+                          <tr key={idx}>
+                            <td className="border border-gray-300 px-4 py-2">
+                              <span className="mr-12">
+                                {component.componentName}
+                              </span>
+                            </td>
+                            <td className="border border-gray-300 px-4 py-2">
+                              <Button
+                                type="primary"
+                                icon={<DownloadOutlined />}
+                                size="small"
+                                value={component.componentName}
+                                onClick={() => {
+                                  handleImportComponent(component.componentId);
+                                }}
+                              >
+                                Import
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    )}
                   </table>
                 ))}
               </div>
@@ -371,15 +390,7 @@ const CreateTemplate: React.FC = () => {
                 }
                 component_name={activeComponent.component_name}
                 template_name={template_name}
-                setFormData={(updatedFormData) => {
-                  setActiveComponent((prevActiveComponent) => ({
-                    ...prevActiveComponent!,
-                    data: {
-                      ...prevActiveComponent!.data,
-                      ...updatedFormData,
-                    },
-                  }));
-                }}
+                setFormData={handleSetFormData}
                 handleSubmit={handleSubmit}
               />
             </div>
@@ -400,24 +411,26 @@ const CreateTemplate: React.FC = () => {
             <div className="h-screen overflow-y-auto">
               {/* Preview images */}
               {!activeComponent ? (
-                components?.map((component, index) => {
-                  return (
-                    <div key={index}>
-                      <p className="text-center uppercase text-base  font-semibold my-2">
-                        {component.component_name}
-                      </p>
-                      <Image
-                        src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                          component?.component_image?.split("uploads\\")[1]
-                        }`}
-                        key={index}
-                      />
-                    </div>
-                  );
-                })
+                components?.map((component, index) => (
+                  <div key={index} className="mb-6">
+                    <p className="text-center capitalize text-base font-semibold mb-2">
+                      <span className="font-semibold">Component: </span>
+                      {component.component_name}
+                    </p>
+                    {/* <div className="max-h-72 flex justify-center"> */}
+                    <Image
+                      src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
+                        component?.component_image?.split("uploads\\")[1]
+                      }`}
+                      // className="max-h-full w-auto object-contain"
+                    />
+                    {/* </div> */}
+                  </div>
+                ))
               ) : (
-                <>
-                  <p className="text-center capitalize text-xl ">
+                <div>
+                  <p className="text-center capitalize text-xl mb-4">
+                    <span className="font-semibold">Component: </span>
                     {activeComponent?.component_name}
                   </p>
                   <Image
@@ -425,7 +438,7 @@ const CreateTemplate: React.FC = () => {
                       activeComponent?.component_image?.split("uploads\\")[1]
                     }`}
                   />
-                </>
+                </div>
               )}
             </div>
           </div>

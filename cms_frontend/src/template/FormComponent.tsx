@@ -94,6 +94,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
     newData[index] = { ...newData[index], [key]: value === "" ? null : value };
     console.log("Updated formData:", newData);
     setFormData(newData);
+    // Also call the parent's setFormData function
+    props.setFormData(newData);
     setErrors((prevErrors) => {
       const newErrors = { ...prevErrors };
       if (!newErrors[key]) {

@@ -73,14 +73,12 @@ const CreateComponent: React.FC<Props> = ({
 
   const handleFieldChange = (oldFieldName: string, newFieldName: string) => {
     if (newFieldName.trim() === "") {
-      toast.error("Field name cannot be empty");
       return;
     }
     const updatedFields = { ...formFields };
     delete updatedFields[oldFieldName];
     updatedFields[newFieldName.trim()] = "";
     setFormFields(updatedFields);
-    toast.success("Field name updated");
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {

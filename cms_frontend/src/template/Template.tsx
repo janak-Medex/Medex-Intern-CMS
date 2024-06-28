@@ -80,7 +80,7 @@ const Template: React.FC = () => {
           </h1>
         </div>
       </div>
-      <div className="h-80 flex flex-col justify-center items-center">
+      <div className="my-16 flex flex-col justify-center items-center">
         <button
           onClick={handleCreateTemplate}
           className="flex items-center rounded-full bg-[#39AF9F] hover:bg-teal-600 text-white py-3 px-6 focus:outline-none transition duration-300 ease-in-out"
@@ -89,7 +89,7 @@ const Template: React.FC = () => {
           <BiAddToQueue size={30} className="animate-pulse" />
         </button>
       </div>
-      <div className="container mx-auto mt-8">
+      <div className="container mx-auto ">
         <h2 className="text-2xl font-semibold mb-4">Existing Templates</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {templates.length === 0 ? (
