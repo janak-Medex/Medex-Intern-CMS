@@ -118,18 +118,28 @@ const CreateTemplate: React.FC = () => {
     setComponents((prevComponents) => [...prevComponents, component]);
   };
 
-  const onCreateComponent = (newComponent: ComponentType) => {
-    const index = components.findIndex(
-      (comp) => comp.component_name === newComponent.component_name
-    );
-    if (index === -1) {
-      addComponent(newComponent);
-    } else {
-      const updatedComponents = [...components];
-      updatedComponents[index] = newComponent;
-      setComponents(updatedComponents);
+  const onCreateComponent = async (newComponent: ComponentType) => {
+    try {
+      const index = components.findIndex(
+        (comp) => comp.component_name === newComponent.component_name
+      );
+      if (index === -1) {
+        addComponent(newComponent);
+      } else {
+        const updatedComponents = [...components];
+        updatedComponents[index] = newComponent;
+        setComponents(updatedComponents);
+      }
+
+      // Fetch template details again to update the component list
+      await fetchTemplateDetails();
+
+      setIsCreatingComponent(false);
+      toast.success("Component saved successfully");
+    } catch (error) {
+      console.error("Error saving component:", error);
+      toast.error("Failed to save component");
     }
-    setIsCreatingComponent(false);
   };
 
   const onDeleteComponent = async (componentId: string) => {
@@ -169,6 +179,10 @@ const CreateTemplate: React.FC = () => {
           : comp
       );
       setComponents(updatedComponents);
+
+      // Fetch template details again to update the component list
+      await fetchTemplateDetails();
+
       toast.success("Component saved successfully");
     } catch (error) {
       console.error("Error saving component:", error);
