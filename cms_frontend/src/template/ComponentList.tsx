@@ -9,7 +9,7 @@ import { toast } from "react-toastify";
 interface ComponentListProps {
   components: ComponentType[];
   toggleStates: { [key: string]: boolean };
-  onToggle: (component_name: string) => void;
+  onToggle: (component_id: string) => void;
   onEdit: (component: ComponentType) => void;
   onDelete: (componentId: string) => void;
   onShowComponentForm: (component: ComponentType) => void;
@@ -92,6 +92,56 @@ const ComponentList: React.FC<ComponentListProps> = ({
     }
   };
 
+  const handleToggle = async (componentId: string) => {
+    // Find the component by ID and toggle its is_active property
+    const toggledComponent = components.find(
+      (comp) => comp._id === componentId
+    );
+
+    if (!toggledComponent) {
+      toast.error("Component not found");
+      return;
+    }
+
+    // Prepare the data payload to send to the server
+    const updatedComponent = {
+      template_name: template_name,
+      component_name: toggledComponent.component_name,
+      data: toggledComponent.data,
+      isActive: !toggledComponent.is_active,
+      inner_component: toggledComponent.inner_component,
+      component_image: toggledComponent.component_image,
+    };
+
+    console.log("Updated Component Data:", updatedComponent);
+
+    try {
+      // Make the API call to update the component status
+      const response = await axiosInstance.post(
+        `/components`,
+        updatedComponent
+      );
+
+      console.log("API Response:", response);
+      if (response.status === 201) {
+        toast.success("Component status updated successfully");
+        // Update the component in the local state
+        const updatedComponents = components.map((comp) =>
+          comp._id === componentId
+            ? { ...comp, is_active: !comp.is_active }
+            : comp
+        );
+        setComponents(updatedComponents);
+        console.log("dsfsdfsdgsgs", updatedComponents);
+      } else {
+        toast.error("Failed to update component status");
+      }
+    } catch (error) {
+      console.error("Error updating component status:", error);
+      toast.error("Failed to update component status");
+    }
+  };
+
   const handleDelete = (componentId: any) => {
     confirmAlert({
       title: "Confirm to delete",
@@ -135,10 +185,9 @@ const ComponentList: React.FC<ComponentListProps> = ({
               <div className="flex items-center space-x-2">
                 <Switch
                   size="small"
-                  checked={toggleStates[component.component_name]}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    onToggle(component.component_name);
+                  checked={component.is_active} // Use component.is_active directly for switch state
+                  onChange={() => {
+                    handleToggle(component._id);
                   }}
                 />
                 <button
