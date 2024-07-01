@@ -5,14 +5,12 @@ import CreateComponent, {
   Component as ComponentType,
 } from "../components/createComponents";
 import ComponentList from "../template/ComponentList";
-// import SchemaRuleModal from "../template/SchemaRule";
 import axiosInstance from "../http/axiosInstance";
 import FormComponent from "../template/FormComponent";
 import { toast } from "react-toastify";
 import { Image } from "antd";
 import { Button, Modal } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
-import Cookies from "js-cookie";
 
 interface TemplateDetails {
   _id: string;
@@ -34,7 +32,6 @@ const CreateTemplate: React.FC = () => {
   const [activeComponent, setActiveComponent] = useState<ComponentType | null>(
     null
   );
-  // const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
   const [templateDetails, setTemplateDetails] =
     useState<TemplateDetails | null>(null);
   const [isCreatingComponent, setIsCreatingComponent] =
@@ -44,56 +41,41 @@ const CreateTemplate: React.FC = () => {
   const [allComponents, setAllComponents] = useState<ComponentType[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedTables, setExpandedTables] = useState({});
+  const [forceUpdate, setForceUpdate] = useState(false);
 
   useEffect(() => {
     fetchTemplateDetails();
+    fetchAllComponents();
   }, [template_name]);
 
   useEffect(() => {
-    fetchAllComponents();
-  }, []);
+    if (templateDetails && templateDetails.components) {
+      setComponents(templateDetails.components);
+    }
+  }, [templateDetails]);
+
   const fetchTemplateDetails = async () => {
     try {
       const response = await axiosInstance.get<TemplateDetails>(
         `/templates/${template_name}`
       );
       setTemplateDetails(response.data);
-      setComponents(response.data.components || []);
     } catch (error) {
       console.error("Error fetching template details:", error);
+      toast.error("Failed to fetch template details");
     }
   };
 
   const fetchAllComponents = async () => {
     try {
-      const response = await axiosInstance.get("templates ");
+      const response = await axiosInstance.get("templates");
       if (response.status === 200) {
         setAllComponents(response.data);
       }
     } catch (error) {
       console.error("Error fetching components:", error);
+      toast.error("Failed to fetch all components");
     }
-  };
-
-  // for antd modal
-  const showModal = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleOk = () => {
-    setIsModalOpen(false);
-  };
-
-  const handleCancel = () => {
-    setIsModalOpen(false);
-  };
-
-  // for table
-  const toggleExpand = (index) => {
-    setExpandedTables((prevState) => ({
-      ...prevState,
-      [index]: !prevState[index],
-    }));
   };
 
   const handleToggle = (component_name: string) => {
@@ -155,31 +137,17 @@ const CreateTemplate: React.FC = () => {
       await axiosInstance.delete(
         `/templates/${templateDetails?._id}/components/${componentId}`
       );
-      // Update local state after successful deletion
       setComponents((prevComponents) =>
         prevComponents.filter((comp) => comp._id !== componentId)
       );
       if (activeComponent?._id === componentId) {
         setActiveComponent(null);
       }
-      toast.success("Component deleted successfully", {
-        className:
-          "bg-green-500 text-white font-bold py-2 px-4 rounded-md shadow-md",
-      });
+      toast.success("Component deleted successfully");
     } catch (error) {
       console.error("Error deleting component:", error);
-      toast.error("Failed to delete component", {
-        className:
-          "bg-red-500 text-white font-bold py-2 px-4 rounded-md shadow-md",
-      });
+      toast.error("Failed to delete component");
     }
-  };
-  const handleAddRule = (newRule: {
-    fieldName: string;
-    type: string;
-    required: boolean;
-  }) => {
-    setIsRuleModalOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -201,16 +169,10 @@ const CreateTemplate: React.FC = () => {
           : comp
       );
       setComponents(updatedComponents);
-      toast.success("Component saved successfully", {
-        className:
-          "bg-green-500 text-white font-bold py-2 px-4 rounded-md shadow-md",
-      });
+      toast.success("Component saved successfully");
     } catch (error) {
       console.error("Error saving component:", error);
-      toast.error("Failed to save component", {
-        className:
-          "bg-red-500 text-white font-bold py-2 px-4 rounded-md shadow-md",
-      });
+      toast.error("Failed to save component");
     }
   };
 
@@ -224,21 +186,6 @@ const CreateTemplate: React.FC = () => {
       };
     });
   };
-  // Extract component and templates
-  const tableData = allComponents.map((template) => {
-    const templateName = template.template_name;
-    const isActive = template.is_active;
-    const componentArray = template.components;
-    const components = template.components.map((component) => ({
-      componentName: component.component_name,
-      componentId: component._id,
-      data: component.data,
-      isActive: component.is_active,
-    }));
-    return { templateName, componentArray, isActive, components };
-  });
-
-  console.log(allComponents);
 
   const handleImportComponent = async (componentId: string) => {
     console.log("Importing component:", componentId);
@@ -249,15 +196,19 @@ const CreateTemplate: React.FC = () => {
           console.log("Component found:", component);
           setComponents((prevComponents) => [...prevComponents, component]);
 
-          // Post the component data using Axios
           try {
             const response = await axiosInstance.post<ComponentType>(
               "/components",
-              { ...component, template_name }
+              {
+                ...component,
+                template_name,
+              }
             );
             console.log("Component posted successfully:", response.data);
+            toast.success("Component imported successfully");
           } catch (error) {
             console.error("Error posting component:", error);
+            toast.error("Failed to import component");
           }
           return;
         }
@@ -265,7 +216,31 @@ const CreateTemplate: React.FC = () => {
     }
 
     console.log("Component not found");
+    toast.error("Component not found");
   };
+
+  const showModal = () => setIsModalOpen(true);
+  const handleOk = () => setIsModalOpen(false);
+  const handleCancel = () => setIsModalOpen(false);
+
+  const toggleExpand = (index: number) => {
+    setExpandedTables((prevState) => ({
+      ...prevState,
+      [index]: !prevState[index],
+    }));
+  };
+
+  const tableData = allComponents.map((template) => ({
+    templateName: template.template_name,
+    isActive: template.is_active,
+    componentArray: template.components,
+    components: template.components.map((component) => ({
+      componentName: component.component_name,
+      componentId: component._id,
+      data: component.data,
+      isActive: component.is_active,
+    })),
+  }));
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -287,11 +262,12 @@ const CreateTemplate: React.FC = () => {
               <FaPlus className="mr-2" /> Create
             </button>
             <ComponentList
+              key={`component-list-${forceUpdate}`}
               components={components}
               toggleStates={toggleStates}
               onToggle={handleToggle}
               onEdit={(component) => {
-                setEditingComponent(component as ComponentType);
+                setEditingComponent(component);
                 setIsCreatingComponent(true);
                 setActiveComponent(null);
               }}
@@ -300,9 +276,9 @@ const CreateTemplate: React.FC = () => {
                 setActiveComponent(component);
                 setIsCreatingComponent(false);
               }}
+              template_name={template_name}
+              setComponents={setComponents}
             />
-
-            {/* Modal to show all components */}
             <Button type="primary" onClick={showModal} size="large">
               Show other components
             </Button>
@@ -348,9 +324,9 @@ const CreateTemplate: React.FC = () => {
                                 icon={<DownloadOutlined />}
                                 size="small"
                                 value={component.componentName}
-                                onClick={() => {
-                                  handleImportComponent(component.componentId);
-                                }}
+                                onClick={() =>
+                                  handleImportComponent(component.componentId)
+                                }
                               >
                                 Import
                               </Button>
@@ -407,9 +383,7 @@ const CreateTemplate: React.FC = () => {
         <div className="col-span-12 md:col-span-5 flex flex-col">
           <div className="bg-white rounded-lg shadow-md p-4 flex-1">
             <h2 className="text-xl font-semibold mb-4">Component Images</h2>
-
             <div className="h-screen overflow-y-auto">
-              {/* Preview images */}
               {!activeComponent ? (
                 components?.map((component, index) => (
                   <div key={index} className="mb-6">
@@ -417,14 +391,11 @@ const CreateTemplate: React.FC = () => {
                       <span className="font-semibold">Component: </span>
                       {component.component_name}
                     </p>
-                    {/* <div className="max-h-72 flex justify-center"> */}
                     <Image
                       src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
                         component?.component_image?.split("uploads\\")[1]
                       }`}
-                      // className="max-h-full w-auto object-contain"
                     />
-                    {/* </div> */}
                   </div>
                 ))
               ) : (
@@ -444,12 +415,6 @@ const CreateTemplate: React.FC = () => {
           </div>
         </div>
       </main>
-
-      {/* <SchemaRuleModal
-        isOpen={isRuleModalOpen}
-        onClose={() => setIsRuleModalOpen(false)}
-        onAddRule={handleAddRule}
-      /> */}
     </div>
   );
 };
