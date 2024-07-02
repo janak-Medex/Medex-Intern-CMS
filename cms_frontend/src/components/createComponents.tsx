@@ -14,6 +14,7 @@ interface SchemaRule {
   fieldName: string;
   type: string;
   required: boolean;
+  originalFieldName?: string;
 }
 
 export interface Component {
@@ -240,13 +241,25 @@ const CreateComponent: React.FC<Props> = ({
       return;
     }
 
-    const newRule = [
-      {
-        fieldName,
-        type: fieldType,
-        required: isRequired,
-      },
-    ];
+    // Check if the field name already exists (excluding the current rule if in edit mode)
+    const fieldNameExists = schemaRulesData.some(
+      (rule) =>
+        rule.fieldName.toLowerCase() === fieldName.toLowerCase() &&
+        (!editMode || rule._id !== editingRule?._id)
+    );
+
+    if (fieldNameExists) {
+      toast.error(
+        "A field with this name already exists. Please choose a different name."
+      );
+      return;
+    }
+
+    const newRule = {
+      fieldName,
+      type: fieldType,
+      required: isRequired,
+    };
 
     try {
       if (editMode && editingRule) {
@@ -267,7 +280,7 @@ const CreateComponent: React.FC<Props> = ({
         }
       } else {
         // Add new rule
-        const response = await axiosInstance.post("schemas", newRule, {
+        const response = await axiosInstance.post("schemas", [newRule], {
           headers: {
             "Content-Type": "application/json",
           },
@@ -283,6 +296,7 @@ const CreateComponent: React.FC<Props> = ({
       handleCloseModal();
       viewAllSchema();
     } catch (error) {
+      console.error("Error processing schema rule:", error);
       toast.error("An error occurred while processing the schema rule.");
     }
   };
@@ -291,10 +305,22 @@ const CreateComponent: React.FC<Props> = ({
     setIsSchemaModalOpen(true);
     try {
       const response = await axiosInstance.get("schemas");
-      setSchemaRulesData(response.data);
-      toast.success("Schema Rules fetched successfully!");
+      if (
+        response.data &&
+        response.data.success &&
+        Array.isArray(response.data.data)
+      ) {
+        setSchemaRulesData(response.data.data);
+        setFilteredSchemaRules(response.data.data);
+        toast.success("Schema Rules fetched successfully!");
+      } else {
+        throw new Error("Invalid data structure received from API");
+      }
     } catch (error) {
       console.error("Error fetching schemas:", error);
+      toast.error("Failed to fetch schema rules");
+      setSchemaRulesData([]);
+      setFilteredSchemaRules([]);
     }
   };
 
@@ -319,20 +345,22 @@ const CreateComponent: React.FC<Props> = ({
     viewAllSchema();
   };
 
-  const handleEditSchemaRule = (rule: any) => {
+  const handleEditSchemaRule = (rule: SchemaRule) => {
     setEditMode(true);
-    setEditingRule(rule);
+    setEditingRule({ ...rule, originalFieldName: rule.fieldName });
     setFieldName(rule.fieldName);
     setFieldType(rule.type);
     setIsRequired(rule.required);
     setIsModalOpen(true);
   };
   useEffect(() => {
-    const filtered = schemaRulesData.filter((rule: SchemaRule) =>
-      rule.fieldName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredSchemaRules(filtered);
-    setCurrentPage(1);
+    if (Array.isArray(schemaRulesData)) {
+      const filtered = schemaRulesData.filter((rule: SchemaRule) =>
+        rule.fieldName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredSchemaRules(filtered);
+      setCurrentPage(1);
+    }
   }, [schemaRulesData, searchTerm]);
   // for pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -541,7 +569,7 @@ const CreateComponent: React.FC<Props> = ({
           centered
         >
           <div>
-            {filteredSchemaRules?.length > 0 ? (
+            {filteredSchemaRules.length > 0 ? (
               <>
                 <table className="w-full mb-4 border-collapse table-fixed">
                   <thead className="cursor-pointer">
@@ -561,8 +589,8 @@ const CreateComponent: React.FC<Props> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {currentData.map((data, index) => (
-                      <tr key={data._id || index}>
+                    {currentData.map((data: SchemaRule) => (
+                      <tr key={data._id}>
                         <td className="border border-gray-300 px-4 py-2">
                           <span className="flex justify-between">
                             <span className="mr-12">{data.fieldName}</span>
@@ -577,10 +605,7 @@ const CreateComponent: React.FC<Props> = ({
                         <td className="border border-gray-300 px-4 py-2">
                           <span className="flex gap-6">
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onSchemaRuleDelete(data._id);
-                              }}
+                              onClick={() => onSchemaRuleDelete(data._id)}
                             >
                               <FaTrash className="text-red-600" />
                             </button>
