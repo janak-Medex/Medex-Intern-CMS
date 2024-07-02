@@ -31,9 +31,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   const [errors, setErrors] = useState<{ [key: string]: string[] }>({});
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
-  useEffect(() => {
-    console.log("FormComponent rendered with formData:", formData);
-  }, [formData]);
+  useEffect(() => {}, [formData]);
 
   useEffect(() => {
     if (!Array.isArray(formData) || formData.length === 0) {
@@ -90,10 +88,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
   }, [formData, baseImageUrl]);
 
   const handleFieldChange = (index: number, key: string, value: any) => {
-    console.log(`Updating field: index=${index}, key=${key}, value=`, value);
     const newData = [...formData];
     newData[index] = { ...newData[index], [key]: value === "" ? null : value };
-    console.log("Updated formData:", newData);
     setFormData(newData);
     setErrors((prevErrors) => {
       const newErrors = { ...prevErrors };
@@ -139,9 +135,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
   };
 
   const handleClearFile = (index: number, key: string, fileIndex: number) => {
-    console.log(
-      `Clearing file: index=${index}, key=${key}, fileIndex=${fileIndex}`
-    );
     const newData = [...formData];
     const updatedFiles = (newData[index][key] as (File | string)[]).filter(
       (_, i) => i !== fileIndex
@@ -150,7 +143,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
       ...newData[index],
       [key]: updatedFiles.length > 0 ? updatedFiles : null,
     };
-    console.log("Updated formData after clearing file:", newData);
     setFormData(newData);
 
     setSelectedFilePreviews((prev) => {
@@ -358,8 +350,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
       );
     }
   };
-
-  console.log("Rendering FormComponent with formData:", formData);
 
   if (!Array.isArray(formData) || formData.length === 0) {
     console.error("Invalid formData:", formData);

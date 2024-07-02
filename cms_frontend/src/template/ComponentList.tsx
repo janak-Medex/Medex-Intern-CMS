@@ -111,8 +111,6 @@ const ComponentList: React.FC<ComponentListProps> = ({
       component_image: toggledComponent.component_image,
     };
 
-    console.log("Updated Component Data:", updatedComponent);
-
     try {
       // Make the API call to update the component status
       const response = await axiosInstance.post(
@@ -120,7 +118,6 @@ const ComponentList: React.FC<ComponentListProps> = ({
         updatedComponent
       );
 
-      console.log("API Response:", response);
       if (response.status === 201) {
         toast.success("Component status updated successfully");
         // Update the component in the local state
@@ -130,7 +127,6 @@ const ComponentList: React.FC<ComponentListProps> = ({
             : comp
         );
         setComponents(updatedComponents);
-        console.log("dsfsdfsdgsgs", updatedComponents);
       } else {
         toast.error("Failed to update component status");
       }
