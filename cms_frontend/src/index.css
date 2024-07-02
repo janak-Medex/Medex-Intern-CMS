@@ -7,13 +7,13 @@
 }
 
 .hide-scrollbar {
-  overflow-y: scroll; /* Ensures scrolling is still possible /
+  overflow-y: scroll;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
-  width: 0; / Hides the scrollbar track /
+  width: 0;
 }
 
 .hide-scrollbar::-webkit-scrollbar-thumb {
-  background: transparent; / Makes the scrollbar thumb invisible */
+  background: transparent;
 }
