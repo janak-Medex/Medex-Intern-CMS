@@ -11,6 +11,9 @@ import { toast } from "react-toastify";
 import { Image } from "antd";
 import { Button, Modal } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
+import { MdOutlineExpandLess, MdOutlineExpandMore } from "react-icons/md";
+import { RiDownloadLine } from "react-icons/ri";
+import { Layout } from "antd";
 
 interface TemplateDetails {
   _id: string;
@@ -42,6 +45,7 @@ const CreateTemplate: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedTables, setExpandedTables] = useState({});
   const [forceUpdate, setForceUpdate] = useState(false);
+  const { Sider, Content } = Layout;
 
   useEffect(() => {
     fetchTemplateDetails();

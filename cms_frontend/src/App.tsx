@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -16,14 +16,14 @@ function App() {
     !!Cookies.get("access_token")
   );
 
-  const handleLogin = () => {
+  const handleLogin = useCallback(() => {
     setIsAuthenticated(true);
-  };
+  }, []);
 
-  // const handleLogout = () => {
-  //   Cookies.remove("access_token");
-  //   setIsAuthenticated(false);
-  // };
+  const handleLogout = useCallback(() => {
+    Cookies.remove("access_token");
+    setIsAuthenticated(false);
+  }, []);
 
   return (
     <Router>
@@ -45,7 +45,7 @@ function App() {
           path="/template"
           element={
             isAuthenticated ? (
-              <ProtectedRoute element={<Template />} />
+              <ProtectedRoute element={<Template onLogout={handleLogout} />} />
             ) : (
               <Navigate to="/" replace />
             )
