@@ -1,1 +1,0 @@
-# Medex-Intern-CMS
