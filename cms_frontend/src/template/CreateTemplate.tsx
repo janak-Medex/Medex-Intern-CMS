@@ -385,27 +385,40 @@ const CreateTemplate: React.FC = () => {
                 <h2 className="text-xl font-semibold mb-4 ">
                   Component Images
                 </h2>
-                <div className="space-y-4">
-                  {components?.map((component, index) => (
-                    <Card
-                      key={index}
-                      className="shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-300 flex flex-col items-center justify-center"
-                      style={{ minHeight: "200px" }} // Adjust minHeight as per your design
-                    >
-                      <p className="text-center text-lg font-semibold mb-2">
-                        Component: {component.component_name}
+                <div className="space-y-4 flex flex-col items-center justify-center">
+                  {!activeComponent ? (
+                    components?.map((component, index) => (
+                      <Card key={index} className="mb-4" size="small">
+                        <p className="text-center text-lg font-semibold mb-2 text-indigo-600">
+                          {component.component_name}
+                        </p>
+                        <div className="flex justify-center items-center">
+                          <Image
+                            src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
+                              component?.component_image?.split("uploads\\")[1]
+                            }`}
+                            className="rounded-lg shadow-sm"
+                          />
+                        </div>
+                      </Card>
+                    ))
+                  ) : (
+                    <Card size="small">
+                      <p className="text-center text-xl font-semibold mb-2 text-indigo-700">
+                        {activeComponent?.component_name}
                       </p>
                       <div className="flex justify-center items-center">
                         <Image
                           src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                            component?.component_image?.split("uploads\\")[1]
+                            activeComponent?.component_image?.split(
+                              "uploads\\"
+                            )[1]
                           }`}
-                          className="rounded-lg max-w-full"
-                          alt={component.component_name}
+                          className="rounded-lg shadow-sm"
                         />
                       </div>
                     </Card>
-                  ))}
+                  )}
                 </div>
               </Card>
             </div>
