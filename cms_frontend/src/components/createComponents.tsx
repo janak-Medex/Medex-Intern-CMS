@@ -690,10 +690,10 @@ const CreateComponent: React.FC<Props> = ({
                 <option value="">
                   {editMode ? fieldType : "Select a type"}
                 </option>
-                <option value="String">String</option>
-                <option value="Number">Number</option>
-                <option value="Boolean">Boolean</option>
-                <option value="Date">Date</option>
+                <option value="string">String</option>
+                <option value="number">Number</option>
+                {/* <option value="boolean">Boolean</option>
+                <option value="date">Date</option> */}
               </select>
             </div>
 

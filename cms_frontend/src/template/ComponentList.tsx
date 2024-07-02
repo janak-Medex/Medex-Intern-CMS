@@ -156,7 +156,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
   };
 
   return (
-    <div className="space-y-4 flex-1">
+    <div className="space-y-4 flex-1 p-4 bg-white h-full">
       <h2 className="text-xl font-semibold mb-4">Show Components</h2>
       <div className="space-y-2">
         {components.length === 0 ? (

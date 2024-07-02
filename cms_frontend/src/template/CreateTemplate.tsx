@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaEye, FaBars } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import CreateComponent, {
   Component as ComponentType,
@@ -8,10 +8,26 @@ import ComponentList from "../template/ComponentList";
 import axiosInstance from "../http/axiosInstance";
 import FormComponent from "../template/FormComponent";
 import { toast } from "react-toastify";
-import { Image, Button, Modal, Layout } from "antd";
-import { DownloadOutlined } from "@ant-design/icons";
-import { MdOutlineExpandLess, MdOutlineExpandMore } from "react-icons/md";
-import { RiDownloadLine } from "react-icons/ri";
+import {
+  Image,
+  Button,
+  Modal,
+  Layout,
+  Card,
+  Tooltip,
+  Empty,
+  Spin,
+  Collapse,
+} from "antd";
+import {
+  DownloadOutlined,
+  UploadOutlined,
+  PlusOutlined,
+  MenuOutlined,
+} from "@ant-design/icons";
+
+const { Content, Header, Sider } = Layout;
+const { Panel } = Collapse;
 
 interface TemplateDetails {
   _id: string;
@@ -53,24 +69,17 @@ const CreateTemplate: React.FC = () => {
     useState<ComponentType | null>(null);
   const [allComponents, setAllComponents] = useState<ComponentType[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [expandedTables, setExpandedTables] = useState<{
-    [key: number]: boolean;
-  }>({});
-  const { Sider, Content } = Layout;
+  const [loading, setLoading] = useState<boolean>(true);
+  const [sidebarVisible, setSidebarVisible] = useState<boolean>(false);
 
   useEffect(() => {
     fetchTemplateDetails();
     fetchAllComponents();
   }, [template_name]);
 
-  useEffect(() => {
-    if (templateDetails && templateDetails.components) {
-      setComponents(templateDetails.components);
-    }
-  }, [templateDetails]);
-
   const fetchTemplateDetails = async () => {
     try {
+      setLoading(true);
       const response = await axiosInstance.get<TemplateDetails>(
         `/templates/${template_name}`
       );
@@ -79,6 +88,8 @@ const CreateTemplate: React.FC = () => {
     } catch (error) {
       console.error("Error fetching template details:", error);
       toast.error("Failed to fetch template details");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -240,13 +251,6 @@ const CreateTemplate: React.FC = () => {
   const handleOk = () => setIsModalOpen(false);
   const handleCancel = () => setIsModalOpen(false);
 
-  const toggleExpand = (index: number) => {
-    setExpandedTables((prevState) => ({
-      ...prevState,
-      [index]: !prevState[index],
-    }));
-  };
-
   const tableData: TableData[] = allComponents.map((template) => ({
     templateName: template.template_name,
     isActive: template.is_active,
@@ -260,179 +264,204 @@ const CreateTemplate: React.FC = () => {
   }));
 
   return (
-    <Layout className="min-h-screen bg-gray-200">
-      <Sider width={320} className="bg-gray-200 shadow-md p-6">
-        <h2 className="text-2xl font-bold mb-6 text-gray-600">
-          Manage Components
-        </h2>
-        <div className="flex gap-2 w-full mb-6">
+    <Layout className="h-screen ">
+      <Header className="bg-white shadow-md flex items-center justify-between px-6 py-2 mb-4 z-10">
+        <div className="flex items-center">
           <Button
-            type="default"
-            onClick={handleOpenCreateComponent}
-            size="large"
-            className="flex items-center justify-center w-1/2 bg-emerald-500 text-white hover:bg-emerald-600 transition duration-300"
-            icon={<FaPlus className="mr-2" />}
-          >
-            Create New
-          </Button>
-          <Button
-            type="primary"
-            onClick={showModal}
-            size="large"
-            className="flex items-center justify-center w-1/2 transition duration-300"
-            icon={<RiDownloadLine className="mr-2" />}
-          >
-            Use Existing
-          </Button>
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setSidebarVisible(!sidebarVisible)}
+            className="mr-4 text-indigo-600"
+          />
+          <h1 className="text-xl font-bold text-indigo-700 m-0">
+            {templateDetails ? templateDetails.template_name : "Loading..."}
+          </h1>
         </div>
-        <ComponentList
-          components={components}
-          toggleStates={toggleStates}
-          onToggle={handleToggle}
-          onEdit={(component) => {
-            setEditingComponent(component as ComponentType);
-            setIsCreatingComponent(true);
-            setActiveComponent(null);
-          }}
-          onDelete={(componentId) => onDeleteComponent(componentId)}
-          onShowComponentForm={(component) => {
-            setActiveComponent(component);
-            setIsCreatingComponent(false);
-          }}
-          template_name={template_name || ""}
-          setComponents={setComponents}
-        />
-      </Sider>
-      <Layout>
-        <h1 className="ml-8 text-2xl font-bold text-gray-600 pt-4">
-          {templateDetails ? templateDetails.template_name : "Loading..."}
-        </h1>
-        <Content className="p-6">
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden grid grid-cols-2 gap-2">
-            {isCreatingComponent && (
-              <CreateComponent
-                onClose={handleCloseCreateComponent}
-                onCreate={onCreateComponent}
-                initialComponent={editingComponent}
-              />
-            )}
-            {activeComponent && !isCreatingComponent && (
-              <div className="bg-white rounded-lg shadow-md">
-                <h2 className="text-2xl font-bold mt-6 ml-6 mb-0 text-gray-600">
-                  {activeComponent.component_name}
+        <div className="flex gap-2">
+          <Tooltip title="Create New Component">
+            <Button
+              type="primary"
+              onClick={handleOpenCreateComponent}
+              icon={<PlusOutlined />}
+              className="bg-indigo-500 hover:bg-indigo-600"
+            >
+              Create New
+            </Button>
+          </Tooltip>
+          <Tooltip title="Use Existing Component">
+            <Button
+              type="default"
+              onClick={showModal}
+              icon={<UploadOutlined />}
+              className="border-indigo-500 text-indigo-500 hover:bg-indigo-50"
+            >
+              Use Existing
+            </Button>
+          </Tooltip>
+        </div>
+      </Header>
+      <Layout className="flex-1 overflow-hidden">
+        <Sider
+          width={300}
+          theme="light"
+          trigger={null}
+          collapsible
+          collapsed={!sidebarVisible}
+          collapsedWidth={0}
+          className="border-r border-gray-100 shadow-md bg-white rounded-lg "
+          style={{ height: "calc(100vh - 64px)", overflowY: "auto" }}
+        >
+          <ComponentList
+            components={components}
+            toggleStates={toggleStates}
+            onToggle={handleToggle}
+            onEdit={(component) => {
+              setEditingComponent(component as ComponentType);
+              setIsCreatingComponent(true);
+              setActiveComponent(null);
+            }}
+            onDelete={(componentId) => onDeleteComponent(componentId)}
+            onShowComponentForm={(component) => {
+              setActiveComponent(component);
+              setIsCreatingComponent(false);
+            }}
+            template_name={template_name || ""}
+            setComponents={setComponents}
+          />
+        </Sider>
+        <Content
+          className="pl-4  overflow-y-hidden"
+          style={{ height: "calc(100vh - 64px)" }}
+        >
+          <Spin spinning={loading}>
+            <div className="flex space-x-4 h-full ">
+              <Card
+                className="w-1/2 shadow-lg bg-white overflow-y-auto hide-scrollbar"
+                style={{ height: "calc(100vh - 96px)" }}
+              >
+                <h2 className="text-xl font-semibold mb-4 ">
+                  Component Details
                 </h2>
-                <FormComponent
-                  formData={
-                    Array.isArray(activeComponent.data)
-                      ? activeComponent.data
-                      : [activeComponent.data]
-                  }
-                  component_name={activeComponent.component_name}
-                  template_name={template_name}
-                  setFormData={handleSetFormData}
-                  handleSubmit={handleSubmit}
-                />
-              </div>
-            )}
-            {!activeComponent && !isCreatingComponent && (
-              <div className="bg-white rounded-lg shadow-md flex items-center justify-center h-full">
-                <p className="text-indigo-500 text-lg">
-                  Select a component to view details.
-                </p>
-              </div>
-            )}
-            <div className="py-6 px-4 bg-white">
-              <h2 className="text-xl font-bold mb-6 text-gray-600">
-                Component Images
-              </h2>
-              <div className="h-screen overflow-y-auto hide-scrollbar">
-                {!activeComponent ? (
-                  components?.map((component, index) => (
-                    <div key={index} className="mb-8">
-                      <p className="text-center text-lg font-semibold mb-4 text-gray-600">
-                        <span className="font-bold">Component: </span>
-                        {component.component_name}
-                      </p>
-                      <Image
-                        src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                          component?.component_image?.split("uploads\\")[1]
-                        }`}
-                        className="rounded-lg shadow-md"
-                      />
-                    </div>
-                  ))
-                ) : (
+                {isCreatingComponent && (
+                  <CreateComponent
+                    onClose={handleCloseCreateComponent}
+                    onCreate={onCreateComponent}
+                    initialComponent={editingComponent}
+                  />
+                )}
+                {activeComponent && !isCreatingComponent && (
                   <div>
-                    <p className="text-center text-xl font-semibold mb-6 text-indigo-700">
-                      <span className="font-bold">Component: </span>
-                      {activeComponent?.component_name}
-                    </p>
-                    <Image
-                      src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                        activeComponent?.component_image?.split("uploads\\")[1]
-                      }`}
-                      className="rounded-lg shadow-md"
+                    <h3 className="text-lg font-semibold mb-2 text-indigo-600">
+                      {activeComponent.component_name}
+                    </h3>
+                    <FormComponent
+                      formData={
+                        Array.isArray(activeComponent.data)
+                          ? activeComponent.data
+                          : [activeComponent.data]
+                      }
+                      component_name={activeComponent.component_name}
+                      template_name={template_name}
+                      setFormData={handleSetFormData}
+                      handleSubmit={handleSubmit}
                     />
+                    <Button
+                      type="primary"
+                      onClick={handleSubmit}
+                      icon={<UploadOutlined />}
+                      className="mt-4 bg-green-500 hover:bg-green-600"
+                    >
+                      Save
+                    </Button>
                   </div>
                 )}
-              </div>
+                {!activeComponent && !isCreatingComponent && (
+                  <Empty description="Select a component to view details" />
+                )}
+              </Card>
+              <Card
+                className="w-1/2 shadow-lg bg-white overflow-y-auto hide-scrollbar"
+                style={{ height: "calc(100vh - 96px)" }}
+              >
+                <h2 className="text-xl font-semibold mb-4 ">
+                  Component Images
+                </h2>
+                <div className="space-y-4">
+                  {components?.map((component, index) => (
+                    <Card
+                      key={index}
+                      className="shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-300 flex flex-col items-center justify-center"
+                      style={{ minHeight: "200px" }} // Adjust minHeight as per your design
+                    >
+                      <p className="text-center text-lg font-semibold mb-2">
+                        Component: {component.component_name}
+                      </p>
+                      <div className="flex justify-center items-center">
+                        <Image
+                          src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
+                            component?.component_image?.split("uploads\\")[1]
+                          }`}
+                          className="rounded-lg max-w-full"
+                          alt={component.component_name}
+                        />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </Card>
             </div>
-          </div>
+          </Spin>
         </Content>
       </Layout>
       <Modal
-        title="All Templates (Click to see components)"
+        title="Import Existing Components"
         open={isModalOpen}
         onOk={handleOk}
         onCancel={handleCancel}
         width={600}
-        centered
-        className="rounded-lg"
+        footer={null}
+        className="rounded-lg overflow-hidden"
       >
-        <div className="max-h-96 overflow-y-auto p-6">
-          {tableData.map((data, index) => (
-            <div key={index} className="mb-6 bg-white rounded-lg shadow-md">
-              <div
-                onClick={() => toggleExpand(index)}
-                className="cursor-pointer bg-indigo-100 p-4 rounded-t-lg flex justify-between items-center"
+        <div className="max-h-96 overflow-y-auto">
+          <Collapse className="bg-white shadow-inner">
+            {tableData.map((data, index) => (
+              <Panel
+                header={
+                  <span className="font-semibold text-indigo-600">
+                    {data.templateName}
+                  </span>
+                }
+                key={index}
+                className="border-b last:border-b-0"
               >
-                <p className="text-base font-semibold text-indigo-800">
-                  {expandedTables[index] ? (
-                    <MdOutlineExpandLess className="mr-2 inline-block" />
-                  ) : (
-                    <MdOutlineExpandMore className="mr-2 inline-block" />
-                  )}
-                  {data.templateName}
-                </p>
-                <span className="text-sm text-indigo-600">Status</span>
-              </div>
-              {expandedTables[index] && (
-                <div className="p-4">
+                <ul className="list-none">
                   {data.components.map((component, idx) => (
-                    <div
+                    <li
                       key={idx}
-                      className="flex justify-between items-center py-2 border-b last:border-b-0"
+                      className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50"
                     >
-                      <span className="text-indigo-700">
+                      <span className="text-gray-700">
                         {component.componentName}
                       </span>
-                      <Button
-                        type="primary"
-                        icon={<DownloadOutlined />}
-                        size="small"
-                        onClick={() =>
-                          handleImportComponent(component.componentId)
-                        }
-                        className="bg-emerald-500 hover:bg-emerald-600 transition duration-300 mr-2"
-                      >
-                        Import
-                      </Button>
-                    </div>
+                      <Tooltip title="Import Component">
+                        <Button
+                          type="primary"
+                          icon={<DownloadOutlined />}
+                          size="small"
+                          onClick={() =>
+                            handleImportComponent(component.componentId)
+                          }
+                          className="bg-indigo-500 hover:bg-indigo-600 transition duration-300"
+                        >
+                          Import
+                        </Button>
+                      </Tooltip>
+                    </li>
                   ))}
-                </div>
-              )}
-            </div>
-          ))}
+                </ul>
+              </Panel>
+            ))}
+          </Collapse>
         </div>
       </Modal>
     </Layout>
