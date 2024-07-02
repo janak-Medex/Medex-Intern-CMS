@@ -4,22 +4,37 @@ import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
 import axiosInstance from "../http/axiosInstance";
 import Cookies from "js-cookie";
-import { Card, Switch, Tooltip } from "antd";
-import { LogoutOutlined } from "@ant-design/icons";
+import { Switch, Tooltip, Input, Menu, Dropdown } from "antd";
+import {
+  LogoutOutlined,
+  MoreOutlined,
+  DeleteOutlined,
+  EditOutlined,
+} from "@ant-design/icons";
 import axios from "axios";
 
-const { Meta } = Card;
+const { Search } = Input;
 
 interface TemplateProps {
   onLogout: () => void;
+}
+
+interface Template {
+  _id: string;
+  template_name: string;
+  active: boolean;
+  updatedAt: string;
 }
 
 const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [template_name, settemplate_name] = useState<string>("");
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
 
   useEffect(() => {
     checkLoginStatus();
@@ -32,6 +47,13 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
       navigate("/");
     }
   }, [isLoggedIn, navigate]);
+
+  useEffect(() => {
+    const filtered = templates.filter((template) =>
+      template.template_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredTemplates(filtered);
+  }, [searchTerm, templates]);
 
   const checkLoginStatus = () => {
     const accessToken = Cookies.get("access_token");
@@ -106,106 +128,208 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   const handleLogout = () => {
     Cookies.remove("access_token");
     setIsLoggedIn(false);
-    onLogout(); // Call the onLogout function passed from App
+    onLogout();
   };
 
-  const handleSwitchChange = (checked: boolean, templateId: string) => {
-    console.log(
-      `Switch for template ${templateId} is ${checked ? "on" : "off"}`
-    );
-    // Add your logic for handling the switch change here
+  const handleSwitchChange = async (checked: boolean, templateId: string) => {
+    try {
+      await axiosInstance.patch(`/templates/${templateId}`, {
+        active: checked,
+      });
+      fetchTemplates();
+    } catch (error) {
+      console.error("Error updating template status:", error);
+    }
   };
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+  };
+
+  const handleViewChange = (newView: "grid" | "list") => {
+    setView(newView);
+  };
+
+  const handleTemplateAction = async (action: string, templateId: string) => {
+    switch (action) {
+      case "edit":
+        const template = templates.find((t) => t._id === templateId);
+        if (template) {
+          navigate(`/create-template/${template.template_name}`);
+        }
+        break;
+      case "delete":
+        try {
+          await axiosInstance.delete(`/templates/${templateId}`);
+          fetchTemplates();
+        } catch (error) {
+          console.error("Error deleting template:", error);
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  const menu = (templateId: string) => (
+    <Menu>
+      <Menu.Item
+        key="1"
+        icon={<EditOutlined />}
+        onClick={() => handleTemplateAction("edit", templateId)}
+      >
+        Edit
+      </Menu.Item>
+      <Menu.Item
+        key="2"
+        icon={<DeleteOutlined />}
+        onClick={() => handleTemplateAction("delete", templateId)}
+      >
+        Delete
+      </Menu.Item>
+    </Menu>
+  );
 
   if (!isLoggedIn) {
-    return null; // or a loading spinner
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-[#39AF9F] py-4 px-6 shadow-md">
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white py-6 px-8 shadow-sm">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-white text-2xl font-semibold">
-            Template Management System
-          </h1>
-          <Tooltip title="Logout">
-            <button
-              onClick={handleLogout}
-              className="text-white hover:text-gray-200 transition duration-300"
-            >
-              <LogoutOutlined style={{ fontSize: "24px" }} />
-            </button>
-          </Tooltip>
+          <h1 className="text-gray-800 text-3xl font-bold">Templates</h1>
+          <div className="flex items-center space-x-6">
+            <Search
+              placeholder="Search templates"
+              onChange={(e) => handleSearch(e.target.value)}
+              style={{ width: 300 }}
+              className="border-2 border-gray-200 rounded-lg"
+            />
+            <Tooltip title="Logout">
+              <button
+                onClick={handleLogout}
+                className="text-gray-600 hover:text-gray-800 transition duration-300"
+              >
+                <LogoutOutlined style={{ fontSize: "24px" }} />
+              </button>
+            </Tooltip>
+          </div>
         </div>
       </div>
 
-      <div className="container mx-auto mt-10 px-6">
-        <div className="flex justify-center mb-10">
+      <div className="container mx-auto mt-12 px-8">
+        <div className="flex justify-between items-center mb-10">
           <button
             onClick={handleCreateTemplate}
-            className="flex items-center rounded-full bg-[#39AF9F] hover:bg-teal-600 text-white py-3 px-6 focus:outline-none transition duration-300 ease-in-out shadow-lg"
+            className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 focus:outline-none transition duration-300 ease-in-out shadow-lg hover:shadow-xl"
           >
-            <span className="mr-2 text-xl">Create a New Template</span>
-            <BiAddToQueue size={30} className="animate-pulse" />
+            <BiAddToQueue size={24} className="mr-3" />
+            <span className="text-lg font-semibold">New Template</span>
           </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => handleViewChange("grid")}
+              className={`px-4 py-2 rounded-lg ${
+                view === "grid"
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-white text-gray-600"
+              } transition-colors duration-300`}
+            >
+              Grid
+            </button>
+            <button
+              onClick={() => handleViewChange("list")}
+              className={`px-4 py-2 rounded-lg ${
+                view === "list"
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-white text-gray-600"
+              } transition-colors duration-300`}
+            >
+              List
+            </button>
+          </div>
         </div>
 
-        <h2 className="text-2xl font-semibold mb-6">Existing Templates</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {templates.length === 0 ? (
-            <p className="text-gray-600 col-span-full text-center">
-              No templates created yet.
+        {filteredTemplates.length === 0 ? (
+          <div className="text-center py-24">
+            <p className="text-gray-500 text-2xl font-light">
+              No templates found.
             </p>
-          ) : (
-            templates.map((template) => (
-              <div key={template._id} className="relative">
-                <Link to={`/create-template/${template.template_name}`}>
-                  <Card
-                    className="w-full h-[120px] border border-gray-300 shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out"
-                    hoverable
+            <p className="text-gray-400 mt-3 text-lg">
+              Try adjusting your search or create a new template.
+            </p>
+          </div>
+        ) : (
+          <div
+            className={`grid ${
+              view === "grid"
+                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
+                : "grid-cols-1 gap-6"
+            }`}
+          >
+            {filteredTemplates.map((template) => (
+              <div
+                key={template._id}
+                className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out 
+                            ${view === "grid" ? "p-6" : "p-5"}`}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <Link
+                    to={`/create-template/${template.template_name}`}
+                    className="block w-full"
                   >
-                    <Meta
-                      title={template.template_name}
-                      description="View component"
-                    />
-                  </Card>
-                </Link>
-                <div className="absolute top-2 right-2">
-                  <Tooltip
-                    title={`${
-                      template.active ? "Deactivate" : "Activate"
-                    } template`}
-                  >
+                    <h3 className="text-xl font-semibold text-gray-800 hover:text-blue-600 transition-colors duration-300">
+                      {template.template_name}
+                    </h3>
+                  </Link>
+                  <div className="flex items-center space-x-3">
                     <Switch
                       size="small"
-                      defaultChecked={template.active}
+                      checked={template.active}
                       onChange={(checked) =>
                         handleSwitchChange(checked, template._id)
                       }
                     />
-                  </Tooltip>
+                    <Dropdown overlay={menu(template._id)} trigger={["click"]}>
+                      <button className="text-gray-400 hover:text-gray-600 transition-colors duration-300">
+                        <MoreOutlined style={{ fontSize: "20px" }} />
+                      </button>
+                    </Dropdown>
+                  </div>
                 </div>
+                <p className="text-sm text-gray-500">
+                  Last edited:{" "}
+                  {new Date(template.updatedAt).toLocaleDateString()}
+                </p>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <Modal show={isModalOpen} onClose={handleCloseModal}>
-        <div className="bg-white p-6 rounded-lg shadow-xl">
-          <h2 className="text-xl font-semibold mb-4">Enter Template Name</h2>
+        <div className="bg-white p-8 rounded-lg shadow-xl">
+          <h2 className="text-2xl font-semibold mb-6">Create New Template</h2>
           <input
             type="text"
-            className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 w-full mb-4"
+            className="border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full mb-6"
             placeholder="Template Name"
             value={template_name}
             onChange={handletemplate_nameChange}
           />
-          <div className="flex justify-end">
+          <div className="flex justify-end space-x-4">
+            <button
+              onClick={handleCloseModal}
+              className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors duration-300"
+            >
+              Cancel
+            </button>
             <button
               onClick={handleSaveTemplate}
-              className="px-4 py-2 bg-[#39AF9F] hover:bg-teal-600 text-white rounded-md focus:outline-none transition duration-300 ease-in-out"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg focus:outline-none transition-all duration-300 ease-in-out shadow-md hover:shadow-lg"
             >
-              Save
+              Create
             </button>
           </div>
         </div>
