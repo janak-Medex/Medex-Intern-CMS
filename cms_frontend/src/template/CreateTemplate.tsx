@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-// import { FaPlus, FaEdit, FaTrash, FaEye, FaBars } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import CreateComponent, {
   Component as ComponentType,
@@ -70,7 +69,7 @@ const CreateTemplate: React.FC = () => {
   const [allComponents, setAllComponents] = useState<ComponentType[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [sidebarVisible, setSidebarVisible] = useState<boolean>(false);
+  const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
 
   useEffect(() => {
     fetchTemplateDetails();
