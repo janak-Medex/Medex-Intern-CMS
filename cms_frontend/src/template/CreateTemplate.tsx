@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaPlus, FaEdit, FaTrash, FaEye, FaBars } from "react-icons/fa";
+// import { FaPlus, FaEdit, FaTrash, FaEye, FaBars } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import CreateComponent, {
   Component as ComponentType,
