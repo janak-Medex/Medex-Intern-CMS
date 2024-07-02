@@ -299,8 +299,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
                   </div>
                 </div>
                 <p className="text-sm text-gray-500">
-                  Last edited:{" "}
-                  {new Date(template.updatedAt).toLocaleDateString()}
+                  Last edited: {new Date(template.updatedAt).toLocaleString()}
                 </p>
               </div>
             ))}
