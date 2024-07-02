@@ -227,11 +227,13 @@ const CreateComponent: React.FC<Props> = ({
       return;
     }
 
-    const newRule = {
-      fieldName,
-      type: fieldType,
-      required: isRequired,
-    };
+    const newRule = [
+      {
+        fieldName,
+        type: fieldType,
+        required: isRequired,
+      },
+    ];
 
     try {
       if (editMode && editingRule) {
