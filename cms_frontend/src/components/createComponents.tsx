@@ -1,16 +1,24 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FaPlus, FaTrash, FaUpload, FaExpand, FaEdit } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import axiosInstance from "../http/axiosInstance";
 import { toast } from "react-toastify";
-import { Button, Modal, Tooltip, Input } from "antd";
-import { InfoCircleOutlined, SearchOutlined } from "@ant-design/icons";
+import { Modal, Input } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 
 export interface FormField {
   [key: string]: any;
 }
+interface SchemaRule {
+  _id: string;
+  fieldName: string;
+  type: string;
+  required: boolean;
+}
 
 export interface Component {
+  components: any;
+  is_active: any;
   component_name: string;
   template_name: string;
   data: FormField[];
@@ -54,12 +62,14 @@ const CreateComponent: React.FC<Props> = ({
   // const [maxLength, setMaxLength] = useState<number | undefined>(undefined);
   // const [minValue, setMinValue] = useState<number | undefined>(undefined);
   // const [maxValue, setMaxValue] = useState<number | undefined>(undefined);
-  const [schemaRulesData, setSchemaRulesData] = useState<any[]>([]);
+  const [schemaRulesData, setSchemaRulesData] = useState<SchemaRule[]>([]);
+  const [filteredSchemaRules, setFilteredSchemaRules] = useState<SchemaRule[]>(
+    []
+  );
   const [isSchemaModalOpen, setIsSchemaModalOpen] = useState<boolean>(false);
   const [editMode, setEditMode] = useState<boolean>(false); // New state for edit mode
   const [editingRule, setEditingRule] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredSchemaRules, setFilteredSchemaRules] = useState([]);
 
   useEffect(() => {
     if (initialComponent) {
@@ -154,7 +164,10 @@ const CreateComponent: React.FC<Props> = ({
 
     const formData = new FormData();
     formData.append("component_name", component_name);
-    formData.append("template_name", template_name);
+    if (template_name) {
+      formData.append("template_name", template_name);
+    }
+    // formData.append("template_name", template_name);
     formData.append("data", JSON.stringify([formFields]));
     formData.append("isActive", "true");
     formData.append("inner_component", innerComponent.toString());
@@ -314,16 +327,13 @@ const CreateComponent: React.FC<Props> = ({
     setIsRequired(rule.required);
     setIsModalOpen(true);
   };
-
   useEffect(() => {
-    const filtered =
-      schemaRulesData?.data?.filter((rule) =>
-        rule.fieldName.toLowerCase().includes(searchTerm.toLowerCase())
-      ) || [];
+    const filtered = schemaRulesData.filter((rule: SchemaRule) =>
+      rule.fieldName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     setFilteredSchemaRules(filtered);
     setCurrentPage(1);
   }, [schemaRulesData, searchTerm]);
-
   // for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -335,7 +345,7 @@ const CreateComponent: React.FC<Props> = ({
     currentPage * itemsPerPage
   );
 
-  const handlePageChange = (page) => {
+  const handlePageChange = (page: React.SetStateAction<number>) => {
     setCurrentPage(page);
   };
 
@@ -778,12 +788,6 @@ const CreateComponent: React.FC<Props> = ({
           </button>
         </div>
       )}
-
-      {/* <SchemaRuleModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onAddRule={handleAddSchemaRule}
-      /> */}
     </div>
   );
 };

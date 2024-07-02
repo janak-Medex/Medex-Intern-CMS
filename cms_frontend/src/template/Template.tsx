@@ -6,6 +6,7 @@ import axiosInstance from "../http/axiosInstance";
 import Cookies from "js-cookie";
 import { Card, Switch, Tooltip } from "antd";
 import { LogoutOutlined } from "@ant-design/icons";
+import axios from "axios";
 
 const { Meta } = Card;
 
@@ -41,7 +42,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     try {
       const response = await axiosInstance.get("/templates");
       setTemplates(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching templates:", error);
       if (error.response && error.response.status === 401) {
         handleLogout();
@@ -89,10 +90,14 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
           setIsModalOpen(false);
           navigate(`/create-template/${template_name}`);
         }
-      } catch (error) {
-        console.error("Error saving template:", error);
-        if (error.response && error.response.status === 401) {
-          handleLogout();
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          console.error("Error saving template:", error.message);
+          if (error.response && error.response.status === 401) {
+            handleLogout();
+          }
+        } else {
+          console.error("An unexpected error occurred:", error);
         }
       }
     }

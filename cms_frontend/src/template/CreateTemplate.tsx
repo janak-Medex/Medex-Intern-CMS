@@ -24,6 +24,18 @@ interface TemplateDetails {
   handleSubmit: any;
 }
 
+interface TableData {
+  templateName: string;
+  isActive: boolean;
+  componentArray: ComponentType[];
+  components: {
+    componentName: string;
+    componentId: string;
+    data: any;
+    isActive: boolean;
+  }[];
+}
+
 const CreateTemplate: React.FC = () => {
   const { template_name } = useParams<{ template_name: string }>();
   const [toggleStates, setToggleStates] = useState<{ [key: string]: boolean }>(
@@ -40,8 +52,10 @@ const CreateTemplate: React.FC = () => {
   const [editingComponent, setEditingComponent] =
     useState<ComponentType | null>(null);
   const [allComponents, setAllComponents] = useState<ComponentType[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [expandedTables, setExpandedTables] = useState({});
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [expandedTables, setExpandedTables] = useState<{
+    [key: number]: boolean;
+  }>({});
   const { Sider, Content } = Layout;
 
   useEffect(() => {
@@ -70,7 +84,7 @@ const CreateTemplate: React.FC = () => {
 
   const fetchAllComponents = async () => {
     try {
-      const response = await axiosInstance.get("templates");
+      const response = await axiosInstance.get<ComponentType[]>("templates");
       if (response.status === 200) {
         setAllComponents(response.data);
       }
@@ -233,11 +247,11 @@ const CreateTemplate: React.FC = () => {
     }));
   };
 
-  const tableData = allComponents.map((template) => ({
+  const tableData: TableData[] = allComponents.map((template) => ({
     templateName: template.template_name,
     isActive: template.is_active,
     componentArray: template.components,
-    components: template.components.map((component) => ({
+    components: template.components.map((component: ComponentType) => ({
       componentName: component.component_name,
       componentId: component._id,
       data: component.data,
@@ -285,7 +299,7 @@ const CreateTemplate: React.FC = () => {
             setActiveComponent(component);
             setIsCreatingComponent(false);
           }}
-          template_name={template_name}
+          template_name={template_name || ""}
           setComponents={setComponents}
         />
       </Sider>

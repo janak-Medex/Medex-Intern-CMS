@@ -19,8 +19,6 @@ interface ComponentListProps {
 
 const ComponentList: React.FC<ComponentListProps> = ({
   components,
-  toggleStates,
-  onToggle,
   onEdit,
   onDelete,
   onShowComponentForm,
@@ -30,7 +28,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
   const [draggedItem, setDraggedItem] = useState<ComponentType | null>(null);
 
   const handleDragStart = (
-    e: React.DragEvent<HTMLDivElement>,
+    _e: React.DragEvent<HTMLDivElement>,
     item: ComponentType
   ) => {
     setDraggedItem(item);
@@ -187,7 +185,9 @@ const ComponentList: React.FC<ComponentListProps> = ({
                   size="small"
                   checked={component.is_active} // Use component.is_active directly for switch state
                   onChange={() => {
-                    handleToggle(component._id);
+                    if (component._id) {
+                      handleToggle(component._id);
+                    }
                   }}
                 />
                 <button
