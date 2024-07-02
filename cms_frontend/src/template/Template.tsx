@@ -4,6 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
 import axiosInstance from "../http/axiosInstance";
 import Cookies from "js-cookie";
+import { Card } from "antd";
+const { Meta } = Card;
 
 const Template: React.FC = () => {
   const navigate = useNavigate();
@@ -73,14 +75,15 @@ const Template: React.FC = () => {
 
   return (
     <>
-      <div className="bg-[#39AF9F] py-8">
+      <div className="bg-[#39AF9F] py-6">
         <div className="container mx-auto text-center">
-          <h1 className="text-white text-3xl font-semibold">
+          <h1 className="text-white text-2xl font-semibold">
             Template Management System
           </h1>
         </div>
       </div>
-      <div className="my-16 flex flex-col justify-center items-center">
+
+      <div className="mt-16 flex flex-col justify-center items-center">
         <button
           onClick={handleCreateTemplate}
           className="flex items-center rounded-full bg-[#39AF9F] hover:bg-teal-600 text-white py-3 px-6 focus:outline-none transition duration-300 ease-in-out"
@@ -89,9 +92,10 @@ const Template: React.FC = () => {
           <BiAddToQueue size={30} className="animate-pulse" />
         </button>
       </div>
-      <div className="container mx-auto ">
+
+      <div className="container mx-auto my-10 px-6">
         <h2 className="text-2xl font-semibold mb-4">Existing Templates</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {templates.length === 0 ? (
             <p className="text-gray-600">No templates created yet.</p>
           ) : (
@@ -100,16 +104,22 @@ const Template: React.FC = () => {
                 key={template._id}
                 to={`/create-template/${template.template_name}`}
               >
-                <div className="bg-white rounded-md p-4 shadow-md flex justify-between items-center cursor-pointer">
-                  <span className="text-lg font-semibold">
-                    {template.template_name}
-                  </span>
-                </div>
+                <Card
+                  className="w-[280px] h-[100px] border border-gray-300 shadow-sm hover:shadow-lg transform hover:scale-105 transition-transform duration-200"
+                  hoverable
+                  // cover={<img alt="example" src="https://example.com/example.jpg" />}
+                >
+                  <Meta
+                    title={template.template_name}
+                    description="View component"
+                  />
+                </Card>
               </Link>
             ))
           )}
         </div>
       </div>
+
       <Modal show={isModalOpen} onClose={handleCloseModal}>
         <div className="bg-white p-4 rounded-md">
           <h2 className="text-lg font-semibold mb-4">Enter Template Name</h2>

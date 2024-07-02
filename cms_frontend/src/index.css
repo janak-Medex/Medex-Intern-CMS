@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:where(.css-dev-only-do-not-override-m4timi).ant-layout .ant-layout-sider {
+  background-color: #e5e7eb;
+}
+
+.hide-scrollbar {
+  overflow-y: scroll; /* Ensures scrolling is still possible /
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0; / Hides the scrollbar track /
+}
+
+.hide-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent; / Makes the scrollbar thumb invisible */
+}
