@@ -53,7 +53,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                 value={user_name}
                 onChange={(e) => setUser_name(e.target.value)}
                 className="block w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
-                placeholder="Input Email Address"
+                placeholder="Input username"
                 required
               />
             </div>
