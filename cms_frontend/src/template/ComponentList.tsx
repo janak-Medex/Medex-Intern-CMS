@@ -2,18 +2,13 @@ import React, { useState } from "react";
 import { FaEdit, FaTrash, FaGripVertical } from "react-icons/fa";
 import { confirmAlert } from "react-confirm-alert";
 import { Switch } from "antd";
-import axiosInstance from "../http/axiosInstance";
-import { toast } from "react-toastify";
 
-// Define the Component interface (assuming it's in createComponents.ts)
-interface Component {
-  _id: string;
-  component_name: string;
-  data: any; // Adjust type as per your actual structure
-  is_active: boolean;
-  inner_component?: any; // Adjust type as per your actual structure
-  component_image?: string; // Adjust type as per your actual structure
-}
+import { toast } from "react-toastify";
+import {
+  Component,
+  updateComponentOrder,
+  updateComponentStatus,
+} from "../api/component.api";
 
 interface ComponentListProps {
   components: Component[];
@@ -68,39 +63,19 @@ const ComponentList: React.FC<ComponentListProps> = ({
     setComponents(newComponents);
     setDraggedItem(null);
 
-    // Call the API to update the order
+    // Call the function to update the order
     updateOrder(newComponents);
   };
 
   const updateOrder = async (newComponents: Component[]) => {
-    try {
-      const response = await axiosInstance.put(
-        `/templates/${template_name}/reorder`,
-        {
-          components: newComponents.map((comp, index) => ({
-            _id: comp._id,
-            order: index,
-          })),
-        }
-      );
-
-      if (response.data.success) {
-        toast.success("Component order updated successfully");
-      } else {
-        toast.error("Failed to update component order");
-        // If the API call fails, revert to the original order
-        setComponents(components);
-      }
-    } catch (error) {
-      console.error("Error updating component order:", error);
-      toast.error("Failed to update component order");
-      // If the API call fails, revert to the original order
+    const success = await updateComponentOrder(template_name, newComponents);
+    if (!success) {
+      // If update failed, revert to the original order
       setComponents(components);
     }
   };
 
   const handleToggle = async (componentId: string) => {
-    // Find the component by ID and toggle its is_active property
     const toggledComponent = components.find(
       (comp) => comp._id === componentId
     );
@@ -110,7 +85,6 @@ const ComponentList: React.FC<ComponentListProps> = ({
       return;
     }
 
-    // Prepare the data payload to send to the server
     const updatedComponent = {
       template_name: template_name,
       component_name: toggledComponent.component_name,
@@ -120,28 +94,14 @@ const ComponentList: React.FC<ComponentListProps> = ({
       component_image: toggledComponent.component_image,
     };
 
-    try {
-      // Make the API call to update the component status
-      const response = await axiosInstance.post(
-        `/components`,
-        updatedComponent
+    const success = await updateComponentStatus(updatedComponent);
+    if (success) {
+      const updatedComponents = components.map((comp) =>
+        comp._id === componentId
+          ? { ...comp, is_active: !comp.is_active }
+          : comp
       );
-
-      if (response.status === 201) {
-        toast.success("Component status updated successfully");
-        // Update the component in the local state
-        const updatedComponents = components.map((comp) =>
-          comp._id === componentId
-            ? { ...comp, is_active: !comp.is_active }
-            : comp
-        );
-        setComponents(updatedComponents);
-      } else {
-        toast.error("Failed to update component status");
-      }
-    } catch (error) {
-      console.error("Error updating component status:", error);
-      toast.error("Failed to update component status");
+      setComponents(updatedComponents);
     }
   };
 
@@ -188,7 +148,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
               <div className="flex items-center space-x-2">
                 <Switch
                   size="small"
-                  checked={component.is_active} // Use component.is_active directly for switch state
+                  checked={component.is_active}
                   onChange={() => {
                     if (component._id) {
                       handleToggle(component._id);
