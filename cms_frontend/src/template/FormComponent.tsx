@@ -5,11 +5,11 @@ import {
   AiOutlineVideoCamera,
   AiOutlineFile,
 } from "react-icons/ai";
-import axiosInstance from "../http/axiosInstance";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Image } from "antd";
 import Cookies from "js-cookie";
+import { submitFormData } from "../api/form.api";
 
 interface FormComponentProps {
   template_name: any;
@@ -212,9 +212,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
     formPayload.append("inner_component", "1");
 
     try {
-      const response = await axiosInstance.post("/components", formPayload, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await submitFormData(formPayload);
       if (response.status === 201) {
         Cookies.get("access_token");
         toast.success("Form submitted successfully");
