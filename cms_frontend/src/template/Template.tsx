@@ -14,6 +14,7 @@ import {
 } from "@ant-design/icons";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { logout } from "../api/auth.api";
 
 const { Search } = Input;
 
@@ -183,7 +184,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   };
 
   const handleLogout = () => {
-    Cookies.remove("access_token");
+    logout();
     setIsLoggedIn(false);
     onLogout();
   };

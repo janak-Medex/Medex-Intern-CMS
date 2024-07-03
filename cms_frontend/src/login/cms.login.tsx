@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { MdLockOutline, MdPersonOutline } from "react-icons/md";
-import { useNavigate } from "react-router-dom";
-import axiosInstance from "../http/axiosInstance";
-import Cookies from "js-cookie";
+import { login } from "../api/auth.api";
 
 interface LoginFormProps {
   onLogin: () => void;
@@ -12,26 +10,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [user_name, setUser_name] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
-  const navigate = useNavigate();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     try {
-      const response = await axiosInstance.post(`user/login`, {
-        user_name,
-        password,
-      });
-      if (response.status === 200) {
-        const { accessToken } = response.data;
-        Cookies.set("access_token", accessToken, {
-          expires: 7,
-          path: "/",
-        });
-
-        onLogin(); // Update isAuthenticated state in App component
-        navigate("/template");
-      }
+      await login(user_name, password);
+      onLogin();
     } catch (error) {
       console.error("Login error:", error);
       setError("Invalid username or password");
