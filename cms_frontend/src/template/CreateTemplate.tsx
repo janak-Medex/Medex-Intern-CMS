@@ -25,6 +25,8 @@ import {
   MenuOutlined,
 } from "@ant-design/icons";
 
+import { HiHome } from "react-icons/hi2";
+
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
 
@@ -261,7 +263,14 @@ const CreateTemplate: React.FC = () => {
       isActive: component.is_active,
     })),
   }));
-
+  const refreshState = () => {
+    setActiveComponent(null);
+    setIsCreatingComponent(false);
+    setEditingComponent(null);
+    setToggleStates({});
+    setComponents([...components]);
+    toast.success("Template view refreshed");
+  };
   return (
     <Layout className="h-screen ">
       <Header className="bg-white shadow-md flex items-center justify-between px-6 py-2 mb-4 z-10">
@@ -270,9 +279,26 @@ const CreateTemplate: React.FC = () => {
             type="text"
             icon={<MenuOutlined />}
             onClick={() => setSidebarVisible(!sidebarVisible)}
-            className="mr-4 text-indigo-600"
+            className="mr-2 text-indigo-600"
           />
-          <h1 className="text-xl font-bold text-indigo-700 m-0">
+          <Tooltip title="Go to Templates">
+            <a
+              href="/template"
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.href = "/template";
+              }}
+              className="mr-2 text-indigo-600"
+            >
+              <HiHome size={"1.5rem"} />
+            </a>
+          </Tooltip>
+        </div>
+        <div className="flex-grow flex justify-center">
+          <h1
+            className="text-xl font-bold text-indigo-700 m-0 cursor-pointer"
+            onClick={refreshState}
+          >
             {templateDetails ? templateDetails.template_name : "Loading..."}
           </h1>
         </div>
@@ -364,14 +390,6 @@ const CreateTemplate: React.FC = () => {
                       setFormData={handleSetFormData}
                       handleSubmit={handleSubmit}
                     />
-                    <Button
-                      type="primary"
-                      onClick={handleSubmit}
-                      icon={<UploadOutlined />}
-                      className="mt-4 bg-green-500 hover:bg-green-600"
-                    >
-                      Save
-                    </Button>
                   </div>
                 )}
                 {!activeComponent && !isCreatingComponent && (
