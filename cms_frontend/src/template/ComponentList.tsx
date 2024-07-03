@@ -1,20 +1,29 @@
 import React, { useState } from "react";
 import { FaEdit, FaTrash, FaGripVertical } from "react-icons/fa";
-import { Component as ComponentType } from "../components/createComponents";
 import { confirmAlert } from "react-confirm-alert";
 import { Switch } from "antd";
 import axiosInstance from "../http/axiosInstance";
 import { toast } from "react-toastify";
 
+// Define the Component interface (assuming it's in createComponents.ts)
+interface Component {
+  _id: string;
+  component_name: string;
+  data: any; // Adjust type as per your actual structure
+  is_active: boolean;
+  inner_component?: any; // Adjust type as per your actual structure
+  component_image?: string; // Adjust type as per your actual structure
+}
+
 interface ComponentListProps {
-  components: ComponentType[];
+  components: Component[];
   toggleStates: { [key: string]: boolean };
   onToggle: (component_id: string) => void;
-  onEdit: (component: ComponentType) => void;
+  onEdit: (component: Component) => void;
   onDelete: (componentId: string) => void;
-  onShowComponentForm: (component: ComponentType) => void;
+  onShowComponentForm: (component: Component) => void;
   template_name: string;
-  setComponents: React.Dispatch<React.SetStateAction<ComponentType[]>>;
+  setComponents: React.Dispatch<React.SetStateAction<Component[]>>;
 }
 
 const ComponentList: React.FC<ComponentListProps> = ({
@@ -25,11 +34,11 @@ const ComponentList: React.FC<ComponentListProps> = ({
   template_name,
   setComponents,
 }) => {
-  const [draggedItem, setDraggedItem] = useState<ComponentType | null>(null);
+  const [draggedItem, setDraggedItem] = useState<Component | null>(null);
 
   const handleDragStart = (
     _e: React.DragEvent<HTMLDivElement>,
-    item: ComponentType
+    item: Component
   ) => {
     setDraggedItem(item);
   };
@@ -40,7 +49,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
 
   const handleDrop = (
     e: React.DragEvent<HTMLDivElement>,
-    targetItem: ComponentType
+    targetItem: Component
   ) => {
     e.preventDefault();
     if (!draggedItem) return;
@@ -63,7 +72,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
     updateOrder(newComponents);
   };
 
-  const updateOrder = async (newComponents: ComponentType[]) => {
+  const updateOrder = async (newComponents: Component[]) => {
     try {
       const response = await axiosInstance.put(
         `/templates/${template_name}/reorder`,
