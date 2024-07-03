@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
-import axiosInstance from "../http/axiosInstance";
 import Cookies from "js-cookie";
 import { Switch, Tooltip, Input, Menu, Dropdown } from "antd";
 import {
@@ -15,6 +14,12 @@ import {
 import axios from "axios";
 import { toast } from "react-toastify";
 import { logout } from "../api/auth.api";
+import {
+  createTemplate,
+  deleteTemplate,
+  fetchTemplatesData,
+  updateTemplateStatus,
+} from "../api/template.api";
 
 const { Search } = Input;
 
@@ -77,8 +82,8 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
 
   const fetchTemplates = async () => {
     try {
-      const response = await axiosInstance.get("/templates");
-      setTemplates(response.data);
+      const data = await fetchTemplatesData();
+      setTemplates(data);
     } catch (error: any) {
       console.error("Error fetching templates:", error);
       if (error.response && error.response.status === 401) {
@@ -154,17 +159,8 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
           return;
         }
 
-        const response = await axiosInstance.post(
-          "/templates",
-          { template_name: template_name.trim() },
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
-
-        if (response.status === 200 || response.status === 201) {
+        const template = await createTemplate(template_name.trim());
+        if (template) {
           fetchTemplates();
           settemplate_name("");
           setIsModalOpen(false);
@@ -190,17 +186,12 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   };
   const handleSwitchChange = async (checked: boolean, templateId: string) => {
     try {
-      const response = await axiosInstance.patch(`/templates/${templateId}`, {
-        is_active: checked,
-      });
-      if (response.status === 200) {
-        const template = response.data.data;
-        const statusMessage = checked ? "is_active" : "inactive";
-        toast.success(
-          `Template '${template.template_name}' is now ${statusMessage}`
-        );
-        fetchTemplates(); // Refresh the templates after update
-      }
+      const template = await updateTemplateStatus(templateId, checked);
+      const statusMessage = checked ? "is_active" : "inactive";
+      toast.success(
+        `Template '${template.template_name}' is now ${statusMessage}`
+      );
+      fetchTemplates(); // Refresh the templates after update
     } catch (error) {
       console.error("Error updating template status:", error);
       toast.error("Failed to update template status");
@@ -225,7 +216,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
         break;
       case "delete":
         try {
-          await axiosInstance.delete(`/templates/${templateId}`);
+          await deleteTemplate(templateId);
           fetchTemplates();
         } catch (error) {
           console.error("Error deleting template:", error);
