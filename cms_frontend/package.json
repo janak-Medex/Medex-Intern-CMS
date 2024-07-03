@@ -24,7 +24,8 @@
     "react-icons": "^5.2.1",
     "react-router-dom": "^6.23.1",
     "react-svg": "^16.1.34",
-    "react-toastify": "^10.0.5"
+    "react-toastify": "^10.0.5",
+    "styled-components": "^6.1.11"
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.6",

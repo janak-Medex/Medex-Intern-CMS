@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import CreateComponent, {
   Component as ComponentType,
 } from "../components/createComponents";
@@ -271,6 +271,11 @@ const CreateTemplate: React.FC = () => {
     setComponents([...components]);
     toast.success("Template view refreshed");
   };
+  const navigate = useNavigate();
+  const handleHomeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate("/template", { replace: true });
+  };
   return (
     <Layout className="h-screen ">
       <Header className="bg-white shadow-md flex items-center justify-between px-6 py-2 mb-4 z-10">
@@ -282,16 +287,12 @@ const CreateTemplate: React.FC = () => {
             className="mr-2 text-indigo-600"
           />
           <Tooltip title="Go to Templates">
-            <a
-              href="/template"
-              onClick={(e) => {
-                e.preventDefault();
-                window.location.href = "/template";
-              }}
-              className="mr-2 text-indigo-600"
-            >
-              <HiHome size={"1.5rem"} />
-            </a>
+            <Button
+              type="text"
+              icon={<HiHome size="1.5rem" />}
+              onClick={handleHomeClick}
+              className="mr-2 text-indigo-600 hover:bg-indigo-50"
+            />
           </Tooltip>
         </div>
         <div className="flex-grow flex justify-center">
@@ -299,7 +300,9 @@ const CreateTemplate: React.FC = () => {
             className="text-xl font-bold text-indigo-700 m-0 cursor-pointer"
             onClick={refreshState}
           >
-            {templateDetails ? templateDetails.template_name : "Loading..."}
+            {templateDetails
+              ? templateDetails.template_name.toUpperCase()
+              : "Loading..."}
           </h1>
         </div>
         <div className="flex gap-2">
