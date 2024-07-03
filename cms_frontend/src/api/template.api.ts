@@ -1,15 +1,9 @@
 // src/api/template.api.ts
 
 import axiosInstance from "../http/axiosInstance";
+import { Template } from "../template/Template";
 
-export interface Template {
-    _id: string;
-    template_name: string;
-    is_active: boolean;
-    updatedAt: string;
-    status: number;
-    // Add any other properties that your template object might have
-}
+// Fetch templates data
 
 export const fetchTemplatesData = async (): Promise<Template[]> => {
     try {

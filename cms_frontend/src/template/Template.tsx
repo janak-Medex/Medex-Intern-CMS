@@ -27,11 +27,12 @@ interface TemplateProps {
   onLogout: () => void;
 }
 
-interface Template {
+export interface Template {
   _id: string;
   template_name: string;
   is_active: boolean;
   updatedAt: string;
+  status: number;
 }
 
 type SortKey = "template name" | "updatedAt" | "is_active";
