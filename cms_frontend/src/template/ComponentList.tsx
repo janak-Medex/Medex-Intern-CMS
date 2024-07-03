@@ -5,11 +5,10 @@ import { Switch } from "antd";
 
 import { toast } from "react-toastify";
 import {
-  Component,
   updateComponentOrder,
   updateComponentStatus,
 } from "../api/component.api";
-
+import { Component } from "../components/createComponents";
 interface ComponentListProps {
   components: Component[];
   toggleStates: { [key: string]: boolean };

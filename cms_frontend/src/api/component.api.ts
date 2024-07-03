@@ -1,15 +1,7 @@
 import axiosInstance from "../http/axiosInstance";
 import { toast } from "react-toastify";
 
-// Define the Component type
-export interface Component {
-    _id: string;
-    component_name: string;
-    data: any; // Adjust type as per your actual structure
-    is_active: boolean;
-    inner_component?: any; // Adjust type as per your actual structure
-    component_image?: string; // Adjust type as per your actual structure
-}
+import { Component } from "../components/createComponents";
 
 // Function to update component order
 export const updateComponentOrder = async (
