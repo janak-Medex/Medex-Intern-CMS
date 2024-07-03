@@ -10,8 +10,10 @@ import {
   MoreOutlined,
   DeleteOutlined,
   EditOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 const { Search } = Input;
 
@@ -22,9 +24,16 @@ interface TemplateProps {
 interface Template {
   _id: string;
   template_name: string;
-  active: boolean;
+  is_active: boolean;
   updatedAt: string;
 }
+
+type SortKey = "template name" | "updatedAt" | "is_active";
+
+type SortConfig = {
+  key: SortKey;
+  direction: "asc" | "desc";
+};
 
 const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   const navigate = useNavigate();
@@ -35,6 +44,10 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: "updatedAt",
+    direction: "desc",
+  });
 
   useEffect(() => {
     checkLoginStatus();
@@ -52,8 +65,9 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     const filtered = templates.filter((template) =>
       template.template_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    setFilteredTemplates(filtered);
-  }, [searchTerm, templates]);
+    const sorted = sortTemplates(filtered, sortConfig);
+    setFilteredTemplates(sorted);
+  }, [searchTerm, templates, sortConfig]);
 
   const checkLoginStatus = () => {
     const accessToken = Cookies.get("access_token");
@@ -70,6 +84,49 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
         handleLogout();
       }
     }
+  };
+
+  const sortTemplates = (templatesToSort: Template[], config: SortConfig) => {
+    return [...templatesToSort].sort((a, b) => {
+      if (config.key === "template name") {
+        return config.direction === "asc"
+          ? a.template_name.localeCompare(b.template_name, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            })
+          : b.template_name.localeCompare(a.template_name, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            });
+      }
+      if (config.key === "updatedAt") {
+        return config.direction === "asc"
+          ? new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+          : new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }
+      if (config.key === "is_active") {
+        return config.direction === "asc"
+          ? a.is_active === b.is_active
+            ? 0
+            : a.is_active
+            ? -1
+            : 1
+          : a.is_active === b.is_active
+          ? 0
+          : a.is_active
+          ? 1
+          : -1;
+      }
+      return 0;
+    });
+  };
+
+  const requestSort = (key: SortKey) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
   };
 
   const handleCreateTemplate = () => {
@@ -130,15 +187,22 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     setIsLoggedIn(false);
     onLogout();
   };
-
   const handleSwitchChange = async (checked: boolean, templateId: string) => {
     try {
-      await axiosInstance.patch(`/templates/${templateId}`, {
-        active: checked,
+      const response = await axiosInstance.patch(`/templates/${templateId}`, {
+        is_active: checked,
       });
-      fetchTemplates();
+      if (response.status === 200) {
+        const template = response.data.data;
+        const statusMessage = checked ? "is_active" : "inactive";
+        toast.success(
+          `Template '${template.template_name}' is now ${statusMessage}`
+        );
+        fetchTemplates(); // Refresh the templates after update
+      }
     } catch (error) {
       console.error("Error updating template status:", error);
+      toast.error("Failed to update template status");
     }
   };
 
@@ -186,6 +250,20 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
         onClick={() => handleTemplateAction("delete", templateId)}
       >
         Delete
+      </Menu.Item>
+    </Menu>
+  );
+
+  const sortMenu = (
+    <Menu>
+      <Menu.Item key="1" onClick={() => requestSort("template name")}>
+        Sort by Name
+      </Menu.Item>
+      <Menu.Item key="2" onClick={() => requestSort("updatedAt")}>
+        Sort by Last Edited
+      </Menu.Item>
+      <Menu.Item key="3" onClick={() => requestSort("is_active")}>
+        Sort by Status
       </Menu.Item>
     </Menu>
   );
@@ -248,6 +326,12 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
             >
               List
             </button>
+            <Dropdown overlay={sortMenu} trigger={["click"]}>
+              <button className="px-4 py-2 rounded-lg bg-white text-gray-600 transition-colors duration-300">
+                Sort by {sortConfig.key}{" "}
+                {sortConfig.direction === "asc" ? "↑" : "↓"} <DownOutlined />
+              </button>
+            </Dropdown>
           </div>
         </div>
 
@@ -286,7 +370,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
                   <div className="flex items-center space-x-3">
                     <Switch
                       size="small"
-                      checked={template.active}
+                      checked={template.is_active}
                       onChange={(checked) =>
                         handleSwitchChange(checked, template._id)
                       }
@@ -299,7 +383,14 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
                   </div>
                 </div>
                 <p className="text-sm text-gray-500">
-                  Last edited: {new Date(template.updatedAt).toLocaleString()}
+                  Last edited:{" "}
+                  {new Date(template.updatedAt).toLocaleString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
             ))}
