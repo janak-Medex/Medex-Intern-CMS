@@ -437,7 +437,7 @@ const CreateTemplate: React.FC = () => {
                   Component Images
                 </h2>
                 <div className="space-y-4 flex flex-col items-center justify-center">
-                  {!activeComponent ? (
+                  {!activeComponent && !editingComponent ? (
                     components?.map((component, index) => (
                       <Card key={index} className="mb-4" size="small">
                         <p className="text-center text-lg font-semibold mb-2 text-indigo-600">
@@ -456,14 +456,15 @@ const CreateTemplate: React.FC = () => {
                   ) : (
                     <Card size="small">
                       <p className="text-center text-xl font-semibold mb-2 text-indigo-700">
-                        {activeComponent?.component_name}
+                        {activeComponent?.component_name ||
+                          editingComponent?.component_name}
                       </p>
                       <div className="flex justify-center items-center">
                         <Image
                           src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                            activeComponent?.component_image?.split(
-                              "uploads\\"
-                            )[1]
+                            (
+                              activeComponent || editingComponent
+                            )?.component_image?.split("uploads\\")[1]
                           }`}
                           className="rounded-lg shadow-sm"
                         />
