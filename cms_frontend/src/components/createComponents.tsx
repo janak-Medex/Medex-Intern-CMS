@@ -66,6 +66,10 @@ const CreateComponent: React.FC<Props> = ({
   const [fieldName, setFieldName] = useState("");
   const [fieldType, setFieldType] = useState("");
   const [isRequired, setIsRequired] = useState(false);
+  // const [minLength, setMinLength] = useState<number | undefined>(undefined);
+  // const [maxLength, setMaxLength] = useState<number | undefined>(undefined);
+  // const [minValue, setMinValue] = useState<number | undefined>(undefined);
+  // const [maxValue, setMaxValue] = useState<number | undefined>(undefined);
   const [schemaRulesData, setSchemaRulesData] = useState<SchemaRule[]>([]);
   const [filteredSchemaRules, setFilteredSchemaRules] = useState<SchemaRule[]>(
     []
@@ -209,6 +213,10 @@ const CreateComponent: React.FC<Props> = ({
     setFieldName("");
     setFieldType("");
     setIsRequired(false);
+    // setMinLength(undefined);
+    // setMaxLength(undefined);
+    // setMinValue(undefined);
+    // setMaxValue(undefined);
     setEditMode(false);
     setEditingRule(null);
     setIsModalOpen(false);

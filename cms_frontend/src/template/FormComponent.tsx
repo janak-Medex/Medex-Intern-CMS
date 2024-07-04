@@ -17,6 +17,7 @@ interface FormComponentProps {
   formData: { [key: string]: any }[];
   setFormData: (data: { [key: string]: any }[]) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
+  refetchData: () => Promise<void>;
 }
 
 const FormComponent: React.FC<FormComponentProps> = ({
@@ -24,6 +25,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   component_name,
   formData,
   setFormData,
+  refetchData,
 }) => {
   const [selectedFilePreviews, setSelectedFilePreviews] = useState<{
     [key: string]: any[][];
@@ -214,6 +216,10 @@ const FormComponent: React.FC<FormComponentProps> = ({
     try {
       const response = await submitFormData(formPayload);
       if (response.status === 201) {
+        setFormData([]);
+        setSelectedFilePreviews({});
+        setErrors({});
+        await refetchData();
         Cookies.get("access_token");
         toast.success("Form submitted successfully");
       } else {

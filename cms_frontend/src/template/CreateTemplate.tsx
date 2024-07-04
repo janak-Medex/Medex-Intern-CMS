@@ -201,6 +201,13 @@ const CreateTemplate: React.FC = () => {
           : comp
       );
       setComponents(updatedComponents);
+
+      // Fetch the latest data for the active component
+      const latestComponentData = await axiosInstance.get<ComponentType>(
+        `/templates/${template_name}/components/${response.data._id}`
+      );
+      setActiveComponent(latestComponentData.data);
+
       await fetchTemplateDetails();
       toast.success("Component saved successfully");
     } catch (error) {
@@ -276,6 +283,28 @@ const CreateTemplate: React.FC = () => {
     e.preventDefault();
     navigate("/template", { replace: true });
   };
+  const refetchData = async () => {
+    try {
+      // Reset states
+      setActiveComponent(null);
+      setIsCreatingComponent(false);
+      setEditingComponent(null);
+      setToggleStates({});
+      setComponents([]);
+
+      // Fetch latest template details
+      await fetchTemplateDetails();
+
+      // Fetch all components again
+      await fetchAllComponents();
+
+      toast.success("Data refreshed successfully");
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh data");
+    }
+  };
+
   return (
     <Layout className="h-screen ">
       <Header className="bg-white shadow-md flex items-center justify-between px-6 py-2 mb-4 z-10">
@@ -392,6 +421,7 @@ const CreateTemplate: React.FC = () => {
                       template_name={template_name}
                       setFormData={handleSetFormData}
                       handleSubmit={handleSubmit}
+                      refetchData={refetchData}
                     />
                   </div>
                 )}
