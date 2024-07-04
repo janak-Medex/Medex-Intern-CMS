@@ -3,7 +3,95 @@ import { toast } from "react-toastify";
 
 import { Component } from "../components/createComponents";
 
-// Function to update component order
+// src/services/api.ts
+
+
+export interface ComponentData {
+    component_name: string;
+    template_name?: string;
+    data: any[];
+    isActive: boolean;
+    inner_component: number;
+}
+
+export const createComponent = async (componentData: ComponentData, componentImage: File | null) => {
+    const formData = new FormData();
+
+    formData.append("component_name", componentData.component_name);
+    if (componentData.template_name) {
+        formData.append("template_name", componentData.template_name);
+    }
+    formData.append("data", JSON.stringify(componentData.data));
+    formData.append("isActive", String(componentData.isActive));
+    formData.append("inner_component", String(componentData.inner_component));
+
+    if (componentImage) {
+        formData.append("component_image", componentImage);
+    }
+
+    const response = await axiosInstance.post("components", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+
+    return response.data;
+};
+
+export const updateComponent = async (id: string, componentData: ComponentData, componentImage: File | null) => {
+    const formData = new FormData();
+
+    formData.append("component_name", componentData.component_name);
+    if (componentData.template_name) {
+        formData.append("template_name", componentData.template_name);
+    }
+    formData.append("data", JSON.stringify(componentData.data));
+    formData.append("isActive", String(componentData.isActive));
+    formData.append("inner_component", String(componentData.inner_component));
+
+    if (componentImage) {
+        formData.append("component_image", componentImage);
+    }
+
+
+
+    const response = await axiosInstance.put(`components/${id}`, formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+
+    return response.data;
+};
+
+export const getSchemaRules = async () => {
+    const response = await axiosInstance.get("schemas");
+    return response.data;
+};
+
+export const addSchemaRule = async (rule: any) => {
+    const response = await axiosInstance.post("schemas", [rule], {
+        headers: {
+            "Content-Type": "application/json",
+        },
+    });
+    return response.data;
+};
+
+export const updateSchemaRule = async (id: string, rule: any) => {
+    const response = await axiosInstance.put(`schemas/${id}`, rule, {
+        headers: {
+            "Content-Type": "application/json",
+        },
+    });
+    return response.data;
+};
+
+export const deleteSchemaRule = async (id: string) => {
+    const response = await axiosInstance.delete(`schemas/${id}`);
+    return response.data;
+};
+
 export const updateComponentOrder = async (
     templateName: string,
     newComponents: Component[]

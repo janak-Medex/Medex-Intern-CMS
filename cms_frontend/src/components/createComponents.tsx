@@ -163,15 +163,24 @@ const CreateComponent: React.FC<Props> = ({
       return;
     }
 
+    const componentData = {
+      component_name,
+      template_name,
+      data: [formFields], // Ensure data is an array
+      isActive: true,
+      inner_component: innerComponent,
+    };
+
     const formData = new FormData();
-    formData.append("component_name", component_name);
-    if (template_name) {
-      formData.append("template_name", template_name);
+
+    // Append each field separately to FormData
+    formData.append("component_name", componentData.component_name);
+    if (componentData.template_name) {
+      formData.append("template_name", componentData.template_name);
     }
-    // formData.append("template_name", template_name);
-    formData.append("data", JSON.stringify([formFields]));
-    formData.append("isActive", "true");
-    formData.append("inner_component", innerComponent.toString());
+    formData.append("data", JSON.stringify(componentData.data));
+    formData.append("isActive", String(componentData.isActive));
+    formData.append("inner_component", String(componentData.inner_component));
 
     if (componentImage) {
       formData.append("component_image", componentImage);
