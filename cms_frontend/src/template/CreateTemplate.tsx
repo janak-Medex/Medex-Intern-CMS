@@ -71,7 +71,7 @@ const CreateTemplate: React.FC = () => {
   const [allComponents, setAllComponents] = useState<ComponentType[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
+  const [sidebarVisible, setSidebarVisible] = useState<boolean>(false);
 
   useEffect(() => {
     fetchTemplateDetails();
