@@ -14,8 +14,9 @@ import {
   ComponentData,
 } from "../api/component.api";
 
-export interface FormField {
-  [key: string]: any;
+interface FormField {
+  key: string;
+  value: string;
 }
 
 interface SchemaRule {
@@ -52,7 +53,9 @@ const CreateComponent: React.FC<Props> = ({
 }) => {
   const { template_name } = useParams<{ template_name: string }>();
   const [component_name, setComponentName] = useState<string>("");
-  const [formFields, setFormFields] = useState<FormField>({});
+  const [formFields, setFormFields] = useState<
+    Array<{ key: string; value: string }>
+  >([]);
   const [innerComponent, setInnerComponent] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [componentImage, setComponentImage] = useState<File | null>(null);
@@ -84,7 +87,14 @@ const CreateComponent: React.FC<Props> = ({
   useEffect(() => {
     if (initialComponent) {
       setComponentName(initialComponent.component_name);
-      setFormFields(initialComponent.data[0] || {});
+      // Convert the object to an array of { key, value } pairs
+      const fieldsArray = Object.entries(initialComponent.data[0] || {}).map(
+        ([key, value]) => ({
+          key,
+          value: value as string,
+        })
+      );
+      setFormFields(fieldsArray);
       setInnerComponent(initialComponent.inner_component || 1);
       if (initialComponent.component_image) {
         const src = initialComponent.component_image.startsWith("http")
@@ -98,24 +108,27 @@ const CreateComponent: React.FC<Props> = ({
   }, [initialComponent, baseImageUrl]);
 
   const handleAddField = () => {
-    setFormFields({ ...formFields, "": "" });
+    setFormFields([...formFields, { key: "", value: "" }]);
     toast.success("New field added");
   };
 
-  const handleRemoveField = (fieldName: string) => {
-    const updatedFields = { ...formFields };
-    delete updatedFields[fieldName];
+  const handleRemoveField = (index: number) => {
+    const updatedFields = formFields.filter((_, i) => i !== index);
     setFormFields(updatedFields);
     toast.success("Field removed");
   };
 
-  const handleFieldChange = (oldFieldName: string, newFieldName: string) => {
-    if (newFieldName.trim() === "") {
-      return;
-    }
-    const updatedFields = { ...formFields };
-    delete updatedFields[oldFieldName];
-    updatedFields[newFieldName.trim()] = "";
+  const handleFieldChange = (
+    index: number,
+    field: "key" | "value",
+    newValue: string
+  ) => {
+    const updatedFields = formFields.map((item, i) => {
+      if (i === index) {
+        return { ...item, [field]: newValue };
+      }
+      return item;
+    });
     setFormFields(updatedFields);
   };
 
@@ -156,7 +169,7 @@ const CreateComponent: React.FC<Props> = ({
       newErrors.component_image = "Component image is required";
     }
 
-    if (Object.keys(formFields).length === 0) {
+    if (formFields.length === 0) {
       newErrors.formFields = "At least one data field is required";
     }
 
@@ -172,10 +185,16 @@ const CreateComponent: React.FC<Props> = ({
       return;
     }
 
+    // Convert formFields array back to an object
+    const formFieldsObject = formFields.reduce((acc, field) => {
+      acc[field.key] = field.value;
+      return acc;
+    }, {} as Record<string, string>);
+
     const componentData: ComponentData = {
       component_name,
       template_name,
-      data: [formFields],
+      data: [formFieldsObject],
       isActive: true,
       inner_component: innerComponent,
     };
@@ -444,19 +463,22 @@ const CreateComponent: React.FC<Props> = ({
           <label className="block text-gray-700 font-bold mb-2">
             Data Fields <span className="text-red-500">*</span>
           </label>
-          {Object.entries(formFields).map(([fieldName, _], index) => (
+          {formFields.map((field, index) => (
             <div key={index} className="flex items-center mb-2">
               <input
                 type="text"
                 className="flex-1 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
                 placeholder="Field name"
-                value={fieldName}
-                onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+                value={field.key}
+                onChange={(e) =>
+                  handleFieldChange(index, "key", e.target.value)
+                }
               />
+
               <button
                 type="button"
                 className="ml-2 text-red-500 focus:outline-none"
-                onClick={() => handleRemoveField(fieldName)}
+                onClick={() => handleRemoveField(index)}
               >
                 <FaTrash />
               </button>
