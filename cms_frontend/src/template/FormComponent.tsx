@@ -304,7 +304,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
           </div>
           <div className="flex items-center">
             <label
-              className="flex items-center justify-center px-4 py-2 bg-[#39AF9F] text-white rounded-lg cursor-pointer hover:bg-green-500 transition-colors duration-300"
+              className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg cursor-pointer hover:bg-indigo-500 transition-colors duration-300"
               htmlFor={`${index}-${key}-file-input`}
             >
               <Icon className="mr-2" />
@@ -372,7 +372,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         <div className="flex justify-center mb-8">
           <button
             type="submit"
-            className="px-6 py-3 w-full text-white bg-[#39AF9F] rounded-lg hover:bg-teal-700 focus:outline-none transition-colors duration-300"
+            className="px-6 py-3 w-full text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none transition-colors duration-300"
           >
             Submit
           </button>

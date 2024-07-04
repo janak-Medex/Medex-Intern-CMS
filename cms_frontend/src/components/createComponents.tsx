@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaPlus, FaTrash, FaUpload, FaExpand, FaEdit } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import axiosInstance from "../http/axiosInstance";
 import { toast } from "react-toastify";
 import { Modal, Input } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
+import {
+  createComponent,
+  updateComponent,
+  getSchemaRules,
+  addSchemaRule,
+  updateSchemaRule,
+  deleteSchemaRule,
+  ComponentData,
+} from "../api/component.api";
 
 export interface FormField {
   [key: string]: any;
 }
+
 interface SchemaRule {
   _id: string;
   fieldName: string;
@@ -54,23 +63,19 @@ const CreateComponent: React.FC<Props> = ({
 
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
-  // for add schema rule
-
   const [fieldName, setFieldName] = useState("");
   const [fieldType, setFieldType] = useState("");
   const [isRequired, setIsRequired] = useState(false);
-  // const [minLength, setMinLength] = useState<number | undefined>(undefined);
-  // const [maxLength, setMaxLength] = useState<number | undefined>(undefined);
-  // const [minValue, setMinValue] = useState<number | undefined>(undefined);
-  // const [maxValue, setMaxValue] = useState<number | undefined>(undefined);
   const [schemaRulesData, setSchemaRulesData] = useState<SchemaRule[]>([]);
   const [filteredSchemaRules, setFilteredSchemaRules] = useState<SchemaRule[]>(
     []
   );
   const [isSchemaModalOpen, setIsSchemaModalOpen] = useState<boolean>(false);
-  const [editMode, setEditMode] = useState<boolean>(false); // New state for edit mode
+  const [editMode, setEditMode] = useState<boolean>(false);
   const [editingRule, setEditingRule] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     if (initialComponent) {
@@ -163,47 +168,29 @@ const CreateComponent: React.FC<Props> = ({
       return;
     }
 
-    const componentData = {
+    const componentData: ComponentData = {
       component_name,
       template_name,
-      data: [formFields], // Ensure data is an array
+      data: [formFields],
       isActive: true,
       inner_component: innerComponent,
     };
 
-    const formData = new FormData();
-
-    // Append each field separately to FormData
-    formData.append("component_name", componentData.component_name);
-    if (componentData.template_name) {
-      formData.append("template_name", componentData.template_name);
-    }
-    formData.append("data", JSON.stringify(componentData.data));
-    formData.append("isActive", String(componentData.isActive));
-    formData.append("inner_component", String(componentData.inner_component));
-
-    if (componentImage) {
-      formData.append("component_image", componentImage);
-    } else if (imagePreview && initialComponent?.component_image) {
-      formData.append("component_image", initialComponent.component_image);
-    }
-
     try {
-      const response = await axiosInstance.post("components", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (response.status === 200 || response.status === 201) {
-        toast.success(
-          initialComponent
-            ? "Component updated successfully!"
-            : "Component created successfully!"
-        );
-        onCreate(response.data);
-        onClose();
+      let response;
+      if (initialComponent) {
+        response = await updateComponent(componentData, componentImage);
+      } else {
+        response = await createComponent(componentData, componentImage);
       }
+
+      toast.success(
+        initialComponent
+          ? "Component updated successfully!"
+          : "Component created successfully!"
+      );
+      onCreate(response);
+      onClose();
     } catch (error) {
       console.error("Error creating/updating component:", error);
       toast.error(
@@ -214,19 +201,6 @@ const CreateComponent: React.FC<Props> = ({
     }
   };
 
-  // const handleInsertRule = () => {
-  //   setIsModalOpen(true);
-  // };
-
-  // const handleCloseModal = () => {
-  //   setIsModalOpen(false);
-  // };
-
-  // const handleAddSchemaRule = (newRule: SchemaRule) => {
-  //   setIsModalOpen(false);
-  //   toast.success("New schema rule added successfully!");
-  // };
-  // Open to modal for adding schema rule
   const handleInsertRule = () => {
     setIsModalOpen(true);
   };
@@ -235,10 +209,6 @@ const CreateComponent: React.FC<Props> = ({
     setFieldName("");
     setFieldType("");
     setIsRequired(false);
-    // setMinLength(undefined);
-    // setMaxLength(undefined);
-    // setMinValue(undefined);
-    // setMaxValue(undefined);
     setEditMode(false);
     setEditingRule(null);
     setIsModalOpen(false);
@@ -250,7 +220,6 @@ const CreateComponent: React.FC<Props> = ({
       return;
     }
 
-    // Check if the field name already exists (excluding the current rule if in edit mode)
     const fieldNameExists = schemaRulesData.some(
       (rule) =>
         rule.fieldName.toLowerCase() === fieldName.toLowerCase() &&
@@ -272,34 +241,11 @@ const CreateComponent: React.FC<Props> = ({
 
     try {
       if (editMode && editingRule) {
-        const response = await axiosInstance.put(
-          `schemas/${editingRule._id}`,
-          newRule,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (response.status === 200) {
-          toast.success("Schema rule updated successfully!");
-        } else {
-          toast.error("Failed to update schema rule.");
-        }
+        await updateSchemaRule(editingRule._id, newRule);
+        toast.success("Schema rule updated successfully!");
       } else {
-        // Add new rule
-        const response = await axiosInstance.post("schemas", [newRule], {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.status === 200 || response.status === 201) {
-          toast.success("New schema rule added successfully!");
-        } else {
-          toast.error("Failed to add the new schema rule.");
-        }
+        await addSchemaRule(newRule);
+        toast.success("New schema rule added successfully!");
       }
 
       handleCloseModal();
@@ -313,14 +259,10 @@ const CreateComponent: React.FC<Props> = ({
   const viewAllSchema = async () => {
     setIsSchemaModalOpen(true);
     try {
-      const response = await axiosInstance.get("schemas");
-      if (
-        response.data &&
-        response.data.success &&
-        Array.isArray(response.data.data)
-      ) {
-        setSchemaRulesData(response.data.data);
-        setFilteredSchemaRules(response.data.data);
+      const response = await getSchemaRules();
+      if (response && response.success && Array.isArray(response.data)) {
+        setSchemaRulesData(response.data);
+        setFilteredSchemaRules(response.data);
         toast.success("Schema Rules fetched successfully!");
       } else {
         throw new Error("Invalid data structure received from API");
@@ -343,15 +285,13 @@ const CreateComponent: React.FC<Props> = ({
 
   const onSchemaRuleDelete = async (id: string) => {
     try {
-      const response = await axiosInstance.delete(`schemas/${id}`);
-      if (response.status === 200) {
-        toast.success("Schema Rule deleted successfully!");
-      }
+      await deleteSchemaRule(id);
+      toast.success("Schema Rule deleted successfully!");
+      viewAllSchema();
     } catch (error) {
       console.error("Error deleting schema rule:", error);
       toast.error("Failed to delete schema rule.");
     }
-    viewAllSchema();
   };
 
   const handleEditSchemaRule = (rule: SchemaRule) => {
@@ -362,6 +302,7 @@ const CreateComponent: React.FC<Props> = ({
     setIsRequired(rule.required);
     setIsModalOpen(true);
   };
+
   useEffect(() => {
     if (Array.isArray(schemaRulesData)) {
       const filtered = schemaRulesData.filter((rule: SchemaRule) =>
@@ -371,9 +312,6 @@ const CreateComponent: React.FC<Props> = ({
       setCurrentPage(1);
     }
   }, [schemaRulesData, searchTerm]);
-  // for pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   const totalPages = Math.ceil(filteredSchemaRules.length / itemsPerPage);
 
@@ -385,7 +323,6 @@ const CreateComponent: React.FC<Props> = ({
   const handlePageChange = (page: React.SetStateAction<number>) => {
     setCurrentPage(page);
   };
-
   return (
     <div className="bg-white rounded-lg shadow-md p-6 relative">
       <h2 className="text-xl font-semibold mb-4">

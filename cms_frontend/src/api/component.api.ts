@@ -38,7 +38,7 @@ export const createComponent = async (componentData: ComponentData, componentIma
     return response.data;
 };
 
-export const updateComponent = async (id: string, componentData: ComponentData, componentImage: File | null) => {
+export const updateComponent = async (componentData: ComponentData, componentImage: File | null) => {
     const formData = new FormData();
 
     formData.append("component_name", componentData.component_name);
@@ -55,7 +55,7 @@ export const updateComponent = async (id: string, componentData: ComponentData, 
 
 
 
-    const response = await axiosInstance.put(`components/${id}`, formData, {
+    const response = await axiosInstance.post(`components`, formData, {
         headers: {
             "Content-Type": "multipart/form-data",
         },
