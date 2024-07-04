@@ -5,11 +5,11 @@ import {
   AiOutlineVideoCamera,
   AiOutlineFile,
 } from "react-icons/ai";
-import axiosInstance from "../http/axiosInstance";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Image } from "antd";
 import Cookies from "js-cookie";
+import { submitFormData } from "../api/form.api";
 
 interface FormComponentProps {
   template_name: any;
@@ -17,6 +17,7 @@ interface FormComponentProps {
   formData: { [key: string]: any }[];
   setFormData: (data: { [key: string]: any }[]) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
+  refetchData: () => Promise<void>;
 }
 
 const FormComponent: React.FC<FormComponentProps> = ({
@@ -24,6 +25,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   component_name,
   formData,
   setFormData,
+  refetchData,
 }) => {
   const [selectedFilePreviews, setSelectedFilePreviews] = useState<{
     [key: string]: any[][];
@@ -212,10 +214,12 @@ const FormComponent: React.FC<FormComponentProps> = ({
     formPayload.append("inner_component", "1");
 
     try {
-      const response = await axiosInstance.post("/components", formPayload, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await submitFormData(formPayload);
       if (response.status === 201) {
+        setFormData([]);
+        setSelectedFilePreviews({});
+        setErrors({});
+        await refetchData();
         Cookies.get("access_token");
         toast.success("Form submitted successfully");
       } else {
@@ -306,7 +310,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
           </div>
           <div className="flex items-center">
             <label
-              className="flex items-center justify-center px-4 py-2 bg-[#39AF9F] text-white rounded-lg cursor-pointer hover:bg-green-500 transition-colors duration-300"
+              className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg cursor-pointer hover:bg-indigo-500 transition-colors duration-300"
               htmlFor={`${index}-${key}-file-input`}
             >
               <Icon className="mr-2" />
@@ -374,7 +378,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         <div className="flex justify-center mb-8">
           <button
             type="submit"
-            className="px-6 py-3 w-full text-white bg-[#39AF9F] rounded-lg hover:bg-teal-700 focus:outline-none transition-colors duration-300"
+            className="px-6 py-3 w-full text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none transition-colors duration-300"
           >
             Submit
           </button>

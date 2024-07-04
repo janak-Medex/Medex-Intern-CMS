@@ -1,14 +1,24 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaPlus, FaTrash, FaUpload, FaExpand, FaEdit } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import axiosInstance from "../http/axiosInstance";
 import { toast } from "react-toastify";
 import { Modal, Input } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
+import {
+  createComponent,
+  updateComponent,
+  getSchemaRules,
+  addSchemaRule,
+  updateSchemaRule,
+  deleteSchemaRule,
+  ComponentData,
+} from "../api/component.api";
 
-export interface FormField {
-  [key: string]: any;
+interface FormField {
+  key: string;
+  value: string;
 }
+
 interface SchemaRule {
   _id: string;
   fieldName: string;
@@ -43,7 +53,9 @@ const CreateComponent: React.FC<Props> = ({
 }) => {
   const { template_name } = useParams<{ template_name: string }>();
   const [component_name, setComponentName] = useState<string>("");
-  const [formFields, setFormFields] = useState<FormField>({});
+  const [formFields, setFormFields] = useState<
+    Array<{ key: string; value: string }>
+  >([]);
   const [innerComponent, setInnerComponent] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [componentImage, setComponentImage] = useState<File | null>(null);
@@ -53,8 +65,6 @@ const CreateComponent: React.FC<Props> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
-
-  // for add schema rule
 
   const [fieldName, setFieldName] = useState("");
   const [fieldType, setFieldType] = useState("");
@@ -68,14 +78,23 @@ const CreateComponent: React.FC<Props> = ({
     []
   );
   const [isSchemaModalOpen, setIsSchemaModalOpen] = useState<boolean>(false);
-  const [editMode, setEditMode] = useState<boolean>(false); // New state for edit mode
+  const [editMode, setEditMode] = useState<boolean>(false);
   const [editingRule, setEditingRule] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     if (initialComponent) {
       setComponentName(initialComponent.component_name);
-      setFormFields(initialComponent.data[0] || {});
+      // Convert the object to an array of { key, value } pairs
+      const fieldsArray = Object.entries(initialComponent.data[0] || {}).map(
+        ([key, value]) => ({
+          key,
+          value: value as string,
+        })
+      );
+      setFormFields(fieldsArray);
       setInnerComponent(initialComponent.inner_component || 1);
       if (initialComponent.component_image) {
         const src = initialComponent.component_image.startsWith("http")
@@ -89,24 +108,27 @@ const CreateComponent: React.FC<Props> = ({
   }, [initialComponent, baseImageUrl]);
 
   const handleAddField = () => {
-    setFormFields({ ...formFields, "": "" });
+    setFormFields([...formFields, { key: "", value: "" }]);
     toast.success("New field added");
   };
 
-  const handleRemoveField = (fieldName: string) => {
-    const updatedFields = { ...formFields };
-    delete updatedFields[fieldName];
+  const handleRemoveField = (index: number) => {
+    const updatedFields = formFields.filter((_, i) => i !== index);
     setFormFields(updatedFields);
     toast.success("Field removed");
   };
 
-  const handleFieldChange = (oldFieldName: string, newFieldName: string) => {
-    if (newFieldName.trim() === "") {
-      return;
-    }
-    const updatedFields = { ...formFields };
-    delete updatedFields[oldFieldName];
-    updatedFields[newFieldName.trim()] = "";
+  const handleFieldChange = (
+    index: number,
+    field: "key" | "value",
+    newValue: string
+  ) => {
+    const updatedFields = formFields.map((item, i) => {
+      if (i === index) {
+        return { ...item, [field]: newValue };
+      }
+      return item;
+    });
     setFormFields(updatedFields);
   };
 
@@ -147,7 +169,7 @@ const CreateComponent: React.FC<Props> = ({
       newErrors.component_image = "Component image is required";
     }
 
-    if (Object.keys(formFields).length === 0) {
+    if (formFields.length === 0) {
       newErrors.formFields = "At least one data field is required";
     }
 
@@ -163,38 +185,35 @@ const CreateComponent: React.FC<Props> = ({
       return;
     }
 
-    const formData = new FormData();
-    formData.append("component_name", component_name);
-    if (template_name) {
-      formData.append("template_name", template_name);
-    }
-    // formData.append("template_name", template_name);
-    formData.append("data", JSON.stringify([formFields]));
-    formData.append("isActive", "true");
-    formData.append("inner_component", innerComponent.toString());
+    // Convert formFields array back to an object
+    const formFieldsObject = formFields.reduce((acc, field) => {
+      acc[field.key] = field.value;
+      return acc;
+    }, {} as Record<string, string>);
 
-    if (componentImage) {
-      formData.append("component_image", componentImage);
-    } else if (imagePreview && initialComponent?.component_image) {
-      formData.append("component_image", initialComponent.component_image);
-    }
+    const componentData: ComponentData = {
+      component_name,
+      template_name,
+      data: [formFieldsObject],
+      isActive: true,
+      inner_component: innerComponent,
+    };
 
     try {
-      const response = await axiosInstance.post("components", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (response.status === 200 || response.status === 201) {
-        toast.success(
-          initialComponent
-            ? "Component updated successfully!"
-            : "Component created successfully!"
-        );
-        onCreate(response.data);
-        onClose();
+      let response;
+      if (initialComponent) {
+        response = await updateComponent(componentData, componentImage);
+      } else {
+        response = await createComponent(componentData, componentImage);
       }
+
+      toast.success(
+        initialComponent
+          ? "Component updated successfully!"
+          : "Component created successfully!"
+      );
+      onCreate(response);
+      onClose();
     } catch (error) {
       console.error("Error creating/updating component:", error);
       toast.error(
@@ -205,19 +224,6 @@ const CreateComponent: React.FC<Props> = ({
     }
   };
 
-  // const handleInsertRule = () => {
-  //   setIsModalOpen(true);
-  // };
-
-  // const handleCloseModal = () => {
-  //   setIsModalOpen(false);
-  // };
-
-  // const handleAddSchemaRule = (newRule: SchemaRule) => {
-  //   setIsModalOpen(false);
-  //   toast.success("New schema rule added successfully!");
-  // };
-  // Open to modal for adding schema rule
   const handleInsertRule = () => {
     setIsModalOpen(true);
   };
@@ -241,7 +247,6 @@ const CreateComponent: React.FC<Props> = ({
       return;
     }
 
-    // Check if the field name already exists (excluding the current rule if in edit mode)
     const fieldNameExists = schemaRulesData.some(
       (rule) =>
         rule.fieldName.toLowerCase() === fieldName.toLowerCase() &&
@@ -263,34 +268,11 @@ const CreateComponent: React.FC<Props> = ({
 
     try {
       if (editMode && editingRule) {
-        const response = await axiosInstance.put(
-          `schemas/${editingRule._id}`,
-          newRule,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (response.status === 200) {
-          toast.success("Schema rule updated successfully!");
-        } else {
-          toast.error("Failed to update schema rule.");
-        }
+        await updateSchemaRule(editingRule._id, newRule);
+        toast.success("Schema rule updated successfully!");
       } else {
-        // Add new rule
-        const response = await axiosInstance.post("schemas", [newRule], {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.status === 200 || response.status === 201) {
-          toast.success("New schema rule added successfully!");
-        } else {
-          toast.error("Failed to add the new schema rule.");
-        }
+        await addSchemaRule(newRule);
+        toast.success("New schema rule added successfully!");
       }
 
       handleCloseModal();
@@ -304,14 +286,10 @@ const CreateComponent: React.FC<Props> = ({
   const viewAllSchema = async () => {
     setIsSchemaModalOpen(true);
     try {
-      const response = await axiosInstance.get("schemas");
-      if (
-        response.data &&
-        response.data.success &&
-        Array.isArray(response.data.data)
-      ) {
-        setSchemaRulesData(response.data.data);
-        setFilteredSchemaRules(response.data.data);
+      const response = await getSchemaRules();
+      if (response && response.success && Array.isArray(response.data)) {
+        setSchemaRulesData(response.data);
+        setFilteredSchemaRules(response.data);
         toast.success("Schema Rules fetched successfully!");
       } else {
         throw new Error("Invalid data structure received from API");
@@ -334,15 +312,13 @@ const CreateComponent: React.FC<Props> = ({
 
   const onSchemaRuleDelete = async (id: string) => {
     try {
-      const response = await axiosInstance.delete(`schemas/${id}`);
-      if (response.status === 200) {
-        toast.success("Schema Rule deleted successfully!");
-      }
+      await deleteSchemaRule(id);
+      toast.success("Schema Rule deleted successfully!");
+      viewAllSchema();
     } catch (error) {
       console.error("Error deleting schema rule:", error);
       toast.error("Failed to delete schema rule.");
     }
-    viewAllSchema();
   };
 
   const handleEditSchemaRule = (rule: SchemaRule) => {
@@ -353,6 +329,7 @@ const CreateComponent: React.FC<Props> = ({
     setIsRequired(rule.required);
     setIsModalOpen(true);
   };
+
   useEffect(() => {
     if (Array.isArray(schemaRulesData)) {
       const filtered = schemaRulesData.filter((rule: SchemaRule) =>
@@ -362,9 +339,6 @@ const CreateComponent: React.FC<Props> = ({
       setCurrentPage(1);
     }
   }, [schemaRulesData, searchTerm]);
-  // for pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   const totalPages = Math.ceil(filteredSchemaRules.length / itemsPerPage);
 
@@ -376,7 +350,6 @@ const CreateComponent: React.FC<Props> = ({
   const handlePageChange = (page: React.SetStateAction<number>) => {
     setCurrentPage(page);
   };
-
   return (
     <div className="bg-white rounded-lg shadow-md p-6 relative">
       <h2 className="text-xl font-semibold mb-4">
@@ -417,6 +390,7 @@ const CreateComponent: React.FC<Props> = ({
             className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
             value={innerComponent}
             onChange={(e) => setInnerComponent(parseInt(e.target.value) || 1)}
+            onWheel={(e) => (e.target as HTMLInputElement).blur()}
             min="1"
           />
         </div>
@@ -490,19 +464,22 @@ const CreateComponent: React.FC<Props> = ({
           <label className="block text-gray-700 font-bold mb-2">
             Data Fields <span className="text-red-500">*</span>
           </label>
-          {Object.entries(formFields).map(([fieldName, _], index) => (
+          {formFields.map((field, index) => (
             <div key={index} className="flex items-center mb-2">
               <input
                 type="text"
                 className="flex-1 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
                 placeholder="Field name"
-                value={fieldName}
-                onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+                value={field.key}
+                onChange={(e) =>
+                  handleFieldChange(index, "key", e.target.value)
+                }
               />
+
               <button
                 type="button"
                 className="ml-2 text-red-500 focus:outline-none"
-                onClick={() => handleRemoveField(fieldName)}
+                onClick={() => handleRemoveField(index)}
               >
                 <FaTrash />
               </button>

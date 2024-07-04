@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-// import { FaPlus, FaEdit, FaTrash, FaEye, FaBars } from "react-icons/fa";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import CreateComponent, {
   Component as ComponentType,
 } from "../components/createComponents";
@@ -25,6 +24,8 @@ import {
   PlusOutlined,
   MenuOutlined,
 } from "@ant-design/icons";
+
+import { HiHome } from "react-icons/hi2";
 
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
@@ -200,6 +201,13 @@ const CreateTemplate: React.FC = () => {
           : comp
       );
       setComponents(updatedComponents);
+
+      // Fetch the latest data for the active component
+      const latestComponentData = await axiosInstance.get<ComponentType>(
+        `/templates/${template_name}/components/${response.data._id}`
+      );
+      setActiveComponent(latestComponentData.data);
+
       await fetchTemplateDetails();
       toast.success("Component saved successfully");
     } catch (error) {
@@ -262,6 +270,40 @@ const CreateTemplate: React.FC = () => {
       isActive: component.is_active,
     })),
   }));
+  const refreshState = () => {
+    setActiveComponent(null);
+    setIsCreatingComponent(false);
+    setEditingComponent(null);
+    setToggleStates({});
+    setComponents([...components]);
+    toast.success("Template view refreshed");
+  };
+  const navigate = useNavigate();
+  const handleHomeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate("/template", { replace: true });
+  };
+  const refetchData = async () => {
+    try {
+      // Reset states
+      setActiveComponent(null);
+      setIsCreatingComponent(false);
+      setEditingComponent(null);
+      setToggleStates({});
+      setComponents([]);
+
+      // Fetch latest template details
+      await fetchTemplateDetails();
+
+      // Fetch all components again
+      await fetchAllComponents();
+
+      toast.success("Data refreshed successfully");
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh data");
+    }
+  };
 
   return (
     <Layout className="h-screen ">
@@ -271,10 +313,25 @@ const CreateTemplate: React.FC = () => {
             type="text"
             icon={<MenuOutlined />}
             onClick={() => setSidebarVisible(!sidebarVisible)}
-            className="mr-4 text-indigo-600"
+            className="mr-2 text-indigo-600"
           />
-          <h1 className="text-xl font-bold text-indigo-700 m-0">
-            {templateDetails ? templateDetails.template_name : "Loading..."}
+          <Tooltip title="Go to Templates">
+            <Button
+              type="text"
+              icon={<HiHome size="1.5rem" />}
+              onClick={handleHomeClick}
+              className="mr-2 text-indigo-600 hover:bg-indigo-50"
+            />
+          </Tooltip>
+        </div>
+        <div className="flex-grow flex justify-center">
+          <h1
+            className="text-xl font-bold text-indigo-700 m-0 cursor-pointer"
+            onClick={refreshState}
+          >
+            {templateDetails
+              ? templateDetails.template_name.toUpperCase()
+              : "Loading..."}
           </h1>
         </div>
         <div className="flex gap-2">
@@ -364,15 +421,8 @@ const CreateTemplate: React.FC = () => {
                       template_name={template_name}
                       setFormData={handleSetFormData}
                       handleSubmit={handleSubmit}
+                      refetchData={refetchData}
                     />
-                    <Button
-                      type="primary"
-                      onClick={handleSubmit}
-                      icon={<UploadOutlined />}
-                      className="mt-4 bg-green-500 hover:bg-green-600"
-                    >
-                      Save
-                    </Button>
                   </div>
                 )}
                 {!activeComponent && !isCreatingComponent && (
@@ -387,7 +437,7 @@ const CreateTemplate: React.FC = () => {
                   Component Images
                 </h2>
                 <div className="space-y-4 flex flex-col items-center justify-center">
-                  {!activeComponent ? (
+                  {!activeComponent && !editingComponent ? (
                     components?.map((component, index) => (
                       <Card key={index} className="mb-4" size="small">
                         <p className="text-center text-lg font-semibold mb-2 text-indigo-600">
@@ -406,14 +456,15 @@ const CreateTemplate: React.FC = () => {
                   ) : (
                     <Card size="small">
                       <p className="text-center text-xl font-semibold mb-2 text-indigo-700">
-                        {activeComponent?.component_name}
+                        {activeComponent?.component_name ||
+                          editingComponent?.component_name}
                       </p>
                       <div className="flex justify-center items-center">
                         <Image
                           src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                            activeComponent?.component_image?.split(
-                              "uploads\\"
-                            )[1]
+                            (
+                              activeComponent || editingComponent
+                            )?.component_image?.split("uploads\\")[1]
                           }`}
                           className="rounded-lg shadow-sm"
                         />

@@ -1,20 +1,23 @@
 import React, { useState } from "react";
 import { FaEdit, FaTrash, FaGripVertical } from "react-icons/fa";
-import { Component as ComponentType } from "../components/createComponents";
 import { confirmAlert } from "react-confirm-alert";
 import { Switch } from "antd";
-import axiosInstance from "../http/axiosInstance";
-import { toast } from "react-toastify";
 
+import { toast } from "react-toastify";
+import {
+  updateComponentOrder,
+  updateComponentStatus,
+} from "../api/component.api";
+import { Component } from "../components/createComponents";
 interface ComponentListProps {
-  components: ComponentType[];
+  components: Component[];
   toggleStates: { [key: string]: boolean };
   onToggle: (component_id: string) => void;
-  onEdit: (component: ComponentType) => void;
+  onEdit: (component: Component) => void;
   onDelete: (componentId: string) => void;
-  onShowComponentForm: (component: ComponentType) => void;
+  onShowComponentForm: (component: Component) => void;
   template_name: string;
-  setComponents: React.Dispatch<React.SetStateAction<ComponentType[]>>;
+  setComponents: React.Dispatch<React.SetStateAction<Component[]>>;
 }
 
 const ComponentList: React.FC<ComponentListProps> = ({
@@ -25,11 +28,11 @@ const ComponentList: React.FC<ComponentListProps> = ({
   template_name,
   setComponents,
 }) => {
-  const [draggedItem, setDraggedItem] = useState<ComponentType | null>(null);
+  const [draggedItem, setDraggedItem] = useState<Component | null>(null);
 
   const handleDragStart = (
     _e: React.DragEvent<HTMLDivElement>,
-    item: ComponentType
+    item: Component
   ) => {
     setDraggedItem(item);
   };
@@ -40,7 +43,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
 
   const handleDrop = (
     e: React.DragEvent<HTMLDivElement>,
-    targetItem: ComponentType
+    targetItem: Component
   ) => {
     e.preventDefault();
     if (!draggedItem) return;
@@ -59,39 +62,19 @@ const ComponentList: React.FC<ComponentListProps> = ({
     setComponents(newComponents);
     setDraggedItem(null);
 
-    // Call the API to update the order
+    // Call the function to update the order
     updateOrder(newComponents);
   };
 
-  const updateOrder = async (newComponents: ComponentType[]) => {
-    try {
-      const response = await axiosInstance.put(
-        `/templates/${template_name}/reorder`,
-        {
-          components: newComponents.map((comp, index) => ({
-            _id: comp._id,
-            order: index,
-          })),
-        }
-      );
-
-      if (response.data.success) {
-        toast.success("Component order updated successfully");
-      } else {
-        toast.error("Failed to update component order");
-        // If the API call fails, revert to the original order
-        setComponents(components);
-      }
-    } catch (error) {
-      console.error("Error updating component order:", error);
-      toast.error("Failed to update component order");
-      // If the API call fails, revert to the original order
+  const updateOrder = async (newComponents: Component[]) => {
+    const success = await updateComponentOrder(template_name, newComponents);
+    if (!success) {
+      // If update failed, revert to the original order
       setComponents(components);
     }
   };
 
   const handleToggle = async (componentId: string) => {
-    // Find the component by ID and toggle its is_active property
     const toggledComponent = components.find(
       (comp) => comp._id === componentId
     );
@@ -101,7 +84,6 @@ const ComponentList: React.FC<ComponentListProps> = ({
       return;
     }
 
-    // Prepare the data payload to send to the server
     const updatedComponent = {
       template_name: template_name,
       component_name: toggledComponent.component_name,
@@ -111,28 +93,14 @@ const ComponentList: React.FC<ComponentListProps> = ({
       component_image: toggledComponent.component_image,
     };
 
-    try {
-      // Make the API call to update the component status
-      const response = await axiosInstance.post(
-        `/components`,
-        updatedComponent
+    const success = await updateComponentStatus(updatedComponent);
+    if (success) {
+      const updatedComponents = components.map((comp) =>
+        comp._id === componentId
+          ? { ...comp, is_active: !comp.is_active }
+          : comp
       );
-
-      if (response.status === 201) {
-        toast.success("Component status updated successfully");
-        // Update the component in the local state
-        const updatedComponents = components.map((comp) =>
-          comp._id === componentId
-            ? { ...comp, is_active: !comp.is_active }
-            : comp
-        );
-        setComponents(updatedComponents);
-      } else {
-        toast.error("Failed to update component status");
-      }
-    } catch (error) {
-      console.error("Error updating component status:", error);
-      toast.error("Failed to update component status");
+      setComponents(updatedComponents);
     }
   };
 
@@ -179,7 +147,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
               <div className="flex items-center space-x-2">
                 <Switch
                   size="small"
-                  checked={component.is_active} // Use component.is_active directly for switch state
+                  checked={component.is_active}
                   onChange={() => {
                     if (component._id) {
                       handleToggle(component._id);
