@@ -1,5 +1,5 @@
 // TemplateForm.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Modal,
   Form,
@@ -12,6 +12,15 @@ import {
   Popconfirm,
   Spin,
   Tooltip,
+  Radio,
+  Checkbox,
+  Collapse,
+  Typography,
+  Space,
+  Tag,
+  Empty,
+  Avatar,
+  Drawer,
 } from "antd";
 import {
   PlusOutlined,
@@ -19,20 +28,25 @@ import {
   EditOutlined,
   SaveOutlined,
   DeleteOutlined,
+  EyeOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
+import { motion, AnimatePresence } from "framer-motion";
+import styled from "styled-components";
 import axiosInstance from "../http/axiosInstance";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { motion, AnimatePresence } from "framer-motion";
 
 const { Option } = Select;
 const { TabPane } = Tabs;
+const { Panel } = Collapse;
 
 interface FieldType {
   type: string;
   required: boolean;
   fieldName: string;
   placeholder: string;
+  options: string[];
 }
 
 interface FormType {
@@ -48,6 +62,43 @@ interface TemplateFormProps {
   onFormCreated: () => void;
 }
 
+const StyledCard = styled(Card)`
+  transition: all 0.3s;
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const StyledButton = styled(Button)`
+  transition: all 0.3s;
+  &:hover {
+    transform: scale(1.05);
+  }
+`;
+
+const ScrollableDiv = styled.div`
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding-right: 16px;
+  margin-right: -16px;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 3px;
+  }
+`;
+
 const TemplateForm: React.FC<TemplateFormProps> = ({
   templateName,
   visible,
@@ -61,6 +112,8 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("1");
   const [loading, setLoading] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const formBuilderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (visible) {
@@ -115,10 +168,21 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
   const addField = () => {
     const newFields = [
       ...fields,
-      { type: "text", required: false, fieldName: "", placeholder: "" },
+      {
+        type: "text",
+        required: false,
+        fieldName: "",
+        placeholder: "",
+        options: [],
+      },
     ];
     setFields(newFields);
     form.setFieldsValue({ fields: newFields });
+    setTimeout(() => {
+      if (formBuilderRef.current) {
+        formBuilderRef.current.scrollTop = formBuilderRef.current.scrollHeight;
+      }
+    }, 100);
   };
 
   const removeField = (index: number) => {
@@ -134,9 +198,45 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
     form.setFieldsValue({ fields: newFields });
   };
 
+  const handleOptionAdd = (fieldIndex: number) => {
+    const newFields = [...fields];
+    if (!newFields[fieldIndex].options) {
+      newFields[fieldIndex].options = [];
+    }
+    newFields[fieldIndex].options.push("");
+    setFields(newFields);
+    form.setFieldsValue({ fields: newFields });
+  };
+
+  const handleOptionRemove = (fieldIndex: number, optionIndex: number) => {
+    const newFields = [...fields];
+    newFields[fieldIndex].options.splice(optionIndex, 1);
+    setFields(newFields);
+    form.setFieldsValue({ fields: newFields });
+  };
+
+  const handleOptionChange = (
+    fieldIndex: number,
+    optionIndex: number,
+    value: string
+  ) => {
+    const newFields = [...fields];
+    if (!newFields[fieldIndex].options) {
+      newFields[fieldIndex].options = [];
+    }
+    newFields[fieldIndex].options[optionIndex] = value;
+    setFields(newFields);
+    form.setFieldsValue({ fields: newFields });
+  };
+
   const selectForm = (formToEdit: FormType) => {
     setSelectedForm(formToEdit);
-    setFields(formToEdit.fields);
+    setFields(
+      formToEdit.fields.map((field) => ({
+        ...field,
+        options: field.options || [],
+      }))
+    );
     setIsEditing(true);
     setFormValues(formToEdit);
     setActiveTab("2");
@@ -145,7 +245,10 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
   const setFormValues = (formToEdit: FormType) => {
     form.setFieldsValue({
       formName: formToEdit.name,
-      fields: formToEdit.fields,
+      fields: formToEdit.fields.map((field) => ({
+        ...field,
+        options: field.options || [],
+      })),
     });
   };
 
@@ -163,9 +266,362 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
     }
   };
 
-  const renderPreview = () => {
-    return (
-      <Card title="Form Preview" className="bg-gray-100 rounded-lg h-full">
+  const renderFormsList = () => (
+    <ScrollableDiv>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+        {forms.length > 0 ? (
+          forms.map((item) => (
+            <StyledCard
+              key={item._id}
+              hoverable
+              className="shadow-sm"
+              bodyStyle={{ padding: "12px" }}
+              actions={[
+                <Tooltip title="Edit">
+                  <EditOutlined key="edit" onClick={() => selectForm(item)} />
+                </Tooltip>,
+                <Tooltip title="Preview">
+                  <EyeOutlined
+                    key="preview"
+                    onClick={() => {
+                      setSelectedForm(item);
+                      setPreviewVisible(true);
+                    }}
+                  />
+                </Tooltip>,
+                <Tooltip title="Duplicate">
+                  <CopyOutlined
+                    key="copy"
+                    onClick={() => {
+                      const newForm = {
+                        ...item,
+                        _id: "",
+                        name: `${item.name} (Copy)`,
+                      };
+                      selectForm(newForm);
+                    }}
+                  />
+                </Tooltip>,
+                <Popconfirm
+                  title="Delete this form?"
+                  onConfirm={() => deleteForm(item._id)}
+                  okText="Yes"
+                  cancelText="No"
+                >
+                  <DeleteOutlined key="delete" />
+                </Popconfirm>,
+              ]}
+            >
+              <div className="flex items-center mb-2">
+                <Avatar
+                  style={{ backgroundColor: "#1890ff", marginRight: "8px" }}
+                >
+                  {item.name[0].toUpperCase()}
+                </Avatar>
+                <Typography.Text strong className="text-sm truncate flex-1">
+                  {item.name}
+                </Typography.Text>
+              </div>
+              <div className="flex justify-between items-center">
+                <Typography.Text type="secondary" className="text-xs">
+                  Fields: {item.fields.length}
+                </Typography.Text>
+                <div className="flex flex-wrap justify-end">
+                  {item.fields.slice(0, 2).map((field, index) => (
+                    <Tag key={index} color="blue" className="text-xs mr-1 mb-1">
+                      {field.type}
+                    </Tag>
+                  ))}
+                  {item.fields.length > 2 && (
+                    <Tag color="blue" className="text-xs mb-1">
+                      +{item.fields.length - 2}
+                    </Tag>
+                  )}
+                </div>
+              </div>
+            </StyledCard>
+          ))
+        ) : (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="No forms yet. Create your first form!"
+            className="col-span-full"
+          />
+        )}
+      </div>
+    </ScrollableDiv>
+  );
+
+  const renderFormBuilder = () => (
+    <ScrollableDiv ref={formBuilderRef}>
+      <Card title="Form Builder" className="shadow-lg mb-6">
+        <Form
+          form={form}
+          onFinish={onFinish}
+          layout="vertical"
+          className="space-y-6"
+        >
+          <Form.Item
+            name="formName"
+            label="Form Name"
+            rules={[{ required: true, message: "Please input the form name!" }]}
+          >
+            <Input className="w-full" placeholder="Enter form name" />
+          </Form.Item>
+
+          <Collapse defaultActiveKey={["1"]} className="mb-6">
+            <Panel header="Form Fields" key="1">
+              <Form.List name="fields">
+                {(fields, { add, remove }) => (
+                  <AnimatePresence>
+                    {fields.map((field, index) => (
+                      <motion.div
+                        key={field.key}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Card className="mb-4 shadow-sm">
+                          <Space direction="vertical" className="w-full">
+                            <Form.Item
+                              {...field}
+                              name={[field.name, "fieldName"]}
+                              label="Field Name"
+                              rules={[{ required: true, message: "Required" }]}
+                            >
+                              <Input
+                                onChange={(e) =>
+                                  handleFieldChange(
+                                    index,
+                                    "fieldName",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </Form.Item>
+                            <Form.Item
+                              {...field}
+                              name={[field.name, "type"]}
+                              label="Field Type"
+                              rules={[{ required: true, message: "Required" }]}
+                            >
+                              <Select
+                                onChange={(value) =>
+                                  handleFieldChange(index, "type", value)
+                                }
+                              >
+                                <Option value="text">Text</Option>
+                                <Option value="number">Number</Option>
+                                <Option value="boolean">Boolean</Option>
+                                <Option value="select">Select</Option>
+                                <Option value="checkbox">Checkbox</Option>
+                                <Option value="radio">Radio</Option>
+                                <Option value="switch">Switch</Option>
+                                <Option value="date">Date</Option>
+                              </Select>
+                            </Form.Item>
+                            <Form.Item
+                              {...field}
+                              name={[field.name, "placeholder"]}
+                              label="Placeholder"
+                            >
+                              <Input
+                                onChange={(e) =>
+                                  handleFieldChange(
+                                    index,
+                                    "placeholder",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </Form.Item>
+                            <Form.Item
+                              {...field}
+                              name={[field.name, "required"]}
+                              label="Required"
+                              valuePropName="checked"
+                            >
+                              <Switch
+                                onChange={(checked) =>
+                                  handleFieldChange(index, "required", checked)
+                                }
+                              />
+                            </Form.Item>
+
+                            {["select", "checkbox", "radio"].includes(
+                              form.getFieldValue(["fields", index, "type"])
+                            ) && (
+                              <Form.List name={[field.name, "options"]}>
+                                {(
+                                  options,
+                                  { add: addOption, remove: removeOption }
+                                ) => (
+                                  <>
+                                    {options.map((option, optionIndex) => (
+                                      <Form.Item
+                                        key={option.key}
+                                        label={
+                                          optionIndex === 0 ? "Options" : ""
+                                        }
+                                        required={false}
+                                      >
+                                        <Input
+                                          placeholder={`Option ${
+                                            optionIndex + 1
+                                          }`}
+                                          style={{ width: "calc(100% - 32px)" }}
+                                          defaultValue={
+                                            form.getFieldValue([
+                                              "fields",
+                                              index,
+                                              "options",
+                                            ])?.[optionIndex] || ""
+                                          }
+                                          onChange={(e) =>
+                                            handleOptionChange(
+                                              index,
+                                              optionIndex,
+                                              e.target.value
+                                            )
+                                          }
+                                        />
+                                        <MinusCircleOutlined
+                                          className="dynamic-delete-button ml-2"
+                                          onClick={() => {
+                                            removeOption(optionIndex);
+                                            handleOptionRemove(
+                                              index,
+                                              optionIndex
+                                            );
+                                          }}
+                                        />
+                                      </Form.Item>
+                                    ))}
+                                    <Form.Item>
+                                      <Button
+                                        type="dashed"
+                                        onClick={() => {
+                                          addOption();
+                                          handleOptionAdd(index);
+                                        }}
+                                        icon={<PlusOutlined />}
+                                        block
+                                      >
+                                        Add Option
+                                      </Button>
+                                    </Form.Item>
+                                  </>
+                                )}
+                              </Form.List>
+                            )}
+
+                            <StyledButton
+                              type="text"
+                              danger
+                              onClick={() => {
+                                remove(field.name);
+                                removeField(index);
+                              }}
+                              icon={<MinusCircleOutlined />}
+                            >
+                              Remove Field
+                            </StyledButton>
+                          </Space>
+                        </Card>
+                      </motion.div>
+                    ))}
+                    <Form.Item>
+                      <StyledButton
+                        type="dashed"
+                        onClick={() => {
+                          add();
+                          addField();
+                        }}
+                        block
+                        icon={<PlusOutlined />}
+                      >
+                        Add Field
+                      </StyledButton>
+                    </Form.Item>
+                  </AnimatePresence>
+                )}
+              </Form.List>
+            </Panel>
+          </Collapse>
+
+          <Form.Item>
+            <StyledButton
+              type="primary"
+              htmlType="submit"
+              icon={<SaveOutlined />}
+              size="large"
+              block
+            >
+              {isEditing ? "Update Form" : "Create Form"}
+            </StyledButton>
+          </Form.Item>
+        </Form>
+      </Card>
+    </ScrollableDiv>
+  );
+
+  const renderField = (field: FieldType) => {
+    switch (field.type) {
+      case "text":
+        return <Input placeholder={field.placeholder} className="w-full" />;
+      case "number":
+        return (
+          <Input
+            type="number"
+            placeholder={field.placeholder}
+            className="w-full"
+          />
+        );
+      case "boolean":
+        return <Switch />;
+      case "select":
+        return (
+          <Select placeholder={field.placeholder} className="w-full">
+            {field.options.map((option, index) => (
+              <Option key={index} value={option}>
+                {option}
+              </Option>
+            ))}
+          </Select>
+        );
+      case "checkbox":
+        return (
+          <Checkbox.Group className="w-full">
+            {field.options.map((option, index) => (
+              <Checkbox key={index} value={option} className="mb-2 block">
+                {option}
+              </Checkbox>
+            ))}
+          </Checkbox.Group>
+        );
+      case "radio":
+        return (
+          <Radio.Group className="w-full">
+            {field.options.map((option, index) => (
+              <Radio key={index} value={option} className="mb-2 block">
+                {option}
+              </Radio>
+            ))}
+          </Radio.Group>
+        );
+      case "switch":
+        return <Switch />;
+      case "date":
+        return <Input type="date" className="w-full" />;
+      default:
+        return <Input placeholder={field.placeholder} className="w-full" />;
+    }
+  };
+
+  const renderPreview = () => (
+    <ScrollableDiv>
+      <Card className="bg-gray-50 rounded-lg shadow-inner">
         <AnimatePresence>
           {fields.map((field, index) => (
             <motion.div
@@ -175,297 +631,100 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <Form.Item label={field.fieldName} required={field.required}>
+              <Form.Item
+                label={<span className="font-semibold">{field.fieldName}</span>}
+                required={field.required}
+                className="mb-6"
+              >
                 {renderField(field)}
               </Form.Item>
             </motion.div>
           ))}
         </AnimatePresence>
+        {fields.length === 0 && (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="No fields added yet. Start building your form!"
+          />
+        )}
       </Card>
-    );
-  };
-
-  const renderField = (field: FieldType) => {
-    switch (field.type) {
-      case "text":
-        return <Input placeholder={field.placeholder} />;
-      case "number":
-        return <Input type="number" placeholder={field.placeholder} />;
-      case "boolean":
-        return <Switch />;
-      case "select":
-        return (
-          <Select placeholder={field.placeholder}>
-            <Option value="option">Option</Option>
-          </Select>
-        );
-      case "checkbox":
-        return <Input type="checkbox" />;
-      case "radio":
-        return <Input type="radio" />;
-      case "switch":
-        return <Switch />;
-      case "date":
-        return <Input type="date" />;
-      default:
-        return <Input placeholder={field.placeholder} />;
-    }
-  };
+    </ScrollableDiv>
+  );
 
   return (
-    <Modal
-      visible={visible}
-      onCancel={onClose}
-      footer={null}
-      width={"90vw"}
-      bodyStyle={{ height: "77vh", overflowY: "hidden" }}
-    >
-      <Spin spinning={loading}>
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          className="mt-2 sticky top-0 z-10 bg-white"
-        >
-          <TabPane tab="Forms List" key="1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-              {forms.map((item) => (
-                <div
-                  key={item._id}
-                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden border border-gray-200"
+    <>
+      <Modal
+        visible={visible}
+        onCancel={onClose}
+        footer={null}
+        width="90vw"
+        bodyStyle={{
+          maxHeight: "77vh",
+          overflowY: "auto",
+          overflowX: "hidden",
+        }}
+      >
+        <Spin spinning={loading}>
+          <Tabs activeKey={activeTab} onChange={setActiveTab} className="mt-2">
+            <TabPane tab="Forms List" key="1" className="w-full">
+              {renderFormsList()}
+              <div className="flex justify-center mt-6">
+                <StyledButton
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    resetForm();
+                    setActiveTab("2");
+                  }}
+                  size="large"
                 >
-                  <div className="p-3 bg-gray-50 border-b border-gray-200">
-                    <h4 className="text-base font-semibold text-gray-800">
-                      {item.name}
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Fields: {item.fields.length}
-                    </p>
-                  </div>
-                  <div className="p-2 flex justify-end space-x-2">
-                    <Tooltip title="Edit">
-                      <button
-                        onClick={() => selectForm(item)}
-                        className="p-1 text-blue-500 hover:bg-blue-50 rounded-full transition-colors duration-300"
-                      >
-                        <EditOutlined />
-                      </button>
-                    </Tooltip>
-                    <Popconfirm
-                      title="Are you sure you want to delete this form?"
-                      onConfirm={() => deleteForm(item._id)}
-                      okText="Yes"
-                      cancelText="No"
-                    >
-                      <Tooltip title="Delete">
-                        <button className="p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors duration-300">
-                          <DeleteOutlined />
-                        </button>
-                      </Tooltip>
-                    </Popconfirm>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-center mt-4">
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  resetForm();
-                  setActiveTab("2");
-                }}
-                size="middle"
-                className="px-4 py-1"
-              >
-                Create New Form
-              </Button>
-            </div>
-          </TabPane>
-
-          <TabPane tab={isEditing ? "Edit Form" : "Create Form"} key="2">
-            <div className="flex flex-col lg:flex-row gap-4 p-4">
-              <div className="w-full lg:w-1/2 h-full overflow-y-auto">
-                <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-                  <div className="bg-gray-200 p-3 sticky z-10">
-                    <h4 className="text-lg font-semibold text-gray-800">
-                      Form Name
-                    </h4>
-                  </div>
-                  <div className="p-4 overflow-y-auto max-h-[calc(80vh-200px)]">
-                    <Form
-                      form={form}
-                      onFinish={onFinish}
-                      layout="vertical"
-                      className="space-y-4"
-                    >
-                      <Form.Item
-                        name="formName"
-                        label="Form Name"
-                        rules={[
-                          {
-                            required: true,
-                            message: "Please input the form name!",
-                          },
-                        ]}
-                      >
-                        <Input className="w-full" />
-                      </Form.Item>
-
-                      <div className="my-3 border-b border-gray-200">
-                        <span className="text-lg font-semibold text-gray-700">
-                          Form Fields
-                        </span>
-                      </div>
-
-                      <Form.List name="fields">
-                        {(fields, { add, remove }) => (
-                          <>
-                            {fields.map((field, index) => (
-                              <div
-                                key={field.key}
-                                className="bg-white p-4 rounded-lg mb-4 shadow-sm border border-gray-200"
-                              >
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <Form.Item
-                                    {...field}
-                                    name={[field.name, "fieldName"]}
-                                    label="Field Name"
-                                    rules={[
-                                      { required: true, message: "Required" },
-                                    ]}
-                                  >
-                                    <Input
-                                      onChange={(e) =>
-                                        handleFieldChange(
-                                          index,
-                                          "fieldName",
-                                          e.target.value
-                                        )
-                                      }
-                                    />
-                                  </Form.Item>
-                                  <Form.Item
-                                    {...field}
-                                    name={[field.name, "type"]}
-                                    label="Field Type"
-                                    rules={[
-                                      { required: true, message: "Required" },
-                                    ]}
-                                  >
-                                    <Select
-                                      onChange={(value) =>
-                                        handleFieldChange(index, "type", value)
-                                      }
-                                    >
-                                      <Option value="text">Text</Option>
-                                      <Option value="number">Number</Option>
-                                      <Option value="boolean">Boolean</Option>
-                                      <Option value="select">Select</Option>
-                                      <Option value="checkbox">Checkbox</Option>
-                                      <Option value="radio">Radio</Option>
-                                      <Option value="switch">Switch</Option>
-                                      <Option value="date">Date</Option>
-                                      <Option value="other">Other</Option>
-                                    </Select>
-                                  </Form.Item>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                  <Form.Item
-                                    {...field}
-                                    name={[field.name, "placeholder"]}
-                                    label="Placeholder"
-                                  >
-                                    <Input
-                                      onChange={(e) =>
-                                        handleFieldChange(
-                                          index,
-                                          "placeholder",
-                                          e.target.value
-                                        )
-                                      }
-                                    />
-                                  </Form.Item>
-                                  <Form.Item
-                                    {...field}
-                                    name={[field.name, "required"]}
-                                    label="Required"
-                                    valuePropName="checked"
-                                  >
-                                    <Switch
-                                      onChange={(checked) =>
-                                        handleFieldChange(
-                                          index,
-                                          "required",
-                                          checked
-                                        )
-                                      }
-                                    />
-                                  </Form.Item>
-                                </div>
-                                <Button
-                                  type="text"
-                                  danger
-                                  onClick={() => {
-                                    remove(field.name);
-                                    removeField(index);
-                                  }}
-                                  className="mt-2"
-                                  icon={<MinusCircleOutlined />}
-                                >
-                                  Remove Field
-                                </Button>
-                              </div>
-                            ))}
-                            <Form.Item>
-                              <Button
-                                type="dashed"
-                                onClick={() => {
-                                  add();
-                                  addField();
-                                }}
-                                block
-                                icon={<PlusOutlined />}
-                                className="h-9 hover:border-blue-500 hover:text-blue-500"
-                              >
-                                Add Field
-                              </Button>
-                            </Form.Item>
-                          </>
-                        )}
-                      </Form.List>
-                      <Form.Item>
-                        <Button
-                          type="primary"
-                          htmlType="submit"
-                          icon={<SaveOutlined />}
-                          size="middle"
-                          className="px-4 py-1"
-                        >
-                          {isEditing ? "Update Form" : "Create Form"}
-                        </Button>
-                      </Form.Item>
-                    </Form>
-                  </div>
-                </div>
+                  Create New Form
+                </StyledButton>
               </div>
-              <div className="w-full lg:w-1/2 h-full overflow-y-auto">
-                <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-                  <div className="bg-gray-200 p-3 sticky z-10">
-                    <h4 className="text-lg font-semibold text-gray-800">
-                      Form Preview
-                    </h4>
-                  </div>
-                  <div className="p-4 overflow-y-auto max-h-[calc(80vh-200px)]">
+            </TabPane>
+            <TabPane tab={isEditing ? "Edit Form" : "Create Form"} key="2">
+              <div className="flex gap-6">
+                <div className="w-1/2">{renderFormBuilder()}</div>
+                <div className="w-1/2">
+                  <Card title="Form Preview" className="shadow-lg sticky top-0">
                     {renderPreview()}
-                  </div>
+                  </Card>
                 </div>
               </div>
-            </div>
-          </TabPane>
-        </Tabs>
-      </Spin>
+            </TabPane>
+          </Tabs>
+        </Spin>
+      </Modal>
+
+      <Drawer
+        title="Form Preview"
+        placement="right"
+        onClose={() => setPreviewVisible(false)}
+        visible={previewVisible}
+        width="50%"
+      >
+        {selectedForm && (
+          <ScrollableDiv>
+            <Card className="bg-gray-50 rounded-lg shadow-inner">
+              {selectedForm.fields.map((field, index) => (
+                <Form.Item
+                  key={index}
+                  label={
+                    <span className="font-semibold">{field.fieldName}</span>
+                  }
+                  required={field.required}
+                  className="mb-6"
+                >
+                  {renderField(field)}
+                </Form.Item>
+              ))}
+            </Card>
+          </ScrollableDiv>
+        )}
+      </Drawer>
+
       <ToastContainer position="top-right" autoClose={3000} />
-    </Modal>
+    </>
   );
 };
 
