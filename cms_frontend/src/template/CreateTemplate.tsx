@@ -26,6 +26,7 @@ import {
 } from "@ant-design/icons";
 
 import { HiHome } from "react-icons/hi2";
+import TemplateForm from "../templateForm/TemplateForm";
 
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
@@ -72,6 +73,8 @@ const CreateTemplate: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
+  const [isTemplateFormVisible, setIsTemplateFormVisible] =
+    useState<boolean>(false);
 
   useEffect(() => {
     fetchTemplateDetails();
@@ -305,6 +308,18 @@ const CreateTemplate: React.FC = () => {
     }
   };
 
+  const handleOpenTemplateForm = () => {
+    setIsTemplateFormVisible(true);
+  };
+
+  const handleCloseTemplateForm = () => {
+    setIsTemplateFormVisible(false);
+  };
+
+  const handleFormCreated = () => {
+    // Refetch template details or update the state as needed
+    fetchTemplateDetails();
+  };
   return (
     <Layout className="h-screen ">
       <Header className="bg-white shadow-md flex items-center justify-between px-6 py-2 mb-4 z-10">
@@ -345,6 +360,16 @@ const CreateTemplate: React.FC = () => {
               Create New
             </Button>
           </Tooltip>
+          <Tooltip title="Create New Form">
+            <Button
+              type="default"
+              onClick={handleOpenTemplateForm}
+              icon={<PlusOutlined />}
+              className="border-indigo-500 text-indigo-500 hover:bg-indigo-50"
+            >
+              Create Form
+            </Button>
+          </Tooltip>
           <Tooltip title="Use Existing Component">
             <Button
               type="default"
@@ -357,6 +382,12 @@ const CreateTemplate: React.FC = () => {
           </Tooltip>
         </div>
       </Header>
+      <TemplateForm
+        templateName={template_name || ""}
+        visible={isTemplateFormVisible}
+        onClose={handleCloseTemplateForm}
+        onFormCreated={handleFormCreated}
+      />
       <Layout className="flex-1 overflow-hidden">
         <Sider
           width={300}
