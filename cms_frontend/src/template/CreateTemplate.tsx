@@ -89,6 +89,7 @@ const CreateTemplate: React.FC = () => {
       );
       setTemplateDetails(response.data);
       setComponents(response.data.components || []);
+      console.log(response.data.components);
     } catch (error) {
       console.error("Error fetching template details:", error);
       toast.error("Failed to fetch template details");
@@ -102,6 +103,7 @@ const CreateTemplate: React.FC = () => {
       const response = await axiosInstance.get<ComponentType[]>("templates");
       if (response.status === 200) {
         setAllComponents(response.data);
+        console.log(response.data);
       }
     } catch (error) {
       console.error("Error fetching components:", error);
@@ -387,6 +389,7 @@ const CreateTemplate: React.FC = () => {
         visible={isTemplateFormVisible}
         onClose={handleCloseTemplateForm}
         onFormCreated={handleFormCreated}
+        onFormDeleted={refetchData} // Add this line
       />
       <Layout className="flex-1 overflow-hidden">
         <Sider

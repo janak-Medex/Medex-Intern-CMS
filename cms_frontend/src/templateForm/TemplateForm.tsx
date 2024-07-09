@@ -60,6 +60,7 @@ interface TemplateFormProps {
   visible: boolean;
   onClose: () => void;
   onFormCreated: () => void;
+  onFormDeleted: () => void;
 }
 
 const StyledCard = styled(Card)`
@@ -104,6 +105,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
   visible,
   onClose,
   onFormCreated,
+  onFormDeleted,
 }) => {
   const [form] = Form.useForm();
   const [fields, setFields] = useState<FieldType[]>([]);
@@ -126,6 +128,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
     try {
       const response = await axiosInstance.get(`/form/${templateName}`);
       setForms(response.data.data);
+      console.log(response.data.data);
     } catch (error) {
       console.error("Error fetching forms:", error);
       toast.error("Failed to fetch forms");
@@ -251,13 +254,16 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       })),
     });
   };
-
-  const deleteForm = async (formId: string) => {
+  const deleteForm = async (formName: string) => {
     setLoading(true);
     try {
-      await axiosInstance.delete(`/form/${templateName}/${formId}`);
+      const fullFormName = formName.startsWith("Form_")
+        ? formName
+        : `Form_${formName}`;
+      console.log(fullFormName);
+      await axiosInstance.delete(`/form/${templateName}/${fullFormName}`);
       toast.success("Form deleted successfully");
-      fetchForms();
+      onFormDeleted(); // Call the callback function
     } catch (error) {
       console.error("Error deleting form:", error);
       toast.error("Failed to delete form");
@@ -304,7 +310,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
                 </Tooltip>,
                 <Popconfirm
                   title="Delete this form?"
-                  onConfirm={() => deleteForm(item._id)}
+                  onConfirm={() => deleteForm(item.name)}
                   okText="Yes"
                   cancelText="No"
                 >
