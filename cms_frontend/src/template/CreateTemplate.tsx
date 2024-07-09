@@ -389,7 +389,7 @@ const CreateTemplate: React.FC = () => {
         visible={isTemplateFormVisible}
         onClose={handleCloseTemplateForm}
         onFormCreated={handleFormCreated}
-        onFormDeleted={refetchData} // Add this line
+        onFormDeleted={refetchData}
       />
       <Layout className="flex-1 overflow-hidden">
         <Sider
@@ -435,6 +435,7 @@ const CreateTemplate: React.FC = () => {
                 </h2>
                 {isCreatingComponent && (
                   <CreateComponent
+                    key={editingComponent ? editingComponent._id : "new"}
                     onClose={handleCloseCreateComponent}
                     onCreate={onCreateComponent}
                     initialComponent={editingComponent}

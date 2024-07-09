@@ -82,6 +82,12 @@ const CreateComponent: React.FC<Props> = ({
   const [editingRule, setEditingRule] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [_formData, setFormData] = useState(
+    initialComponent || {
+      component_name: "",
+    }
+  );
+
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -107,6 +113,16 @@ const CreateComponent: React.FC<Props> = ({
     }
   }, [initialComponent, baseImageUrl]);
 
+  useEffect(() => {
+    if (initialComponent) {
+      setFormData(initialComponent);
+    } else {
+      setFormData({
+        component_name: "",
+        // ... reset other fields
+      });
+    }
+  }, [initialComponent]);
   const handleAddField = () => {
     setFormFields([...formFields, { key: "", value: "" }]);
     toast.success("New field added");
@@ -669,8 +685,8 @@ const CreateComponent: React.FC<Props> = ({
                 </option>
                 <option value="string">String</option>
                 <option value="number">Number</option>
-                {/* <option value="boolean">Boolean</option>
-                <option value="date">Date</option> */}
+                <option value="object">Object</option>
+                {/* <option value="date">Date</option> */}
               </select>
             </div>
 

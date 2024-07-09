@@ -1,14 +1,23 @@
 import React, { useState } from "react";
-import { FaEdit, FaTrash, FaGripVertical } from "react-icons/fa";
+import {
+  FaEdit,
+  FaTrash,
+  FaGripVertical,
+  FaClipboardList,
+  FaCog,
+  FaToggleOn,
+  FaToggleOff,
+} from "react-icons/fa";
 import { confirmAlert } from "react-confirm-alert";
-import { Switch } from "antd";
-
+import { Switch, Tooltip, Badge } from "antd";
 import { toast } from "react-toastify";
 import {
   updateComponentOrder,
   updateComponentStatus,
 } from "../api/component.api";
 import { Component } from "../components/createComponents";
+import TemplateForm from "../templateForm/TemplateForm";
+
 interface ComponentListProps {
   components: Component[];
   toggleStates: { [key: string]: boolean };
@@ -29,16 +38,33 @@ const ComponentList: React.FC<ComponentListProps> = ({
   setComponents,
 }) => {
   const [draggedItem, setDraggedItem] = useState<Component | null>(null);
+  const [templateFormVisible, setTemplateFormVisible] = useState(false);
+  const [selectedForm, setSelectedForm] = useState<Component | null>(null);
+  const [editMode, setEditMode] = useState(false);
+
+  const isFormComponent = (componentName: string) =>
+    componentName?.toLowerCase().startsWith("form_");
 
   const handleDragStart = (
-    _e: React.DragEvent<HTMLDivElement>,
+    e: React.DragEvent<HTMLDivElement>,
     item: Component
   ) => {
     setDraggedItem(item);
+    e.dataTransfer.effectAllowed = "move";
+    if (item._id) {
+      e.dataTransfer.setData("text/plain", item._id);
+    }
+    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+    dragImage.style.position = "absolute";
+    dragImage.style.top = "-1000px";
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, 20, 20);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
   };
 
   const handleDrop = (
@@ -62,14 +88,12 @@ const ComponentList: React.FC<ComponentListProps> = ({
     setComponents(newComponents);
     setDraggedItem(null);
 
-    // Call the function to update the order
     updateOrder(newComponents);
   };
 
   const updateOrder = async (newComponents: Component[]) => {
     const success = await updateComponentOrder(template_name, newComponents);
     if (!success) {
-      // If update failed, revert to the original order
       setComponents(components);
     }
   };
@@ -123,12 +147,30 @@ const ComponentList: React.FC<ComponentListProps> = ({
     });
   };
 
+  const handleFormClick = (component: Component) => {
+    setSelectedForm(component);
+    setEditMode(false);
+    setTemplateFormVisible(true);
+  };
+
+  const handleFormEdit = (e: React.MouseEvent, component: Component) => {
+    e.stopPropagation();
+    setSelectedForm(component);
+    setEditMode(true);
+    setTemplateFormVisible(true);
+  };
+
   return (
-    <div className="space-y-4 flex-1 p-4 bg-white h-full">
-      <h2 className="text-xl font-semibold mb-4">Show Components</h2>
-      <div className="space-y-2">
+    <div className="space-y-4 flex-1 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-lg min-h-full">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center">
+        <FaClipboardList className="mr-3 text-indigo-600" />
+        Component List
+      </h2>
+      <div className="space-y-3">
         {components.length === 0 ? (
-          <p className="text-gray-600">No components available.</p>
+          <p className="text-gray-600 text-center py-8 bg-white rounded-lg shadow">
+            No components available.
+          </p>
         ) : (
           components.map((component) => (
             <div
@@ -137,45 +179,109 @@ const ComponentList: React.FC<ComponentListProps> = ({
               onDragStart={(e) => handleDragStart(e, component)}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, component)}
-              className="flex items-center justify-between bg-gray-100 rounded-md p-3 cursor-move"
-              onClick={() => onShowComponentForm(component)}
+              className={`flex items-center justify-between rounded-lg p-4 transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-md ${
+                isFormComponent(component.component_name)
+                  ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
+                  : "bg-white"
+              }`}
+              onClick={() =>
+                isFormComponent(component.component_name)
+                  ? handleFormClick(component)
+                  : onShowComponentForm(component)
+              }
             >
-              <div className="flex items-center space-x-2">
-                <FaGripVertical className="text-gray-400 cursor-move" />
-                <span>{component.component_name}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  size="small"
-                  checked={component.is_active}
-                  onChange={() => {
-                    if (component._id) {
-                      handleToggle(component._id);
-                    }
-                  }}
+              <div className="flex items-center space-x-3">
+                <FaGripVertical
+                  className={`cursor-move ${
+                    isFormComponent(component.component_name)
+                      ? "text-blue-200"
+                      : "text-gray-400"
+                  }`}
                 />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(component._id);
-                  }}
+                <span
+                  className={`font-medium ${
+                    isFormComponent(component.component_name)
+                      ? "text-white"
+                      : "text-gray-700"
+                  }`}
                 >
-                  <FaTrash className="text-red-600" />
-                </button>
-                <button
-                  className="focus:outline-none"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(component);
-                  }}
-                >
-                  <FaEdit className="text-gray-600" size={20} />
-                </button>
+                  {component.component_name}
+                </span>
+                {isFormComponent(component.component_name) && (
+                  <Badge count="Form" style={{ backgroundColor: "#10B981" }} />
+                )}
+              </div>
+              <div className="flex items-center space-x-3">
+                {isFormComponent(component.component_name) ? (
+                  <Tooltip title="Edit Form">
+                    <button
+                      className="text-white hover:text-blue-200 transition-colors duration-200"
+                      onClick={(e) => handleFormEdit(e, component)}
+                    >
+                      <FaEdit size={20} />
+                    </button>
+                  </Tooltip>
+                ) : (
+                  <>
+                    <Tooltip
+                      title={component.is_active ? "Active" : "Inactive"}
+                    >
+                      <Switch
+                        size="small"
+                        checked={component.is_active}
+                        onChange={() => {
+                          if (component._id) {
+                            handleToggle(component._id);
+                          }
+                        }}
+                        className="bg-gray-300"
+                        checkedChildren={<FaToggleOn />}
+                        unCheckedChildren={<FaToggleOff />}
+                      />
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <button
+                        className="text-red-500 hover:text-red-700 transition-colors duration-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(component._id);
+                        }}
+                      >
+                        <FaTrash size={18} />
+                      </button>
+                    </Tooltip>
+                    <Tooltip title="Edit">
+                      <button
+                        className="text-indigo-500 hover:text-indigo-700 transition-colors duration-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(component);
+                        }}
+                      >
+                        <FaCog size={18} />
+                      </button>
+                    </Tooltip>
+                  </>
+                )}
               </div>
             </div>
           ))
         )}
       </div>
+      {templateFormVisible && (
+        <TemplateForm
+          templateName={template_name}
+          visible={templateFormVisible}
+          onClose={() => setTemplateFormVisible(false)}
+          onFormCreated={() => {
+            // Handle form creation
+          }}
+          onFormDeleted={() => {
+            // Handle form deletion
+          }}
+          initialFormData={editMode ? selectedForm : null}
+        />
+      )}
     </div>
   );
 };

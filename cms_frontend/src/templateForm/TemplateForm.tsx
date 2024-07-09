@@ -36,6 +36,7 @@ import styled from "styled-components";
 import axiosInstance from "../http/axiosInstance";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Component } from "../components/createComponents";
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -61,6 +62,7 @@ interface TemplateFormProps {
   onClose: () => void;
   onFormCreated: () => void;
   onFormDeleted: () => void;
+  initialFormData?: Component | null;
 }
 
 const StyledCard = styled(Card)`
@@ -263,6 +265,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       console.log(fullFormName);
       await axiosInstance.delete(`/form/${templateName}/${fullFormName}`);
       toast.success("Form deleted successfully");
+      fetchForms(); // Call the callback function
       onFormDeleted(); // Call the callback function
     } catch (error) {
       console.error("Error deleting form:", error);
