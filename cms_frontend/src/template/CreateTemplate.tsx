@@ -480,9 +480,17 @@ const CreateTemplate: React.FC = () => {
                         </p>
                         <div className="flex justify-center items-center">
                           <Image
-                            src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                              component?.component_image?.split("uploads\\")[1]
-                            }`}
+                            src={
+                              component.component_name
+                                ?.toLocaleLowerCase()
+                                .startsWith("form_")
+                                ? "../../public/images/form.svg" // replace with your default image path
+                                : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
+                                    component?.component_image?.split(
+                                      "uploads\\"
+                                    )[1]
+                                  }`
+                            }
                             className="rounded-lg shadow-sm"
                           />
                         </div>
@@ -496,11 +504,17 @@ const CreateTemplate: React.FC = () => {
                       </p>
                       <div className="flex justify-center items-center">
                         <Image
-                          src={`${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
+                          src={
                             (
                               activeComponent || editingComponent
-                            )?.component_image?.split("uploads\\")[1]
-                          }`}
+                            )?.component_name.startsWith("Form_")
+                              ? "path/to/default/image.png" // replace with your default image path
+                              : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
+                                  (
+                                    activeComponent || editingComponent
+                                  )?.component_image?.split("uploads\\")[1]
+                                }`
+                          }
                           className="rounded-lg shadow-sm"
                         />
                       </div>

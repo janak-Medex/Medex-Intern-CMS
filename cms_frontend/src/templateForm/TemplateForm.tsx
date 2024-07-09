@@ -261,7 +261,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
     try {
       const fullFormName = formName.startsWith("Form_")
         ? formName
-        : `Form_${formName}`;
+        : `${formName}`;
       console.log(fullFormName);
       await axiosInstance.delete(`/form/${templateName}/${fullFormName}`);
       toast.success("Form deleted successfully");
