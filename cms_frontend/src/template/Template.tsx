@@ -3,7 +3,7 @@ import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
 import Cookies from "js-cookie";
-import { Switch, Tooltip, Input, Menu, Dropdown } from "antd";
+import { Switch, Tooltip, Input, Menu, Dropdown, message } from "antd";
 import {
   LogoutOutlined,
   MoreOutlined,
@@ -12,7 +12,6 @@ import {
   DownOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
-import { toast } from "react-toastify";
 import { logout } from "../api/auth.api";
 import {
   createTemplate,
@@ -189,13 +188,13 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     try {
       const template = await updateTemplateStatus(templateId, checked);
       const statusMessage = checked ? "is_active" : "inactive";
-      toast.success(
+      message.success(
         `Template '${template.template_name}' is now ${statusMessage}`
       );
       fetchTemplates(); // Refresh the templates after update
     } catch (error) {
       console.error("Error updating template status:", error);
-      toast.error("Failed to update template status");
+      message.error("Failed to update template status");
     }
   };
 

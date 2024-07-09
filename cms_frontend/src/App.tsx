@@ -10,6 +10,7 @@ import CreateTemplate from "./template/CreateTemplate.tsx";
 import ProtectedRoute from "./routes/protected.route";
 import Cookies from "js-cookie";
 import Template from "./template/Template.tsx";
+import { ToastContainer } from "react-toastify";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
@@ -26,43 +27,48 @@ function App() {
   }, []);
 
   return (
-    <Router>
-      <Routes>
-        {/* Route for Login */}
-        <Route
-          path="/"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/template" replace />
-            ) : (
-              <Login onLogin={handleLogin} />
-            )
-          }
-        />
+    <>
+      <ToastContainer />
+      <Router>
+        <Routes>
+          {/* Route for Login */}
+          <Route
+            path="/"
+            element={
+              isAuthenticated ? (
+                <Navigate to="/template" replace />
+              ) : (
+                <Login onLogin={handleLogin} />
+              )
+            }
+          />
 
-        {/* Protected Routes */}
-        <Route
-          path="/template"
-          element={
-            isAuthenticated ? (
-              <ProtectedRoute element={<Template onLogout={handleLogout} />} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/create-template/:template_name"
-          element={
-            isAuthenticated ? (
-              <ProtectedRoute element={<CreateTemplate />} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-      </Routes>
-    </Router>
+          {/* Protected Routes */}
+          <Route
+            path="/template"
+            element={
+              isAuthenticated ? (
+                <ProtectedRoute
+                  element={<Template onLogout={handleLogout} />}
+                />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/create-template/:template_name"
+            element={
+              isAuthenticated ? (
+                <ProtectedRoute element={<CreateTemplate />} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+        </Routes>
+      </Router>
+    </>
   );
 }
 

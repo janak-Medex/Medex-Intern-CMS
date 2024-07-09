@@ -21,6 +21,7 @@ import {
   Empty,
   Avatar,
   Drawer,
+  message,
 } from "antd";
 import {
   PlusOutlined,
@@ -34,8 +35,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import styled from "styled-components";
 import axiosInstance from "../http/axiosInstance";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { Component } from "../components/createComponents";
 
 const { Option } = Select;
@@ -133,7 +132,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       console.log(response.data.data);
     } catch (error) {
       console.error("Error fetching forms:", error);
-      toast.error("Failed to fetch forms");
+      message.error("Failed to fetch forms");
     } finally {
       setLoading(false);
     }
@@ -148,7 +147,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
         fields: values.fields,
         template_name: templateName,
       });
-      toast.success(
+      message.success(
         isEditing ? "Form updated successfully" : "Form created successfully"
       );
       onFormCreated();
@@ -156,7 +155,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       resetForm();
     } catch (error) {
       console.error("Error saving form:", error);
-      toast.error("Failed to save form");
+      message.error("Failed to save form");
     } finally {
       setLoading(false);
     }
@@ -264,12 +263,13 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
         : `${formName}`;
       console.log(fullFormName);
       await axiosInstance.delete(`/form/${templateName}/${fullFormName}`);
-      toast.success("Form deleted successfully");
-      fetchForms(); // Call the callback function
-      onFormDeleted(); // Call the callback function
+      fetchForms();
+      await onFormDeleted();
+
+      message.success("Form deleted successfully");
     } catch (error) {
       console.error("Error deleting form:", error);
-      toast.error("Failed to delete form");
+      message.error("Failed to delete form");
     } finally {
       setLoading(false);
     }
@@ -592,7 +592,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       case "select":
         return (
           <Select placeholder={field.placeholder} className="w-full">
-            {field.options.map((option, index) => (
+            {field.options?.map((option, index) => (
               <Option key={index} value={option}>
                 {option}
               </Option>
@@ -602,7 +602,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       case "checkbox":
         return (
           <Checkbox.Group className="w-full">
-            {field.options.map((option, index) => (
+            {field.options?.map((option, index) => (
               <Checkbox key={index} value={option} className="mb-2 block">
                 {option}
               </Checkbox>
@@ -612,7 +612,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       case "radio":
         return (
           <Radio.Group className="w-full">
-            {field.options.map((option, index) => (
+            {field.options?.map((option, index) => (
               <Radio key={index} value={option} className="mb-2 block">
                 {option}
               </Radio>
@@ -731,8 +731,6 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
           </ScrollableDiv>
         )}
       </Drawer>
-
-      <ToastContainer position="top-right" autoClose={3000} />
     </>
   );
 };

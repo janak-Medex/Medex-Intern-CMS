@@ -1,7 +1,7 @@
 import axiosInstance from "../http/axiosInstance";
-import { toast } from "react-toastify";
 
 import { Component } from "../components/createComponents";
+import { message } from "antd";
 
 // src/services/api.ts
 
@@ -108,15 +108,15 @@ export const updateComponentOrder = async (
         );
 
         if (response.data.success) {
-            toast.success("Component order updated successfully");
+            message.success("Component order updated successfully");
             return true;
         } else {
-            toast.error("Failed to update component order");
+            message.error("Failed to update component order");
             return false;
         }
     } catch (error) {
         console.error("Error updating component order:", error);
-        toast.error("Failed to update component order");
+        message.error("Failed to update component order");
         return false;
     }
 };
@@ -130,15 +130,15 @@ export const updateComponentStatus = async (
         const response = await axiosInstance.post(`/components`, updatedComponent);
 
         if (response.status === 201) {
-            toast.success("Component status updated successfully");
+            message.success("Component status updated successfully");
             return true;
         } else {
-            toast.error("Failed to update component status");
+            message.error("Failed to update component status");
             return false;
         }
     } catch (error) {
         console.error("Error updating component status:", error);
-        toast.error("Failed to update component status");
+        message.error("Failed to update component status");
         return false;
     }
 };

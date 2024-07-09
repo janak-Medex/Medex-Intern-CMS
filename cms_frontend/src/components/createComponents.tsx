@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaPlus, FaTrash, FaUpload, FaExpand, FaEdit } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import { toast } from "react-toastify";
-import { Modal, Input } from "antd";
+import { Modal, Input, message } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import {
   createComponent,
@@ -125,13 +124,13 @@ const CreateComponent: React.FC<Props> = ({
   }, [initialComponent]);
   const handleAddField = () => {
     setFormFields([...formFields, { key: "", value: "" }]);
-    toast.success("New field added");
+    message.success("New field added");
   };
 
   const handleRemoveField = (index: number) => {
     const updatedFields = formFields.filter((_, i) => i !== index);
     setFormFields(updatedFields);
-    toast.success("Field removed");
+    message.success("Field removed");
   };
 
   const handleFieldChange = (
@@ -157,7 +156,7 @@ const CreateComponent: React.FC<Props> = ({
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-      toast.success("Image uploaded");
+      message.success("Image uploaded");
     }
   };
 
@@ -167,7 +166,7 @@ const CreateComponent: React.FC<Props> = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    toast.success("Image removed");
+    message.success("Image removed");
   };
 
   const toggleFullscreen = () => {
@@ -197,7 +196,7 @@ const CreateComponent: React.FC<Props> = ({
     event.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fill in all required fields");
+      message.error("Please fill in all required fields");
       return;
     }
 
@@ -223,7 +222,7 @@ const CreateComponent: React.FC<Props> = ({
         response = await createComponent(componentData, componentImage);
       }
 
-      toast.success(
+      message.success(
         initialComponent
           ? "Component updated successfully!"
           : "Component created successfully!"
@@ -232,7 +231,7 @@ const CreateComponent: React.FC<Props> = ({
       onClose();
     } catch (error) {
       console.error("Error creating/updating component:", error);
-      toast.error(
+      message.error(
         `Failed to ${
           initialComponent ? "update" : "create"
         } component. Please try again.`
@@ -259,7 +258,7 @@ const CreateComponent: React.FC<Props> = ({
 
   const handleAddSchemaRule = async () => {
     if (!fieldName.trim() || !fieldType) {
-      toast.error("Field Name and Field Type are required");
+      message.error("Field Name and Field Type are required");
       return;
     }
 
@@ -270,7 +269,7 @@ const CreateComponent: React.FC<Props> = ({
     );
 
     if (fieldNameExists) {
-      toast.error(
+      message.error(
         "A field with this name already exists. Please choose a different name."
       );
       return;
@@ -285,17 +284,17 @@ const CreateComponent: React.FC<Props> = ({
     try {
       if (editMode && editingRule) {
         await updateSchemaRule(editingRule._id, newRule);
-        toast.success("Schema rule updated successfully!");
+        message.success("Schema rule updated successfully!");
       } else {
         await addSchemaRule(newRule);
-        toast.success("New schema rule added successfully!");
+        message.success("New schema rule added successfully!");
       }
 
       handleCloseModal();
       viewAllSchema();
     } catch (error) {
       console.error("Error processing schema rule:", error);
-      toast.error("An error occurred while processing the schema rule.");
+      message.error("An error occurred while processing the schema rule.");
     }
   };
 
@@ -306,13 +305,13 @@ const CreateComponent: React.FC<Props> = ({
       if (response && response.success && Array.isArray(response.data)) {
         setSchemaRulesData(response.data);
         setFilteredSchemaRules(response.data);
-        toast.success("Schema Rules fetched successfully!");
+        message.success("Schema Rules fetched successfully!");
       } else {
         throw new Error("Invalid data structure received from API");
       }
     } catch (error) {
       console.error("Error fetching schemas:", error);
-      toast.error("Failed to fetch schema rules");
+      message.error("Failed to fetch schema rules");
       setSchemaRulesData([]);
       setFilteredSchemaRules([]);
     }
@@ -329,11 +328,11 @@ const CreateComponent: React.FC<Props> = ({
   const onSchemaRuleDelete = async (id: string) => {
     try {
       await deleteSchemaRule(id);
-      toast.success("Schema Rule deleted successfully!");
+      message.success("Schema Rule deleted successfully!");
       viewAllSchema();
     } catch (error) {
       console.error("Error deleting schema rule:", error);
-      toast.error("Failed to delete schema rule.");
+      message.error("Failed to delete schema rule.");
     }
   };
 
@@ -405,7 +404,7 @@ const CreateComponent: React.FC<Props> = ({
             id="inner_component"
             className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
             value={innerComponent}
-            onChange={(e) => setInnerComponent(parseInt(e.target.value) || 1)}
+            onChange={(e) => setInnerComponent(parseInt(e.target.value))}
             onWheel={(e) => (e.target as HTMLInputElement).blur()}
             min="1"
           />

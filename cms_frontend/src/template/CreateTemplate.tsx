@@ -6,7 +6,6 @@ import CreateComponent, {
 import ComponentList from "../template/ComponentList";
 import axiosInstance from "../http/axiosInstance";
 import FormComponent from "../template/FormComponent";
-import { toast } from "react-toastify";
 import {
   Image,
   Button,
@@ -17,6 +16,7 @@ import {
   Empty,
   Spin,
   Collapse,
+  message,
 } from "antd";
 import {
   DownloadOutlined,
@@ -28,6 +28,8 @@ import {
 import { HiHome } from "react-icons/hi2";
 import TemplateForm from "../templateForm/TemplateForm";
 
+import { ToastContainer } from "react-toastify"; // Import ToastContainer
+import "react-toastify/dist/ReactToastify.css";
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
 
@@ -92,7 +94,7 @@ const CreateTemplate: React.FC = () => {
       console.log(response.data.components);
     } catch (error) {
       console.error("Error fetching template details:", error);
-      toast.error("Failed to fetch template details");
+      message.error("Failed to fetch template details");
     } finally {
       setLoading(false);
     }
@@ -107,7 +109,7 @@ const CreateTemplate: React.FC = () => {
       }
     } catch (error) {
       console.error("Error fetching components:", error);
-      toast.error("Failed to fetch all components");
+      message.error("Failed to fetch all components");
     }
   };
 
@@ -163,12 +165,12 @@ const CreateTemplate: React.FC = () => {
         updatedComponents[index] = newComponent;
         setComponents(updatedComponents);
       }
-      await fetchTemplateDetails();
+      fetchTemplateDetails();
       setIsCreatingComponent(false);
-      toast.success("Component saved successfully");
+      message.success("Component saved successfully");
     } catch (error) {
       console.error("Error saving component:", error);
-      toast.error("Failed to save component");
+      message.error("Failed to save component");
     }
   };
 
@@ -183,10 +185,10 @@ const CreateTemplate: React.FC = () => {
       if (activeComponent?._id === componentId) {
         setActiveComponent(null);
       }
-      toast.success("Component deleted successfully");
+      message.success("Component deleted successfully");
     } catch (error) {
       console.error("Error deleting component:", error);
-      toast.error("Failed to delete component");
+      message.error("Failed to delete component");
     }
   };
 
@@ -214,10 +216,10 @@ const CreateTemplate: React.FC = () => {
       setActiveComponent(latestComponentData.data);
 
       await fetchTemplateDetails();
-      toast.success("Component saved successfully");
+      message.success("Component saved successfully");
     } catch (error) {
       console.error("Error saving component:", error);
-      toast.error("Failed to save component");
+      message.error("Failed to save component");
     }
   };
 
@@ -231,33 +233,21 @@ const CreateTemplate: React.FC = () => {
     });
   };
 
-  const handleImportComponent = async (componentId: string) => {
-    for (const data of tableData) {
-      for (const component of data.componentArray) {
-        if (component._id === componentId) {
-          try {
-            const response = await axiosInstance.post<ComponentType>(
-              "/components",
-              {
-                ...component,
-                template_name,
-              }
-            );
-            setComponents((prevComponents) => [
-              ...prevComponents,
-              response.data,
-            ]);
-            toast.success("Component imported successfully");
-            await fetchTemplateDetails();
-            return;
-          } catch (error) {
-            console.error("Error posting component:", error);
-            toast.error("Failed to import component");
-          }
-        }
-      }
+  const handleImportComponent = async (component: any) => {
+    // debugger;
+    try {
+      const response = await axiosInstance.post<ComponentType>("/components", {
+        ...component,
+        template_name,
+      });
+      setComponents((prevComponents) => [...prevComponents, response.data]);
+      fetchTemplateDetails();
+      message.success("Component imported successfully");
+      // return;
+    } catch (error) {
+      console.error("Error posting component:", error);
+      message.error("Failed to import component");
     }
-    toast.error("Component not found");
   };
 
   const showModal = () => setIsModalOpen(true);
@@ -281,7 +271,7 @@ const CreateTemplate: React.FC = () => {
     setEditingComponent(null);
     setToggleStates({});
     setComponents([...components]);
-    toast.success("Template view refreshed");
+    message.success("Template view refreshed");
   };
   const navigate = useNavigate();
   const handleHomeClick = (e: React.MouseEvent) => {
@@ -303,10 +293,10 @@ const CreateTemplate: React.FC = () => {
       // Fetch all components again
       await fetchAllComponents();
 
-      toast.success("Data refreshed successfully");
+      message.success("Data refreshed successfully");
     } catch (error) {
       console.error("Error refreshing data:", error);
-      toast.error("Failed to refresh data");
+      message.error("Failed to refresh data");
     }
   };
 
@@ -324,6 +314,7 @@ const CreateTemplate: React.FC = () => {
   };
   return (
     <Layout className="h-screen ">
+      <ToastContainer />
       <Header className="bg-white shadow-md flex items-center justify-between px-6 py-2 mb-4 z-10">
         <div className="flex items-center">
           <Button
@@ -484,7 +475,7 @@ const CreateTemplate: React.FC = () => {
                               component.component_name
                                 ?.toLocaleLowerCase()
                                 .startsWith("form_")
-                                ? "../../public/images/form.svg" // replace with your default image path
+                                ? "/images/form.svg" // replace with your default image path
                                 : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
                                     component?.component_image?.split(
                                       "uploads\\"
@@ -548,22 +539,25 @@ const CreateTemplate: React.FC = () => {
                 className="border-b last:border-b-0"
               >
                 <ul className="list-none">
-                  {data.components.map((component, idx) => (
+                  {data.componentArray.map((component, idx) => (
                     <li
                       key={idx}
                       className="flex justify-between items-center py-2 border-b last:border-b-0 hover:bg-gray-50"
                     >
                       <span className="text-gray-700">
-                        {component.componentName}
+                        {component.component_name}
                       </span>
                       <Tooltip title="Import Component">
                         <Button
                           type="primary"
                           icon={<DownloadOutlined />}
                           size="small"
-                          onClick={() =>
-                            handleImportComponent(component.componentId)
-                          }
+                          onClick={() => {
+                            handleImportComponent(
+                              component
+                              // component.componentId
+                            );
+                          }}
                           className="bg-indigo-500 hover:bg-indigo-600 transition duration-300"
                         >
                           Import

@@ -4,13 +4,11 @@ import {
   FaTrash,
   FaGripVertical,
   FaClipboardList,
-  FaCog,
   FaToggleOn,
   FaToggleOff,
 } from "react-icons/fa";
 import { confirmAlert } from "react-confirm-alert";
-import { Switch, Tooltip, Badge } from "antd";
-import { toast } from "react-toastify";
+import { Switch, Tooltip, Badge, message } from "antd";
 import {
   updateComponentOrder,
   updateComponentStatus,
@@ -104,7 +102,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
     );
 
     if (!toggledComponent) {
-      toast.error("Component not found");
+      message.error("Component not found");
       return;
     }
 
@@ -174,7 +172,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
         ) : (
           components.map((component) => (
             <div
-              key={component._id}
+              key={`${component._id}-${component.component_name}`}
               draggable
               onDragStart={(e) => handleDragStart(e, component)}
               onDragOver={handleDragOver}
@@ -258,7 +256,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
                           onEdit(component);
                         }}
                       >
-                        <FaCog size={18} />
+                        <FaEdit size={20} />
                       </button>
                     </Tooltip>
                   </>

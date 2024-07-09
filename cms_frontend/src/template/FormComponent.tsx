@@ -5,9 +5,7 @@ import {
   AiOutlineVideoCamera,
   AiOutlineFile,
 } from "react-icons/ai";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { Image } from "antd";
+import { Image, message } from "antd";
 import Cookies from "js-cookie";
 import { submitFormData } from "../api/form.api";
 
@@ -179,7 +177,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
-      toast.error("Please fill in all required fields");
+      message.error("Please fill in all required fields");
       return;
     }
 
@@ -221,13 +219,13 @@ const FormComponent: React.FC<FormComponentProps> = ({
         setErrors({});
         await refetchData();
         Cookies.get("access_token");
-        toast.success("Form submitted successfully");
+        message.success("Form submitted successfully");
       } else {
-        toast.error("Form submission failed");
+        message.error("Form submission failed");
       }
     } catch (error: any) {
       console.error("Error submitting form:", error);
-      toast.error(
+      message.error(
         error.response?.data?.message || "An unexpected error occurred"
       );
     }
@@ -362,7 +360,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
   return (
     <>
-      <ToastContainer position="top-right" autoClose={5000} />
       <form
         onSubmit={handleFormSubmit}
         className="max-w-2xl mx-auto font-sans bg-white p-6 rounded-lg shadow-md"
