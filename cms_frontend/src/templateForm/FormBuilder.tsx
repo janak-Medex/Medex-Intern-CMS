@@ -142,7 +142,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({
     if (!newFields[fieldIndex].options) {
       newFields[fieldIndex].options = [];
     }
-    newFields[fieldIndex].options.push("");
+    newFields[fieldIndex].options?.push("");
     setFields(newFields);
     form.setFieldsValue({ fields: newFields });
   };
@@ -163,11 +163,13 @@ const FormBuilder: React.FC<FormBuilderProps> = ({
     if (!newFields[fieldIndex].options) {
       newFields[fieldIndex].options = [];
     }
-    newFields[fieldIndex].options[optionIndex] = value;
-    setFields(newFields);
-    form.setFieldsValue({ fields: newFields });
+    const options = newFields[fieldIndex].options;
+    if (Array.isArray(options)) {
+      options[optionIndex] = value;
+      setFields(newFields);
+      form.setFieldsValue({ fields: newFields });
+    }
   };
-
   return (
     <div className="flex gap-6">
       <div className="w-1/2">
