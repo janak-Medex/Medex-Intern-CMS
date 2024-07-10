@@ -1,15 +1,46 @@
-import React from "react";
-import { Form, Input, Select, Switch, Checkbox, Radio, Empty } from "antd";
+import React, { useEffect, useState, useRef } from "react";
+import {
+  Form,
+  Input,
+  Select,
+  Switch,
+  Checkbox,
+  Radio,
+  Empty,
+  Button,
+} from "antd";
 import { motion, AnimatePresence } from "framer-motion";
+import axiosInstance from "../http/axiosInstance";
+import styled from "styled-components";
 import { FieldType } from "./types";
 
 const { Option } = Select;
 
 interface FormPreviewProps {
   fields: FieldType[];
+  templateName: string;
+  formName: string;
 }
 
-const FormPreview: React.FC<FormPreviewProps> = ({ fields }) => {
+const StyledFormItem = styled(Form.Item)`
+  margin-bottom: 16px;
+  .ant-form-item-label {
+    font-weight: 600;
+  }
+`;
+
+const FormPreview: React.FC<FormPreviewProps> = ({
+  fields,
+  templateName,
+  formName,
+}) => {
+  const formRef = useRef<HTMLDivElement>(null);
+  const [generatedCode, setGeneratedCode] = useState({
+    html: "",
+    css: "",
+    js: "",
+  });
+
   const renderField = (field: FieldType) => {
     switch (field.type) {
       case "text":
@@ -63,8 +94,50 @@ const FormPreview: React.FC<FormPreviewProps> = ({ fields }) => {
     }
   };
 
+  const extractDesign = () => {
+    if (formRef.current) {
+      const html = formRef.current.outerHTML;
+      const css = Array.from(document.styleSheets)
+        .map((sheet) => {
+          try {
+            return Array.from(sheet.cssRules)
+              .map((rule) => rule.cssText)
+              .join("");
+          } catch (e) {
+            return "";
+          }
+        })
+        .join("");
+      const js = `
+        document.addEventListener('DOMContentLoaded', function() {
+          console.log('Form preview loaded');
+          // Add any necessary JavaScript for form functionality
+        });
+      `;
+      setGeneratedCode({ html, css, js });
+    }
+  };
+
+  const saveFormDesign = async () => {
+    try {
+      await axiosInstance.post("form/saveDesign", {
+        templateName, // Ensure this has a valid value
+        formName,
+        design: generatedCode,
+      });
+      alert("Form design saved successfully!");
+    } catch (error) {
+      console.error("Error saving form design:", error);
+      alert("Failed to save form design");
+    }
+  };
+
+  useEffect(() => {
+    extractDesign();
+  }, [fields]);
+
   return (
-    <div className="bg-gray-50 rounded-lg shadow-inner p-4">
+    <div ref={formRef} className="bg-gray-50 rounded-lg shadow-inner p-4">
       <AnimatePresence>
         {fields.map((field, index) => (
           <motion.div
@@ -74,13 +147,13 @@ const FormPreview: React.FC<FormPreviewProps> = ({ fields }) => {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <Form.Item
+            <StyledFormItem
               label={<span className="font-semibold">{field.fieldName}</span>}
               required={field.required}
               className="mb-6"
             >
               {renderField(field)}
-            </Form.Item>
+            </StyledFormItem>
           </motion.div>
         ))}
       </AnimatePresence>
@@ -90,6 +163,9 @@ const FormPreview: React.FC<FormPreviewProps> = ({ fields }) => {
           description="No fields added yet. Start building your form!"
         />
       )}
+      <Button onClick={saveFormDesign} type="primary" className="mt-4">
+        Save Form Design
+      </Button>
     </div>
   );
 };

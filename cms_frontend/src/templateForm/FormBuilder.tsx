@@ -54,6 +54,7 @@ const ScrollableDiv = styled.div`
 
 interface FormBuilderProps {
   templateName: string;
+
   initialForm: FormType | null;
   onFormSaved: () => void;
 }
@@ -387,7 +388,11 @@ const FormBuilder: React.FC<FormBuilderProps> = ({
       </div>
       <div className="w-1/2">
         <Card title="Form Preview" className="shadow-lg sticky top-0">
-          <FormPreview fields={form.getFieldValue("fields") || []} />
+          <FormPreview
+            fields={form.getFieldValue("fields") || []}
+            templateName={templateName}
+            formName={initialForm ? initialForm.name : ""}
+          />
         </Card>
       </div>
     </div>

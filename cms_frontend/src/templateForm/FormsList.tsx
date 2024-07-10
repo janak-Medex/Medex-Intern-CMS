@@ -60,6 +60,7 @@ const FormsList: React.FC<FormsListProps> = ({
   forms,
   onSelectForm,
   onDeleteForm,
+  templateName,
 }) => {
   const [previewForm, setPreviewForm] = useState<FormType | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -164,7 +165,13 @@ const FormsList: React.FC<FormsListProps> = ({
         visible={previewVisible}
         width="50%"
       >
-        {previewForm && <FormPreview fields={previewForm.fields} />}
+        {previewForm && (
+          <FormPreview
+            fields={previewForm.fields}
+            templateName={templateName}
+            formName={previewForm.name}
+          />
+        )}
       </Drawer>
     </>
   );
