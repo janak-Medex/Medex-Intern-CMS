@@ -6,7 +6,6 @@ import ComponentList from "../template/ComponentList";
 import axiosInstance from "../http/axiosInstance";
 import FormComponent from "../template/FormComponent";
 import {
-  Image,
   Button,
   Modal,
   Layout,
@@ -29,6 +28,7 @@ import TemplateForm from "../templateForm/TemplateForm";
 
 import { ToastContainer } from "react-toastify"; // Import ToastContainer
 import "react-toastify/dist/ReactToastify.css";
+import ComponentPreview from "../components/ComponentPreview";
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
 
@@ -458,59 +458,22 @@ const CreateTemplate: React.FC = () => {
                 className="w-1/2 shadow-lg bg-white overflow-y-auto hide-scrollbar"
                 style={{ height: "calc(100vh - 96px)" }}
               >
-                <h2 className="text-xl font-semibold mb-4 ">
-                  Component Images
-                </h2>
-                <div className="space-y-4 flex flex-col items-center justify-center">
-                  {!activeComponent && !editingComponent ? (
-                    components?.map((component, index) => (
-                      <Card key={index} className="mb-4" size="small">
-                        <p className="text-center text-lg font-semibold mb-2 text-indigo-600">
-                          {component.component_name}
-                        </p>
-                        <div className="flex justify-center items-center">
-                          <Image
-                            src={
-                              component.component_name
-                                ?.toLocaleLowerCase()
-                                .startsWith("form_")
-                                ? "/images/form.svg" // replace with your default image path
-                                : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                                    component?.component_image?.split(
-                                      "uploads\\"
-                                    )[1]
-                                  }`
-                            }
-                            className="rounded-lg shadow-sm"
-                          />
-                        </div>
-                      </Card>
-                    ))
-                  ) : (
-                    <Card size="small">
-                      <p className="text-center text-xl font-semibold mb-2 text-indigo-700">
-                        {activeComponent?.component_name ||
-                          editingComponent?.component_name}
-                      </p>
-                      <div className="flex justify-center items-center">
-                        <Image
-                          src={
-                            (
-                              activeComponent || editingComponent
-                            )?.component_name.startsWith("Form_")
-                              ? "path/to/default/image.png" // replace with your default image path
-                              : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                                  (
-                                    activeComponent || editingComponent
-                                  )?.component_image?.split("uploads\\")[1]
-                                }`
-                          }
-                          className="rounded-lg shadow-sm"
-                        />
-                      </div>
+                <Content className="p-6 top-0 h-screen overflow-hidden">
+                  <h2 className="text-xl font-semibold mb-4">
+                    Component Preview
+                  </h2>
+                  {activeComponent ? (
+                    <Card>
+                      {/* {console.log(activeComponent)} */}
+                      <ComponentPreview
+                        component_name={activeComponent.component_name}
+                        formFields={activeComponent.data}
+                      />
                     </Card>
+                  ) : (
+                    <Empty description="Select a component to preview" />
                   )}
-                </div>
+                </Content>
               </Card>
             </div>
           </Spin>
