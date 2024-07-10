@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { FaPlus, FaTrash, FaUpload, FaExpand } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { FaPlus, FaTrash } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import { message } from "antd";
 import {
@@ -9,11 +9,7 @@ import {
 } from "../api/component.api";
 import SchemaRuleManager from "./SchemaRuleManager";
 import { FormField, Props } from "./types";
-import {
-  validateForm,
-  handleImageChange,
-  toggleFullscreen,
-} from "../utils/ComponentHelpers";
+import { validateForm } from "../utils/ComponentHelpers";
 import ComponentPreview from "./ComponentPreview";
 
 const CreateComponent: React.FC<Props> = ({
@@ -25,11 +21,8 @@ const CreateComponent: React.FC<Props> = ({
   const [component_name, setComponentName] = useState<string>("");
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [innerComponent, setInnerComponent] = useState<number>(1);
-  const [componentImage, setComponentImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [_isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [_imagePreview, setImagePreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
@@ -72,7 +65,8 @@ const CreateComponent: React.FC<Props> = ({
   };
 
   const handleRemoveField = (index: number) => {
-    const updatedFields = formFields.filter((_, i) => i !== index);
+    const updatedFields = [...formFields];
+    updatedFields.splice(index, 1);
     setFormFields(updatedFields);
     message.success("Field removed");
   };
@@ -82,36 +76,18 @@ const CreateComponent: React.FC<Props> = ({
     field: "key" | "value",
     newValue: string
   ) => {
-    const updatedFields = formFields.map((item, i) => {
-      if (i === index) {
-        return { ...item, [field]: newValue };
-      }
-      return item;
-    });
+    const updatedFields = [...formFields];
+    updatedFields[index] = {
+      ...updatedFields[index],
+      [field]: newValue,
+    };
     setFormFields(updatedFields);
-  };
-
-  const handleRemoveImage = () => {
-    setComponentImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    message.success("Image removed");
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (
-      !validateForm(
-        component_name,
-        componentImage,
-        imagePreview,
-        formFields,
-        setErrors
-      )
-    ) {
+    if (!validateForm(component_name, formFields, setErrors)) {
       message.error("Please fill in all required fields");
       return;
     }
@@ -132,9 +108,9 @@ const CreateComponent: React.FC<Props> = ({
     try {
       let response;
       if (initialComponent) {
-        response = await updateComponent(componentData, componentImage);
+        response = await updateComponent(componentData);
       } else {
-        response = await createComponent(componentData, componentImage);
+        response = await createComponent(componentData);
       }
 
       message.success(
@@ -156,7 +132,7 @@ const CreateComponent: React.FC<Props> = ({
 
   return (
     <div className="flex">
-      <div className="w-1/2 bg-white rounded-lg shadow-md p-6 relative">
+      <div className="w-1/2 bg-white rounded-lg shadow-md p-6 relative overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">
           {initialComponent ? "Edit Component" : "Create Component"}
         </h2>
@@ -167,7 +143,8 @@ const CreateComponent: React.FC<Props> = ({
               htmlFor="component_name"
               className="block text-gray-700 font-bold mb-2"
             >
-              Component Name <span className="text-red-500">*</span>
+              Component Name
+              <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -203,78 +180,6 @@ const CreateComponent: React.FC<Props> = ({
               onWheel={(e) => (e.target as HTMLInputElement).blur()}
               min="1"
             />
-          </div>
-
-          {/* Component Image Upload */}
-          <div className="mb-6">
-            <label className="block text-gray-700 font-bold mb-2">
-              Component Image <span className="text-red-500">*</span>
-            </label>
-            <div className="flex items-center justify-center w-full">
-              <label
-                htmlFor="component_image"
-                className={`flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 ${
-                  errors.component_image ? "border-red-500" : ""
-                }`}
-              >
-                {imagePreview ? (
-                  <div className="relative w-full h-full">
-                    <img
-                      src={imagePreview}
-                      alt="Component preview"
-                      className="absolute inset-0 w-full h-full object-contain"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 hover:opacity-100 transition-opacity duration-300">
-                      <p className="text-white text-sm">
-                        Click to change image
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleFullscreen(setIsFullscreen)}
-                      className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md"
-                    >
-                      <FaExpand className="text-gray-600" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <FaUpload className="w-8 h-8 mb-4 text-gray-500" />
-                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                      <span className="font-semibold">Click to upload</span> or
-                      drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      SVG, PNG, JPG or GIF (MAX. 800x400px)
-                    </p>
-                  </div>
-                )}
-                <input
-                  id="component_image"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) =>
-                    handleImageChange(e, setComponentImage, setImagePreview)
-                  }
-                  ref={fileInputRef}
-                />
-              </label>
-            </div>
-            {errors.component_image && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.component_image}
-              </p>
-            )}
-            {imagePreview && (
-              <button
-                type="button"
-                onClick={handleRemoveImage}
-                className="mt-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              >
-                Remove Image
-              </button>
-            )}
           </div>
 
           {/* Data Fields */}
@@ -337,10 +242,10 @@ const CreateComponent: React.FC<Props> = ({
           <SchemaRuleManager />
         </form>
       </div>
-      <div className="w-1/2 p-6">
+      <div className="w-1/2 p-6 top-0 h-screen overflow-hidden">
         <h2 className="text-xl font-semibold mb-4">Component Preview</h2>
         <ComponentPreview
-          componentName={component_name}
+          component_name={component_name}
           formFields={formFields}
         />
       </div>

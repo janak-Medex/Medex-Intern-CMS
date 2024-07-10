@@ -3,12 +3,12 @@ import { FormField } from "./types";
 import Hero from "../designs/Hero";
 
 interface ComponentPreviewProps {
-  componentName: string;
+  component_name: string;
   formFields: FormField[];
 }
 
 const ComponentPreview: React.FC<ComponentPreviewProps> = ({
-  componentName,
+  component_name,
   formFields,
 }) => {
   const fieldValues = formFields.reduce((acc, field) => {
@@ -16,7 +16,7 @@ const ComponentPreview: React.FC<ComponentPreviewProps> = ({
     return acc;
   }, {} as Record<string, string>);
 
-  if (componentName.toLowerCase() === "hero") {
+  if (component_name.toLowerCase() === "hero") {
     return (
       <Hero
         title={fieldValues.title || ""}

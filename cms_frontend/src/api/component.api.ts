@@ -1,6 +1,6 @@
 import axiosInstance from "../http/axiosInstance";
 
-import { Component } from "../components/createComponents";
+import { Component } from "../components/types";
 import { message } from "antd";
 
 // src/services/api.ts
@@ -14,7 +14,7 @@ export interface ComponentData {
     inner_component: number;
 }
 
-export const createComponent = async (componentData: ComponentData, componentImage: File | null) => {
+export const createComponent = async (componentData: ComponentData,) => {
     const formData = new FormData();
 
     formData.append("component_name", componentData.component_name);
@@ -25,9 +25,6 @@ export const createComponent = async (componentData: ComponentData, componentIma
     formData.append("isActive", String(componentData.isActive));
     formData.append("inner_component", String(componentData.inner_component));
 
-    if (componentImage) {
-        formData.append("component_image", componentImage);
-    }
 
     const response = await axiosInstance.post("components", formData, {
         headers: {
@@ -38,7 +35,7 @@ export const createComponent = async (componentData: ComponentData, componentIma
     return response.data;
 };
 
-export const updateComponent = async (componentData: ComponentData, componentImage: File | null) => {
+export const updateComponent = async (componentData: ComponentData,) => {
     const formData = new FormData();
 
     formData.append("component_name", componentData.component_name);
@@ -49,9 +46,7 @@ export const updateComponent = async (componentData: ComponentData, componentIma
     formData.append("isActive", String(componentData.isActive));
     formData.append("inner_component", String(componentData.inner_component));
 
-    if (componentImage) {
-        formData.append("component_image", componentImage);
-    }
+
 
 
 
