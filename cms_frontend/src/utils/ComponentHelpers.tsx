@@ -2,7 +2,8 @@ import { FormField } from "../components/types";
 
 export const validateForm = (
   component_name: string,
-
+  componentImage: File | null,
+  imagePreview: string | null,
   formFields: FormField[],
   setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>
 ) => {
@@ -10,6 +11,10 @@ export const validateForm = (
 
   if (!component_name.trim()) {
     newErrors.component_name = "Component name is required";
+  }
+
+  if (!componentImage && !imagePreview) {
+    newErrors.component_image = "Component image is required";
   }
 
   if (formFields.length === 0) {
