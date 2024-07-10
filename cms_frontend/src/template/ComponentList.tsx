@@ -13,7 +13,7 @@ import {
   updateComponentOrder,
   updateComponentStatus,
 } from "../api/component.api";
-import { Component } from "../components/createComponents";
+import { Component } from "../components/types";
 import TemplateForm from "../templateForm/TemplateForm";
 
 interface ComponentListProps {

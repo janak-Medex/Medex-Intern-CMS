@@ -1,6 +1,6 @@
 import axiosInstance from "../http/axiosInstance";
 
-import { Component } from "../components/createComponents";
+import { Component } from "../components/types";
 import { message } from "antd";
 
 // src/services/api.ts

@@ -6,7 +6,7 @@ import axiosInstance from "../http/axiosInstance";
 import FormsList from "./FormsList";
 import FormBuilder from "./FormBuilder";
 import { FormType } from "./types";
-import { Component } from "../components/createComponents";
+import { Component } from "../components/types";
 
 const { TabPane } = Tabs;
 

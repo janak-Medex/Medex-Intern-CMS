@@ -2,7 +2,7 @@
 
 import axiosInstance from "../http/axiosInstance";
 import { Template } from "../template/Template";
-import { Component } from "../components/createComponents";
+import { Component } from "../components/types";
 
 
 
