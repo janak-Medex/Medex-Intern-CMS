@@ -229,13 +229,17 @@ const CreateComponent: React.FC<Props> = ({
       );
       onCreate(response);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating/updating component:", error);
-      message.error(
-        `Failed to ${
-          initialComponent ? "update" : "create"
-        } component. Please try again.`
-      );
+
+      // Extract the error message from the response
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "An unexpected error occurred";
+
+      // Display the specific error message
+      message.error(errorMessage);
     }
   };
 
