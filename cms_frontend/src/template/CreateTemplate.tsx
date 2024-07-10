@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Component as ComponentType } from "../components/types";
-import ComponentList from "../template/ComponentList";
+import ComponentList from "../components/ComponentList";
 import axiosInstance from "../http/axiosInstance";
 import FormComponent from "../template/FormComponent";
 import {
