@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import CreateComponent, {
-  Component as ComponentType,
-} from "../components/createComponents";
+import { Component as ComponentType } from "../components/types";
 import ComponentList from "../template/ComponentList";
 import axiosInstance from "../http/axiosInstance";
 import FormComponent from "../template/FormComponent";
@@ -30,6 +28,7 @@ import TemplateForm from "../templateForm/TemplateForm";
 
 import { ToastContainer } from "react-toastify"; // Import ToastContainer
 import "react-toastify/dist/ReactToastify.css";
+import CreateComponent from "../components/createComponents";
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
 
