@@ -10,6 +10,10 @@ export interface FormType {
     _id: string;
     name: string;
     fields: FieldType[];
+}
+
+export interface FormPreviewProps {
+    fields: FieldType[];
     templateName: string;
     formName: string;
 }

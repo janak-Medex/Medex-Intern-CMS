@@ -2,13 +2,9 @@ import React from "react";
 import { Form, Input, Select, Switch, Checkbox, Radio, Empty } from "antd";
 import { motion, AnimatePresence } from "framer-motion";
 import styled from "styled-components";
-import { FieldType } from "./types";
+import { FieldType, FormPreviewProps } from "./types";
 
 const { Option } = Select;
-
-interface FormPreviewProps {
-  fields: FieldType[];
-}
 
 const StyledFormItem = styled(Form.Item)`
   margin-bottom: 16px;
