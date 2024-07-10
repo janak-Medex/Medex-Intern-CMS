@@ -6,6 +6,7 @@ import axiosInstance from "../http/axiosInstance";
 import FormsList from "./FormsList";
 import FormBuilder from "./FormBuilder";
 import { FormType } from "./types";
+import { Component } from "../components/types";
 
 const { TabPane } = Tabs;
 
@@ -22,6 +23,7 @@ interface TemplateFormProps {
   onClose: () => void;
   onFormCreated: () => void;
   onFormDeleted: () => void;
+  initialFormData?: Component;
 }
 
 const TemplateForm: React.FC<TemplateFormProps> = ({

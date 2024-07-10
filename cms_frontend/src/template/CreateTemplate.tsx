@@ -77,6 +77,9 @@ const CreateTemplate: React.FC = () => {
   const [isTemplateFormVisible, setIsTemplateFormVisible] =
     useState<boolean>(false);
 
+  const [createComponentName, setCreateComponentName] = useState<string>("");
+  const [createPreviewData, setCreatePreviewData] =
+    useState<ComponentType | null>(null);
   useEffect(() => {
     fetchTemplateDetails();
     fetchAllComponents();
@@ -395,7 +398,7 @@ const CreateTemplate: React.FC = () => {
           <ComponentList
             components={components}
             toggleStates={toggleStates}
-            onToggle={handleToggle}
+            onToggle={(component_name) => handleToggle(component_name)}
             onEdit={(component) => {
               setEditingComponent(component as ComponentType);
               setIsCreatingComponent(true);
@@ -429,6 +432,8 @@ const CreateTemplate: React.FC = () => {
                     onClose={handleCloseCreateComponent}
                     onCreate={onCreateComponent}
                     initialComponent={editingComponent}
+                    setCreateComponentName={setCreateComponentName}
+                    setCreatePreviewData={setCreatePreviewData}
                   />
                 )}
                 {activeComponent && !isCreatingComponent && (
@@ -458,22 +463,53 @@ const CreateTemplate: React.FC = () => {
                 className="w-1/2 shadow-lg bg-white overflow-y-auto hide-scrollbar"
                 style={{ height: "calc(100vh - 96px)" }}
               >
-                <Content className="p-6 top-0 h-screen overflow-hidden">
-                  <h2 className="text-xl font-semibold mb-4">
-                    Component Preview
-                  </h2>
-                  {activeComponent ? (
-                    <Card>
-                      {/* {console.log(activeComponent)} */}
-                      <ComponentPreview
-                        component_name={activeComponent.component_name}
-                        formFields={activeComponent.data}
-                      />
-                    </Card>
-                  ) : (
-                    <Empty description="Select a component to preview" />
-                  )}
-                </Content>
+                <h2 className="text-xl font-semibold mb-4 ">
+                  Component Details
+                </h2>
+                {/* Conditionally render based on isCreatingComponent */}
+                {!isCreatingComponent && (
+                  <>
+                    {activeComponent ? (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2 text-indigo-600">
+                          {activeComponent.component_name}
+                        </h3>
+                        <FormComponent
+                          formData={
+                            Array.isArray(activeComponent.data)
+                              ? activeComponent.data
+                              : [activeComponent.data]
+                          }
+                          component_name={activeComponent.component_name}
+                          template_name={template_name}
+                          setFormData={handleSetFormData}
+                          handleSubmit={handleSubmit}
+                          refetchData={refetchData}
+                        />
+                      </div>
+                    ) : (
+                      <Empty description="Select a component to view details" />
+                    )}
+                  </>
+                )}
+
+                {/* Always render the preview section */}
+                <ComponentPreview
+                  component_name={
+                    isCreatingComponent
+                      ? createComponentName
+                      : activeComponent?.component_name || ""
+                  }
+                  formFields={
+                    isCreatingComponent
+                      ? createPreviewData?.data[0] || []
+                      : Array.isArray(activeComponent?.data)
+                      ? activeComponent?.data
+                      : activeComponent?.data
+                      ? [activeComponent?.data]
+                      : []
+                  }
+                />
               </Card>
             </div>
           </Spin>

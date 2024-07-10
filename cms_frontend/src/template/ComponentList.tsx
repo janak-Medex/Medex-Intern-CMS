@@ -13,8 +13,8 @@ import {
   updateComponentOrder,
   updateComponentStatus,
 } from "../api/component.api";
-import { Component } from "../components/createComponents";
 import TemplateForm from "../templateForm/TemplateForm";
+import { Component } from "../components/types";
 
 interface ComponentListProps {
   components: Component[];
@@ -277,7 +277,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
           onFormDeleted={() => {
             // Handle form deletion
           }}
-          initialFormData={editMode ? selectedForm : null}
+          initialFormData={editMode && selectedForm ? selectedForm : undefined}
         />
       )}
     </div>

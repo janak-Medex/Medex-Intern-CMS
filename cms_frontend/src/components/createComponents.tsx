@@ -8,7 +8,7 @@ import {
   ComponentData,
 } from "../api/component.api";
 import SchemaRuleManager from "./SchemaRuleManager";
-import { FormField, Props } from "./types";
+import { FormField, Props, Component } from "./types";
 import { validateForm } from "../utils/ComponentHelpers";
 import ComponentPreview from "./ComponentPreview";
 
@@ -16,6 +16,8 @@ const CreateComponent: React.FC<Props> = ({
   onClose,
   onCreate,
   initialComponent,
+  setCreateComponentName,
+  setCreatePreviewData,
 }) => {
   const { template_name } = useParams<{ template_name: string }>();
   const [component_name, setComponentName] = useState<string>("");
@@ -23,6 +25,7 @@ const CreateComponent: React.FC<Props> = ({
   const [innerComponent, setInnerComponent] = useState<number>(1);
   const [_imagePreview, setImagePreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [previewData, setPreviewData] = useState<Component | null>(null);
 
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
@@ -45,22 +48,68 @@ const CreateComponent: React.FC<Props> = ({
             }`;
         setImagePreview(src);
       }
+      updatePreviewData(
+        initialComponent.component_name,
+        fieldsArray,
+        initialComponent.inner_component
+      );
     }
   }, [initialComponent, baseImageUrl]);
 
   useEffect(() => {
     if (component_name.toLowerCase() === "hero") {
-      setFormFields([
+      const heroFields = [
         { key: "title", value: "Welcome to Our Site" },
         { key: "subtitle", value: "Discover amazing things with us" },
         { key: "buttonText", value: "Get Started" },
         { key: "buttonUrl", value: "#" },
-      ]);
+      ];
+      setFormFields(heroFields);
+      updatePreviewData(component_name, heroFields, innerComponent);
     }
   }, [component_name]);
 
+  useEffect(() => {
+    if (setCreateComponentName) {
+      setCreateComponentName(component_name);
+    }
+    if (setCreatePreviewData && previewData) {
+      setCreatePreviewData(previewData);
+    }
+  }, [
+    component_name,
+    previewData,
+    setCreateComponentName,
+    setCreatePreviewData,
+  ]);
+
+  const updatePreviewData = (
+    name: string,
+    fields: FormField[],
+    inner: number
+  ) => {
+    const formFieldsObject = fields.reduce((acc, field) => {
+      acc[field.key] = field.value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    const newPreviewData: Component = {
+      component_name: name,
+      template_name: template_name || "",
+      data: [formFieldsObject],
+      isActive: true,
+      inner_component: inner,
+      components: [],
+      is_active: true,
+    };
+
+    setPreviewData(newPreviewData);
+  };
+
   const handleAddField = () => {
-    setFormFields([...formFields, { key: "", value: "" }]);
+    const updatedFields = [...formFields, { key: "", value: "" }];
+    setFormFields(updatedFields);
+    updatePreviewData(component_name, updatedFields, innerComponent);
     message.success("New field added");
   };
 
@@ -68,6 +117,7 @@ const CreateComponent: React.FC<Props> = ({
     const updatedFields = [...formFields];
     updatedFields.splice(index, 1);
     setFormFields(updatedFields);
+    updatePreviewData(component_name, updatedFields, innerComponent);
     message.success("Field removed");
   };
 
@@ -82,6 +132,7 @@ const CreateComponent: React.FC<Props> = ({
       [field]: newValue,
     };
     setFormFields(updatedFields);
+    updatePreviewData(component_name, updatedFields, innerComponent);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -131,8 +182,8 @@ const CreateComponent: React.FC<Props> = ({
   };
 
   return (
-    <div className="flex">
-      <div className="w-1/2 bg-white rounded-lg shadow-md p-6 relative overflow-y-auto">
+    <div className="flex flex-col md:flex-row">
+      <div className="w-full md:w-full bg-white rounded-lg shadow-md p-6 relative overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">
           {initialComponent ? "Edit Component" : "Create Component"}
         </h2>
@@ -154,7 +205,10 @@ const CreateComponent: React.FC<Props> = ({
               }`}
               placeholder="Enter component name"
               value={component_name}
-              onChange={(e) => setComponentName(e.target.value)}
+              onChange={(e) => {
+                setComponentName(e.target.value);
+                updatePreviewData(e.target.value, formFields, innerComponent);
+              }}
             />
             {errors.component_name && (
               <p className="text-red-500 text-xs mt-1">
@@ -176,7 +230,11 @@ const CreateComponent: React.FC<Props> = ({
               id="inner_component"
               className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-teal-500"
               value={innerComponent}
-              onChange={(e) => setInnerComponent(parseInt(e.target.value))}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                setInnerComponent(value);
+                updatePreviewData(component_name, formFields, value);
+              }}
               onWheel={(e) => (e.target as HTMLInputElement).blur()}
               min="1"
             />
@@ -242,13 +300,8 @@ const CreateComponent: React.FC<Props> = ({
           <SchemaRuleManager />
         </form>
       </div>
-      <div className="w-1/2 p-6 top-0 h-screen overflow-hidden">
-        <h2 className="text-xl font-semibold mb-4">Component Preview</h2>
-        <ComponentPreview
-          component_name={component_name}
-          formFields={formFields}
-        />
-      </div>
+
+      {/* Preview Section */}
     </div>
   );
 };

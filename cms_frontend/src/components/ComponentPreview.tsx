@@ -1,11 +1,6 @@
 import React from "react";
-import { FormField } from "./types";
 import Hero from "../designs/Hero";
-
-interface ComponentPreviewProps {
-  component_name: string;
-  formFields: FormField[];
-}
+import { ComponentPreviewProps } from "./types";
 
 const ComponentPreview: React.FC<ComponentPreviewProps> = ({
   component_name,
@@ -13,20 +8,23 @@ const ComponentPreview: React.FC<ComponentPreviewProps> = ({
 }) => {
   console.log("ComponentPreview - formFields:", formFields);
 
-  // Initialize an empty object for fieldValues
   let fieldValues: Record<string, any> = {};
 
-  // Extract values from formFields
-  formFields.forEach((field) => {
-    Object.entries(field).forEach(([key, value]) => {
-      fieldValues[key.toLowerCase()] = value;
-    });
-  });
+  if (formFields) {
+    if (Array.isArray(formFields)) {
+      formFields.forEach((field) => {
+        fieldValues[field.key?.toLowerCase()] = field.value;
+      });
+    } else {
+      Object.entries(formFields).forEach(([key, value]) => {
+        fieldValues[key.toLowerCase()] = value;
+      });
+    }
+  }
 
   console.log("ComponentPreview - fieldValues:", fieldValues);
 
-  // Render the appropriate component preview based on component_name
-  switch (component_name.toLowerCase()) {
+  switch (component_name?.toLowerCase()) {
     case "hero":
       return (
         <Hero

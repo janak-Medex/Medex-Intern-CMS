@@ -23,15 +23,20 @@ const Hero: React.FC<HeroProps> = ({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6, delay: 0.2 }}
     >
-      {backgroundImageUrl && (
+      {backgroundImageUrl ? (
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${backgroundImageUrl})` }}
         />
+      ) : (
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `djkfdj.png` }}
+        />
       )}
 
       <div className="relative z-10">
-        <h1 className="text-4xl font-bold mb-4">{title}</h1>
+        <h1 className="text-4xl font-bold mb-4">{title ? title : "helo"}</h1>
         <p className="text-xl mb-6">{subtitle}</p>
 
         <a
