@@ -110,7 +110,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
       template_name: template_name,
       component_name: toggledComponent.component_name,
       data: toggledComponent.data,
-      isActive: !toggledComponent.is_active,
+      is_active: !toggledComponent.is_active,
       inner_component: toggledComponent.inner_component,
       component_image: toggledComponent.component_image,
     };

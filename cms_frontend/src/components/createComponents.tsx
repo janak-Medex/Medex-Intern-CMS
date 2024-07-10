@@ -113,7 +113,7 @@ const CreateComponent: React.FC<Props> = ({
       component_name,
       template_name,
       data: [formFieldsObject],
-      isActive: true,
+      is_active: true,
       inner_component: innerComponent,
     };
 

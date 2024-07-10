@@ -13,15 +13,14 @@ export interface SchemaRule {
 
 export interface Component {
     components: any;
-    is_active: any;
     component_name: string;
     template_name: string;
     data: FormField[];
-    isActive: boolean;
+    is_active: boolean;
     inner_component: number;
     component_image?: string;
     _id?: string;
-    __v?: number;
+
 }
 
 export interface Props {

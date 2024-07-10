@@ -208,7 +208,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
     formPayload.append("data", JSON.stringify(dataArray));
 
     // Append other necessary fields
-    formPayload.append("isActive", "true");
+    formPayload.append("is_active", "true");
     formPayload.append("inner_component", "1");
 
     try {

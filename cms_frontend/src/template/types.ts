@@ -3,7 +3,7 @@ export interface TemplateDetails {
     template_name: string;
     component_name: string;
     data: { [key: string]: any };
-    isActive: boolean;
+    is_active: boolean;
     __v: number;
     components: ComponentType[];
     handleSubmit: any;
@@ -11,21 +11,23 @@ export interface TemplateDetails {
 
 export interface TableData {
     templateName: string;
-    isActive: boolean;
+    is_active: boolean;
     componentArray: ComponentType[];
     components: {
         componentName: string;
         componentId: string;
         data: any;
-        isActive: boolean;
+        is_active: boolean;
     }[];
 }
 
 export interface ComponentType {
-    _id: string;
+    components: any;
     component_name: string;
+    template_name: string;
     data: any;
     is_active: boolean;
-    template_name: string;
+    inner_component: number;
     component_image?: string;
+    _id?: string;
 }

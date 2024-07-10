@@ -10,7 +10,7 @@ export interface ComponentData {
     component_name: string;
     template_name?: string;
     data: any[];
-    isActive: boolean;
+    is_active: boolean;
     inner_component: number;
 }
 
@@ -22,7 +22,7 @@ export const createComponent = async (componentData: ComponentData, componentIma
         formData.append("template_name", componentData.template_name);
     }
     formData.append("data", JSON.stringify(componentData.data));
-    formData.append("isActive", String(componentData.isActive));
+    formData.append("is_active", String(componentData.is_active));
     formData.append("inner_component", String(componentData.inner_component));
 
     if (componentImage) {
@@ -46,7 +46,7 @@ export const updateComponent = async (componentData: ComponentData, componentIma
         formData.append("template_name", componentData.template_name);
     }
     formData.append("data", JSON.stringify(componentData.data));
-    formData.append("isActive", String(componentData.isActive));
+    formData.append("is_active", String(componentData.is_active));
     formData.append("inner_component", String(componentData.inner_component));
 
     if (componentImage) {

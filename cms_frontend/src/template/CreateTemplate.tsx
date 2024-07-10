@@ -29,31 +29,9 @@ import TemplateForm from "../templateForm/TemplateForm";
 import { ToastContainer } from "react-toastify"; // Import ToastContainer
 import "react-toastify/dist/ReactToastify.css";
 import CreateComponent from "../components/createComponents";
+import { TableData, TemplateDetails } from "./types";
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
-
-interface TemplateDetails {
-  _id: string;
-  template_name: string;
-  component_name: string;
-  data: { [key: string]: any };
-  isActive: boolean;
-  __v: number;
-  components: ComponentType[];
-  handleSubmit: any;
-}
-
-interface TableData {
-  templateName: string;
-  isActive: boolean;
-  componentArray: ComponentType[];
-  components: {
-    componentName: string;
-    componentId: string;
-    data: any;
-    isActive: boolean;
-  }[];
-}
 
 const CreateTemplate: React.FC = () => {
   const { template_name } = useParams<{ template_name: string }>();
@@ -198,7 +176,7 @@ const CreateTemplate: React.FC = () => {
       const response = await axiosInstance.post<ComponentType>("/components", {
         component_name: activeComponent.component_name,
         data: JSON.stringify(activeComponent.data),
-        isActive: true,
+        is_active: true,
         template_name: template_name,
       });
       const updatedComponents = components.map((comp) =>
@@ -255,13 +233,13 @@ const CreateTemplate: React.FC = () => {
 
   const tableData: TableData[] = allComponents.map((template) => ({
     templateName: template.template_name,
-    isActive: template.is_active,
+    is_active: template.is_active,
     componentArray: template.components,
     components: template.components.map((component: ComponentType) => ({
       componentName: component.component_name,
       componentId: component._id,
       data: component.data,
-      isActive: component.is_active,
+      is_active: component.is_active,
     })),
   }));
   const refreshState = () => {
