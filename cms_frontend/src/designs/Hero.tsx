@@ -1,4 +1,3 @@
-// designs/Hero.tsx
 import React from "react";
 
 interface HeroProps {
@@ -15,10 +14,16 @@ const Hero: React.FC<HeroProps> = ({
   buttonUrl,
 }) => {
   return (
-    <div className="hero">
-      <h1>{title} asvbhjsdbfh</h1>
-      <p>{subtitle}</p>
-      <a href={buttonUrl}>{buttonText}</a>
+    <div className="hero bg-gray-100 p-8 rounded-lg text-center">
+      <h1 className="text-4xl font-bold mb-4">{title}</h1>
+      <p className="text-xl mb-6">{subtitle}</p>
+
+      <a
+        href={buttonUrl}
+        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+      >
+        {buttonText}
+      </a>
     </div>
   );
 };
