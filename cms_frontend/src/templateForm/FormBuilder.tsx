@@ -24,7 +24,7 @@ const FormBuilder: React.FC<{
   const [expandedFields, setExpandedFields] = useState<{
     [key: number]: boolean;
   }>({});
-  const [draggedItem, setDraggedItem] = useState<FieldType | null>(null);
+  const [_draggedItem, setDraggedItem] = useState<FieldType | null>(null);
   const formBuilderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
