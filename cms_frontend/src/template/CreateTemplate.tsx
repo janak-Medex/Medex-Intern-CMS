@@ -249,6 +249,9 @@ const CreateTemplate: React.FC = () => {
     fetchData();
   };
 
+  const refreshComponents = async () => {
+    await fetchData();
+  };
   return (
     <Layout className="h-screen">
       <ToastContainer />
@@ -346,6 +349,7 @@ const CreateTemplate: React.FC = () => {
             }}
             template_name={template_name || ""}
             setComponents={setComponents}
+            refreshComponents={refreshComponents}
           />
         </Sider>
         <Content

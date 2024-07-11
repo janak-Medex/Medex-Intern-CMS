@@ -25,6 +25,7 @@ interface ComponentListProps {
   onShowComponentForm: (component: Component) => void;
   template_name: string;
   setComponents: React.Dispatch<React.SetStateAction<Component[]>>;
+  refreshComponents: () => void;
 }
 
 const ComponentList: React.FC<ComponentListProps> = ({
@@ -34,6 +35,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
   onShowComponentForm,
   template_name,
   setComponents,
+  refreshComponents,
 }) => {
   const [draggedItem, setDraggedItem] = useState<Component | null>(null);
   const [templateFormVisible, setTemplateFormVisible] = useState(false);
@@ -126,25 +128,6 @@ const ComponentList: React.FC<ComponentListProps> = ({
     }
   };
 
-  const handleDelete = (componentId: any) => {
-    confirmAlert({
-      title: "Confirm to delete",
-      message: "Are you sure you want to delete this component?",
-      buttons: [
-        {
-          label: "Yes",
-          onClick: () => {
-            onDelete(componentId);
-          },
-        },
-        {
-          label: "No",
-          onClick: () => {},
-        },
-      ],
-    });
-  };
-
   const handleFormClick = (component: Component) => {
     setSelectedForm(component);
     setEditMode(false);
@@ -156,6 +139,26 @@ const ComponentList: React.FC<ComponentListProps> = ({
     setSelectedForm(component);
     setEditMode(true);
     setTemplateFormVisible(true);
+  };
+
+  const handleDelete = (componentId: any) => {
+    confirmAlert({
+      title: "Confirm to delete",
+      message: "Are you sure you want to delete this component?",
+      buttons: [
+        {
+          label: "Yes",
+          onClick: () => {
+            onDelete(componentId);
+            refreshComponents(); // Add this line
+          },
+        },
+        {
+          label: "No",
+          onClick: () => {},
+        },
+      ],
+    });
   };
 
   return (
@@ -270,12 +273,17 @@ const ComponentList: React.FC<ComponentListProps> = ({
         <TemplateForm
           templateName={template_name}
           visible={templateFormVisible}
-          onClose={() => setTemplateFormVisible(false)}
+          onClose={() => {
+            setTemplateFormVisible(false);
+            refreshComponents(); // Add this line
+          }}
           onFormCreated={() => {
-            // Handle form creation
+            refreshComponents(); // Add this line
+            setTemplateFormVisible(false); // Add this line
           }}
           onFormDeleted={() => {
-            // Handle form deletion
+            refreshComponents(); // Add this line
+            setTemplateFormVisible(false); // Add this line
           }}
           initialFormData={editMode ? selectedForm : null}
         />
