@@ -18,3 +18,9 @@ export interface FormPreviewProps {
     templateName: string;
     formName: string;
 }
+export interface FormData {
+    _id?: string;
+    name: string;
+    fields: FieldType[];
+    template_name: string;
+}

@@ -8,9 +8,9 @@ import {
   UpOutlined,
   DownOutlined,
 } from "@ant-design/icons";
-import axiosInstance from "../http/axiosInstance";
 import FormPreview from "./FormPreview";
 import { FormType, FieldType } from "./types";
+import { createForm } from "../api/formComponent.api";
 
 const { Option } = Select;
 
@@ -47,19 +47,20 @@ const FormBuilder: React.FC<{
 
   const onFinish = async (values: any) => {
     try {
-      const cleanFields = fields.filter(Boolean); // Filter out null fields
-      await axiosInstance.post("/form", {
+      const formData = {
         _id: initialForm?._id,
         name: values.formName,
-        fields: cleanFields,
+        fields: fields,
         template_name: templateName,
-      });
+      };
+
+      await createForm(formData);
 
       message.success(
         initialForm ? "Form updated successfully" : "Form created successfully"
       );
+
       onFormSaved();
-      // Now reset the form fields after successful submission
       form.resetFields();
       resetForm();
     } catch (error) {
