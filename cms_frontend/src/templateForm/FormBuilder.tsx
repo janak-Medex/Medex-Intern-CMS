@@ -29,10 +29,14 @@ const FormBuilder: React.FC<{
 
   useEffect(() => {
     if (initialForm) {
-      setFields(initialForm.fields);
+      const initialFields = initialForm.fields.map((field) => ({
+        ...field,
+        required: !!field.required, // Ensure it's a boolean
+      }));
+      setFields(initialFields);
       form.setFieldsValue({
         formName: initialForm.name,
-        fields: initialForm.fields,
+        fields: initialFields,
       });
     } else {
       resetForm();
@@ -40,9 +44,9 @@ const FormBuilder: React.FC<{
   }, [initialForm]);
 
   const resetForm = () => {
-    // Clear the state without resetting the form fields immediately
     setFields([]);
     setExpandedFields({});
+    form.resetFields();
   };
 
   const onFinish = async (values: any) => {
@@ -50,9 +54,14 @@ const FormBuilder: React.FC<{
       const formData = {
         _id: initialForm?._id,
         name: values.formName,
-        fields: fields,
+        fields: fields.map((field) => ({
+          ...field,
+          required: !!field.required,
+        })),
         template_name: templateName,
       };
+
+      console.log("FormData to be sent:", formData);
 
       await createForm(formData);
 
@@ -61,7 +70,6 @@ const FormBuilder: React.FC<{
       );
 
       onFormSaved();
-      form.resetFields();
       resetForm();
     } catch (error) {
       console.error("Error saving form:", error);
@@ -102,11 +110,16 @@ const FormBuilder: React.FC<{
     if (newFields[index]) {
       if (name === "type" && value === "boolean") {
         newFields[index] = { ...newFields[index], type: value, switch: true };
+      } else if (name === "required") {
+        newFields[index] = { ...newFields[index], required: value };
       } else {
         newFields[index] = { ...newFields[index], [name]: value };
       }
       setFields(newFields);
       form.setFieldsValue({ fields: newFields });
+
+      console.log(`Field ${index} ${name} changed to:`, value);
+      console.log("Updated field:", newFields[index]);
     }
   };
 
@@ -176,7 +189,7 @@ const FormBuilder: React.FC<{
     const draggedIndex = parseInt(e.dataTransfer.getData("text/plain"), 10);
     if (draggedIndex === targetIndex) return;
 
-    const newFields = fields.filter(Boolean); // Remove any null fields
+    const newFields = fields.filter(Boolean);
     const [draggedField] = newFields.splice(draggedIndex, 1);
     newFields.splice(targetIndex, 0, draggedField);
 
@@ -363,22 +376,16 @@ const FormBuilder: React.FC<{
                             />
                           </Form.Item>
                           <Form.Item
-                            name={["fields", index, "required"]}
                             label={
                               <span className="font-semibold">Required</span>
                             }
-                            valuePropName="checked"
                           >
-                            {field.type === "boolean" ||
-                            field.type === "switch" ? (
-                              <Switch
-                                onChange={(checked) =>
-                                  handleFieldChange(index, "required", checked)
-                                }
-                              />
-                            ) : (
-                              <Switch />
-                            )}
+                            <Switch
+                              checked={field.required}
+                              onChange={(checked) =>
+                                handleFieldChange(index, "required", checked)
+                              }
+                            />
                           </Form.Item>
                         </div>
                       )}

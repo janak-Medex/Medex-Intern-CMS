@@ -1,5 +1,3 @@
-// DynamicFormRenderer.tsx
-
 import React, { useEffect, useState } from "react";
 import axiosInstance from "../http/axiosInstance";
 
@@ -32,14 +30,14 @@ const DynamicFormRenderer: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType | null>(
     null
   );
-  const [loading, setLoading] = useState<boolean>(false); // State to manage loading state
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
         setLoading(true);
         const response = await axiosInstance.get<TemplateType[]>("/templates");
-        setTemplates(response.data); // Set the fetched templates
+        setTemplates(response.data);
       } catch (error) {
         console.error("Error fetching templates:", error);
       } finally {
@@ -55,46 +53,51 @@ const DynamicFormRenderer: React.FC = () => {
   };
 
   const renderTemplateList = () => (
-    <div className="flex flex-col items-center">
-      <h3 className="text-lg font-bold mb-4">Select a Template</h3>
-      <div className="w-full max-w-md">
-        <ul className="border rounded-lg overflow-hidden">
-          {templates.map((template) => (
-            <li
-              key={template._id.$oid}
-              className="border-b last:border-b-0 cursor-pointer"
-              onClick={() => handleTemplateClick(template)}
+    <div className="w-full max-w-md bg-white shadow-lg rounded-lg overflow-hidden">
+      <h3 className="text-xl font-bold p-5 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+        Select a Template
+      </h3>
+      <ul className="divide-y divide-gray-200">
+        {templates.map((template) => (
+          <li
+            key={template._id.$oid}
+            className="p-4 hover:bg-gray-50 cursor-pointer transition duration-300 ease-in-out flex items-center justify-between"
+            onClick={() => handleTemplateClick(template)}
+          >
+            <p className="text-gray-800 font-medium">
+              {template.template_name}
+            </p>
+            <svg
+              className="w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              <p className="p-4">{template.template_name}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 
   const renderForm = (form: FormType) => (
-    <div className="flex flex-col items-center">
-      <h3 className="text-lg font-bold mb-4">{form.name}</h3>
-      <form
-        key={form._id.$oid}
-        className="w-full max-w-md bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-4"
-      >
-        {form.fields.map((field) => (
-          <div key={field.fieldName} className="mb-4">
-            <label
-              htmlFor={field.fieldName}
-              className="block text-gray-700 font-bold mb-2"
-            >
-              {field.fieldName}
-            </label>
-            {getFieldComponent(field)}
-          </div>
-        ))}
-        <div className="flex items-center justify-center mt-6">
+    <div className="w-[50vw]  bg-white shadow-lg rounded-lg overflow-hidden">
+      <h3 className="text-xl font-bold p-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+        {form.name}
+      </h3>
+      <form key={form._id.$oid} className="p-6 space-y-6">
+        {form.fields.map((field) => getFieldComponent(field))}
+        <div className="pt-4">
           <button
             type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-3 px-4 rounded-md hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
           >
             Submit
           </button>
@@ -104,68 +107,210 @@ const DynamicFormRenderer: React.FC = () => {
   );
 
   const getFieldComponent = (field: FieldType) => {
+    const baseClasses =
+      "w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition duration-300 ease-in-out bg-white text-gray-700";
+    const labelClasses = "block text-sm font-medium text-gray-700 mb-1";
+    const requiredProps = field.required ? { required: true } : {};
+
     switch (field.type) {
       case "text":
-      case "textarea":
       case "number":
+      case "date":
         return (
-          <input
-            type={field.type}
-            placeholder={field.placeholder}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
+          <div className="mb-4">
+            <label htmlFor={field.fieldName} className={labelClasses}>
+              {field.fieldName}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <input
+              type={field.type}
+              id={field.fieldName}
+              name={field.fieldName}
+              placeholder={field.placeholder}
+              className={baseClasses}
+              {...requiredProps}
+            />
+          </div>
+        );
+      case "textarea":
+        return (
+          <div className="mb-4">
+            <label htmlFor={field.fieldName} className={labelClasses}>
+              {field.fieldName}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <textarea
+              id={field.fieldName}
+              name={field.fieldName}
+              placeholder={field.placeholder}
+              className={`${baseClasses} h-24 resize-none`}
+              {...requiredProps}
+            />
+          </div>
         );
       case "select":
         return (
-          <select className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            {field.options?.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          <div className="mb-4">
+            <label htmlFor={field.fieldName} className={labelClasses}>
+              {field.fieldName}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <select
+              id={field.fieldName}
+              name={field.fieldName}
+              className={baseClasses}
+              {...requiredProps}
+            >
+              <option value="">Select an option</option>
+              {field.options?.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
         );
       case "radio":
         return (
-          <>
-            {field.options?.map((option) => (
-              <label key={option} className="block text-gray-700">
-                <input
-                  type="radio"
-                  name={field.fieldName}
-                  value={option}
-                  className="mr-2 leading-tight"
-                />
-                {option}
-              </label>
-            ))}
-          </>
+          <div className="mb-4">
+            <label className={labelClasses}>
+              {field.fieldName}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <div className="mt-2 space-y-2">
+              {field.options?.map((option) => (
+                <label key={option} className="inline-flex items-center mr-4">
+                  <input
+                    type="radio"
+                    name={field.fieldName}
+                    value={option}
+                    className="form-radio h-4 w-4 text-blue-600"
+                    {...requiredProps}
+                  />
+                  <span className="ml-2 text-sm text-gray-700">{option}</span>
+                </label>
+              ))}
+            </div>
+          </div>
         );
       case "checkbox":
-        return <input type="checkbox" className="mr-2 leading-tight" />;
+        return (
+          <div className="mb-4">
+            <label className={labelClasses}>
+              {field.fieldName}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <div className="mt-2 space-y-2">
+              {field.options ? (
+                field.options.map((option) => (
+                  <label key={option} className="inline-flex items-center mr-4">
+                    <input
+                      type="checkbox"
+                      name={field.fieldName}
+                      value={option}
+                      className="form-checkbox h-4 w-4 text-blue-600 rounded"
+                      {...requiredProps}
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{option}</span>
+                  </label>
+                ))
+              ) : (
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    name={field.fieldName}
+                    className="form-checkbox h-4 w-4 text-blue-600 rounded"
+                    {...requiredProps}
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    {field.placeholder}
+                  </span>
+                </label>
+              )}
+            </div>
+          </div>
+        );
+      case "switch":
+        return (
+          <div className="mb-4">
+            <label className="inline-flex items-center cursor-pointer">
+              <span className={`${labelClasses} mr-3`}>
+                {field.fieldName}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
+              </span>
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  name={field.fieldName}
+                  className="sr-only peer"
+                  {...requiredProps}
+                />
+                <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </div>
+            </label>
+          </div>
+        );
+      case "boolean":
+        return (
+          <div className="mb-4">
+            <label htmlFor={field.fieldName} className={labelClasses}>
+              {field.fieldName}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <select
+              id={field.fieldName}
+              name={field.fieldName}
+              className={baseClasses}
+              {...requiredProps}
+            >
+              <option value="">Select an option</option>
+              <option value="true">True</option>
+              <option value="false">False</option>
+            </select>
+          </div>
+        );
       default:
-        return null;
+        return (
+          <div className="mb-4">
+            <label htmlFor={field.fieldName} className={labelClasses}>
+              {field.fieldName}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <input
+              type="text"
+              id={field.fieldName}
+              name={field.fieldName}
+              placeholder={field.placeholder}
+              className={baseClasses}
+              {...requiredProps}
+            />
+          </div>
+        );
     }
   };
 
   return (
-    <div className="flex flex-col items-center mt-8">
-      <h2 className="text-2xl font-bold mb-4">Dynamic Form Renderer</h2>
-      <div className="w-full max-w-md mb-8">
-        {loading && <p className="text-gray-700">Loading...</p>}
-        {!selectedTemplate && !loading && renderTemplateList()}
-        {selectedTemplate && (
-          <div className="w-full max-w-md">
-            {selectedTemplate.forms.map((form) => (
-              <div key={form._id.$oid} className="mb-8">
-                {renderForm(form)}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+    <div className="container mx-auto px-4 py-8 bg-gray-50 min-h-screen flex flex-col items-center justify-center">
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+        Dynamic Form Renderer
+      </h2>
+      {loading && (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      )}
+      {!loading && !selectedTemplate && renderTemplateList()}
+      {selectedTemplate && (
+        <div className="space-y-8">
+          {selectedTemplate.forms.map((form) => (
+            <div key={form._id.$oid}>{renderForm(form)}</div>
+          ))}
+        </div>
+      )}
       {!selectedTemplate && !loading && (
-        <p className="text-red-500">Select a template to view forms</p>
+        <p className="text-red-500 text-center mt-4 text-sm">
+          Select a template to view forms
+        </p>
       )}
     </div>
   );
