@@ -4,6 +4,7 @@ export interface FieldType {
     fieldName: string;
     placeholder: string;
     options?: string[];
+    switch?: boolean;
 }
 
 export interface FormType {

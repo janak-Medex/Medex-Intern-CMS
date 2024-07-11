@@ -99,7 +99,11 @@ const FormBuilder: React.FC<{
   const handleFieldChange = (index: number, name: string, value: any) => {
     const newFields = [...fields];
     if (newFields[index]) {
-      newFields[index] = { ...newFields[index], [name]: value };
+      if (name === "type" && value === "boolean") {
+        newFields[index] = { ...newFields[index], type: value, switch: true };
+      } else {
+        newFields[index] = { ...newFields[index], [name]: value };
+      }
       setFields(newFields);
       form.setFieldsValue({ fields: newFields });
     }
@@ -107,7 +111,10 @@ const FormBuilder: React.FC<{
 
   const handleOptionAdd = (fieldIndex: number) => {
     const newFields = [...fields];
-    if (!newFields[fieldIndex].options) {
+    if (
+      newFields[fieldIndex].type === "checkbox" &&
+      !newFields[fieldIndex].options
+    ) {
       newFields[fieldIndex].options = [];
     }
     newFields[fieldIndex].options?.push("");
@@ -285,10 +292,15 @@ const FormBuilder: React.FC<{
                               <Option value="select">Select</Option>
                               <Option value="radio">Radio</Option>
                               <Option value="checkbox">Checkbox</Option>
+                              <Option value="switch">Switch</Option>
+                              <Option value="boolean">Boolean</Option>
+                              <Option value="date">Date</Option>
+                              <Option value="other">Other</Option>
                             </Select>
                           </Form.Item>
                           {(field.type === "select" ||
-                            field.type === "radio") && (
+                            field.type === "radio" ||
+                            field.type === "checkbox") && (
                             <Form.Item
                               label={
                                 <span className="font-semibold">Options</span>
@@ -353,11 +365,16 @@ const FormBuilder: React.FC<{
                             }
                             valuePropName="checked"
                           >
-                            <Switch
-                              onChange={(checked) =>
-                                handleFieldChange(index, "required", checked)
-                              }
-                            />
+                            {field.type === "boolean" ||
+                            field.type === "switch" ? (
+                              <Switch
+                                onChange={(checked) =>
+                                  handleFieldChange(index, "required", checked)
+                                }
+                              />
+                            ) : (
+                              <Switch disabled />
+                            )}
                           </Form.Item>
                         </div>
                       )}
