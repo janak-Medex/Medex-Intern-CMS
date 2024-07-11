@@ -34,7 +34,6 @@ const StyledModal = styled(Modal)`
 
   .ant-tabs-content-holder {
     flex: 1;
-    overflow-y: auto;
   }
 
   .ant-tabs-content {
@@ -45,23 +44,6 @@ const StyledModal = styled(Modal)`
 const StyledTabPane = styled(TabPane)`
   height: 100%;
   overflow-y: auto;
-
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
 `;
 
 const StyledButton = styled(Button)`
@@ -150,6 +132,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       onCancel={onClose}
       footer={null}
       width="90vw"
+      className="overflow-x-hidden" // Add this class to disable horizontal scrolling
     >
       <Spin spinning={loading}>
         <Tabs activeKey={activeTab} onChange={setActiveTab}>

@@ -449,17 +449,18 @@ const FormBuilder: React.FC<{
           </div>
         </div>
       </div>
-
-      <div
-        ref={formPreviewRef}
-        className="max-h-[70vh] overflow-y-auto pr-4  custom-scrollbar w-1/2 bg-white rounded-lg shadow-lg p-6 mb-6"
-        onScroll={handleScroll} // Add this line if you want to handle scroll event
-      >
-        <FormPreview
-          fields={fields}
-          templateName={templateName}
-          formName={form.getFieldValue("formName") || ""}
-        />
+      <div className="max-h-[70vh] overflow-y-auto pr-4  custom-scrollbar w-1/2">
+        <div
+          ref={formPreviewRef}
+          className=" bg-white rounded-lg shadow-lg "
+          onScroll={handleScroll} // Add this line if you want to handle scroll event
+        >
+          <FormPreview
+            fields={fields}
+            templateName={templateName}
+            formName={form.getFieldValue("formName") || ""}
+          />
+        </div>
       </div>
     </div>
   );
