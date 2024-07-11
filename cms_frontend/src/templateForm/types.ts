@@ -5,12 +5,14 @@ export interface FieldType {
     placeholder: string;
     options?: string[];
     switch?: boolean;
+    description?: string;
 }
 
 export interface FormType {
     _id: string;
     name: string;
     fields: FieldType[];
+
 }
 
 export interface FormPreviewProps {
