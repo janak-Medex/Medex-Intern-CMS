@@ -11,7 +11,7 @@ import {
 import FormPreview from "./FormPreview";
 import { FormType, FieldType } from "./types";
 import { createForm } from "../api/formComponent.api";
-
+import "./scrollbar.css";
 const { Option } = Select;
 
 const FormBuilder: React.FC<{
@@ -26,12 +26,14 @@ const FormBuilder: React.FC<{
   }>({});
   const [_draggedItem, setDraggedItem] = useState<FieldType | null>(null);
   const formBuilderRef = useRef<HTMLDivElement>(null);
+  const formPreviewRef = useRef<HTMLDivElement>(null);
+  const [formBuilderScrollPosition, setFormBuilderScrollPosition] = useState(0);
 
   useEffect(() => {
     if (initialForm) {
       const initialFields = initialForm.fields.map((field) => ({
         ...field,
-        required: !!field.required, // Ensure it's a boolean
+        required: !!field.required,
       }));
       setFields(initialFields);
       form.setFieldsValue({
@@ -42,6 +44,31 @@ const FormBuilder: React.FC<{
       resetForm();
     }
   }, [initialForm]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (formBuilderRef.current && formPreviewRef.current) {
+        const windowHeight = window.innerHeight;
+        const headerHeight = 64; // Adjust this value based on your actual header height
+        const contentHeight = windowHeight - headerHeight - 32; // 32px for padding
+        formBuilderRef.current.style.height = `${contentHeight}px`;
+        formPreviewRef.current.style.height = `${contentHeight}px`;
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (formBuilderRef.current) {
+      formBuilderRef.current.scrollTop = formBuilderScrollPosition;
+    }
+  }, [fields]);
 
   const resetForm = () => {
     setFields([]);
@@ -117,9 +144,6 @@ const FormBuilder: React.FC<{
       }
       setFields(newFields);
       form.setFieldsValue({ fields: newFields });
-
-      console.log(`Field ${index} ${name} changed to:`, value);
-      console.log("Updated field:", newFields[index]);
     }
   };
 
@@ -205,12 +229,19 @@ const FormBuilder: React.FC<{
     });
   };
 
+  const handleScroll = () => {
+    if (formBuilderRef.current) {
+      setFormBuilderScrollPosition(formBuilderRef.current.scrollTop);
+    }
+  };
+
   return (
     <div className="flex gap-6">
-      <div className="w-1/2">
+      <div className="w-1/2 ">
         <div
           ref={formBuilderRef}
-          className="max-h-screen overflow-y-auto pr-4 -mr-4"
+          className="max-h-[70vh] overflow-y-auto pr-4  custom-scrollbar"
+          onScroll={handleScroll}
         >
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
             <h3 className="text-2xl font-bold mb-6">Form Builder</h3>
@@ -418,7 +449,12 @@ const FormBuilder: React.FC<{
           </div>
         </div>
       </div>
-      <div className="w-1/2">
+
+      <div
+        ref={formPreviewRef}
+        className="max-h-[70vh] overflow-y-auto pr-4  custom-scrollbar w-1/2 bg-white rounded-lg shadow-lg p-6 mb-6"
+        onScroll={handleScroll} // Add this line if you want to handle scroll event
+      >
         <FormPreview
           fields={fields}
           templateName={templateName}
