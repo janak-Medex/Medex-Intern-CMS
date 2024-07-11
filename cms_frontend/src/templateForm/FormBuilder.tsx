@@ -235,6 +235,9 @@ const FormBuilder: React.FC<{
                           <DragOutlined className="text-gray-400" />
                           <span className="font-medium">
                             {field.fieldName || `Field ${index + 1}`}
+                            {field.required && (
+                              <span className="text-red-500">*</span>
+                            )}
                           </span>
                         </div>
                         <div className="flex items-center space-x-1">
@@ -374,7 +377,7 @@ const FormBuilder: React.FC<{
                                 }
                               />
                             ) : (
-                              <Switch disabled />
+                              <Switch />
                             )}
                           </Form.Item>
                         </div>
