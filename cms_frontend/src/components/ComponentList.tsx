@@ -275,15 +275,15 @@ const ComponentList: React.FC<ComponentListProps> = ({
           visible={templateFormVisible}
           onClose={() => {
             setTemplateFormVisible(false);
-            refreshComponents(); // Add this line
+            refreshComponents();
           }}
           onFormCreated={() => {
-            refreshComponents(); // Add this line
-            setTemplateFormVisible(false); // Add this line
+            refreshComponents();
+            setTemplateFormVisible(false);
           }}
           onFormDeleted={() => {
-            refreshComponents(); // Add this line
-            setTemplateFormVisible(false); // Add this line
+            refreshComponents();
+            setTemplateFormVisible(false);
           }}
           initialFormData={editMode ? selectedForm : null}
         />
