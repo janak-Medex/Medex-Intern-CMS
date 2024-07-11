@@ -1,12 +1,13 @@
+// TemplateForm.tsx
 import React, { useState, useEffect } from "react";
 import { Modal, Tabs, Spin, message, Button } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import styled from "styled-components";
-import axiosInstance from "../http/axiosInstance";
 import FormsList from "./FormsList";
 import FormBuilder from "./FormBuilder";
 import { FormType } from "./types";
 import { Component } from "../components/types";
+import { fetchForms, deleteForm } from "../api/formComponent.api";
 
 const { TabPane } = Tabs;
 
@@ -41,15 +42,15 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
 
   useEffect(() => {
     if (visible) {
-      fetchForms();
+      fetchFormsList();
     }
   }, [visible, templateName]);
 
-  const fetchForms = async () => {
+  const fetchFormsList = async () => {
     setLoading(true);
     try {
-      const response = await axiosInstance.get(`/form/${templateName}`);
-      setForms(response.data.data);
+      const fetchedForms = await fetchForms(templateName);
+      setForms(fetchedForms);
     } catch (error) {
       console.error("Error fetching forms:", error);
       message.error("Failed to fetch forms");
@@ -60,15 +61,15 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
 
   const handleFormCreated = () => {
     onFormCreated();
-    fetchForms();
+    fetchFormsList();
   };
 
-  const deleteForm = async (formName: string) => {
+  const handleDeleteForm = async (formName: string) => {
     setLoading(true);
     try {
-      await axiosInstance.delete(`/form/${templateName}/${formName}`);
+      await deleteForm(templateName, formName);
       message.success("Form deleted successfully");
-      fetchForms(); // Refresh the forms list
+      fetchFormsList(); // Refresh the forms list
       onFormDeleted(); // Notify parent component
     } catch (error) {
       console.error("Error deleting form:", error);
@@ -108,7 +109,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
             <FormsList
               forms={forms}
               onSelectForm={selectForm}
-              onDeleteForm={deleteForm}
+              onDeleteForm={handleDeleteForm}
               templateName={templateName}
             />
             <div className="flex justify-center mt-6">
