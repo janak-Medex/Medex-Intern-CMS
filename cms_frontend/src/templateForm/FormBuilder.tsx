@@ -1,71 +1,30 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Form,
-  Input,
-  Select,
-  Button,
-  Card,
-  Switch,
-  Collapse,
-  message,
-} from "antd";
+import { Form, Input, Select, Button, Switch, message } from "antd";
 import {
   PlusOutlined,
   MinusCircleOutlined,
   SaveOutlined,
+  DragOutlined,
+  UpOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
-import { motion, AnimatePresence } from "framer-motion";
-import styled from "styled-components";
 import axiosInstance from "../http/axiosInstance";
 import FormPreview from "./FormPreview";
 import { FormType, FieldType } from "./types";
 
 const { Option } = Select;
-const { Panel } = Collapse;
 
-const StyledButton = styled(Button)`
-  transition: all 0.3s;
-  &:hover {
-    transform: scale(1.05);
-  }
-`;
-
-const ScrollableDiv = styled.div`
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
-  padding-right: 16px;
-  margin-right: -16px;
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: #d1d5db;
-    border-radius: 3px;
-  }
-`;
-
-interface FormBuilderProps {
+const FormBuilder: React.FC<{
   templateName: string;
-
   initialForm: FormType | null;
   onFormSaved: () => void;
-}
-
-const FormBuilder: React.FC<FormBuilderProps> = ({
-  templateName,
-  initialForm,
-  onFormSaved,
-}) => {
+}> = ({ templateName, initialForm, onFormSaved }) => {
   const [form] = Form.useForm();
   const [fields, setFields] = useState<FieldType[]>([]);
+  const [expandedFields, setExpandedFields] = useState<{
+    [key: number]: boolean;
+  }>({});
+  const [draggedItem, setDraggedItem] = useState<FieldType | null>(null);
   const formBuilderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -80,18 +39,28 @@ const FormBuilder: React.FC<FormBuilderProps> = ({
     }
   }, [initialForm]);
 
+  const resetForm = () => {
+    // Clear the state without resetting the form fields immediately
+    setFields([]);
+    setExpandedFields({});
+  };
+
   const onFinish = async (values: any) => {
     try {
+      const cleanFields = fields.filter(Boolean); // Filter out null fields
       await axiosInstance.post("/form", {
         _id: initialForm?._id,
         name: values.formName,
-        fields: values.fields,
+        fields: cleanFields,
         template_name: templateName,
       });
+
       message.success(
         initialForm ? "Form updated successfully" : "Form created successfully"
       );
       onFormSaved();
+      // Now reset the form fields after successful submission
+      form.resetFields();
       resetForm();
     } catch (error) {
       console.error("Error saving form:", error);
@@ -99,24 +68,18 @@ const FormBuilder: React.FC<FormBuilderProps> = ({
     }
   };
 
-  const resetForm = () => {
-    form.resetFields();
-    setFields([]);
-  };
-
   const addField = () => {
-    const newFields = [
-      ...fields,
-      {
-        type: "text",
-        required: false,
-        fieldName: "",
-        placeholder: "",
-        options: [],
-      },
-    ];
+    const newField: FieldType = {
+      type: "text",
+      required: false,
+      fieldName: "",
+      placeholder: "",
+      options: [],
+    };
+    const newFields = [...fields, newField];
     setFields(newFields);
     form.setFieldsValue({ fields: newFields });
+    setExpandedFields({ ...expandedFields, [newFields.length - 1]: true });
     setTimeout(() => {
       if (formBuilderRef.current) {
         formBuilderRef.current.scrollTop = formBuilderRef.current.scrollHeight;
@@ -128,13 +91,18 @@ const FormBuilder: React.FC<FormBuilderProps> = ({
     const newFields = fields.filter((_, i) => i !== index);
     setFields(newFields);
     form.setFieldsValue({ fields: newFields });
+    const newExpandedFields = { ...expandedFields };
+    delete newExpandedFields[index];
+    setExpandedFields(newExpandedFields);
   };
 
   const handleFieldChange = (index: number, name: string, value: any) => {
     const newFields = [...fields];
-    newFields[index] = { ...newFields[index], [name]: value };
-    setFields(newFields);
-    form.setFieldsValue({ fields: newFields });
+    if (newFields[index]) {
+      newFields[index] = { ...newFields[index], [name]: value };
+      setFields(newFields);
+      form.setFieldsValue({ fields: newFields });
+    }
   };
 
   const handleOptionAdd = (fieldIndex: number) => {
@@ -170,20 +138,70 @@ const FormBuilder: React.FC<FormBuilderProps> = ({
       form.setFieldsValue({ fields: newFields });
     }
   };
+
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    item: FieldType,
+    index: number
+  ) => {
+    setDraggedItem(item);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+    dragImage.style.position = "absolute";
+    dragImage.style.top = "-1000px";
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, 20, 20);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    targetIndex: number
+  ) => {
+    e.preventDefault();
+    const draggedIndex = parseInt(e.dataTransfer.getData("text/plain"), 10);
+    if (draggedIndex === targetIndex) return;
+
+    const newFields = fields.filter(Boolean); // Remove any null fields
+    const [draggedField] = newFields.splice(draggedIndex, 1);
+    newFields.splice(targetIndex, 0, draggedField);
+
+    setFields(newFields);
+    form.setFieldsValue({ fields: newFields });
+    setDraggedItem(null);
+  };
+
+  const toggleFieldExpansion = (index: number) => {
+    setExpandedFields({
+      ...expandedFields,
+      [index]: !expandedFields[index],
+    });
+  };
+
   return (
     <div className="flex gap-6">
       <div className="w-1/2">
-        <ScrollableDiv ref={formBuilderRef}>
-          <Card title="Form Builder" className="shadow-lg mb-6">
+        <div
+          ref={formBuilderRef}
+          className="max-h-screen overflow-y-auto pr-4 -mr-4"
+        >
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h3 className="text-2xl font-bold mb-6">Form Builder</h3>
             <Form
               form={form}
               onFinish={onFinish}
               layout="vertical"
-              className="space-y-6"
+              className="space-y-4"
             >
               <Form.Item
                 name="formName"
-                label="Form Name"
+                label={<span className="font-semibold">Form Name</span>}
                 rules={[
                   { required: true, message: "Please input the form name!" },
                 ]}
@@ -191,211 +209,193 @@ const FormBuilder: React.FC<FormBuilderProps> = ({
                 <Input className="w-full" placeholder="Enter form name" />
               </Form.Item>
 
-              <Collapse defaultActiveKey={["1"]} className="mb-6">
-                <Panel header="Form Fields" key="1">
-                  <Form.List name="fields">
-                    {(fields, { add, remove }) => (
-                      <AnimatePresence>
-                        {fields.map((field, index) => (
-                          <motion.div
-                            key={field.key}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3 }}
+              <div className="border-t border-gray-200 my-4"></div>
+
+              {fields.map(
+                (field, index) =>
+                  field && (
+                    <div
+                      key={index}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, field, index)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, index)}
+                      className="bg-white rounded-lg shadow-sm p-2 mb-2 border border-gray-200 cursor-move"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <DragOutlined className="text-gray-400" />
+                          <span className="font-medium">
+                            {field.fieldName || `Field ${index + 1}`}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            type="text"
+                            size="small"
+                            onClick={() => toggleFieldExpansion(index)}
+                            icon={
+                              expandedFields[index] ? (
+                                <UpOutlined />
+                              ) : (
+                                <DownOutlined />
+                              )
+                            }
+                          />
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<MinusCircleOutlined />}
+                            onClick={() => removeField(index)}
+                          />
+                        </div>
+                      </div>
+                      {expandedFields[index] && (
+                        <div className="mt-2">
+                          <Form.Item
+                            name={["fields", index, "fieldName"]}
+                            label={
+                              <span className="font-semibold">Field Name</span>
+                            }
+                            rules={[{ required: true, message: "Required" }]}
                           >
-                            <Card className="mb-4 shadow-sm">
-                              <Form.Item
-                                {...field}
-                                name={[field.name, "fieldName"]}
-                                label="Field Name"
-                                rules={[
-                                  { required: true, message: "Required" },
-                                ]}
-                              >
-                                <Input
-                                  onChange={(e) =>
-                                    handleFieldChange(
-                                      index,
-                                      "fieldName",
-                                      e.target.value
-                                    )
-                                  }
-                                />
-                              </Form.Item>
-                              <Form.Item
-                                {...field}
-                                name={[field.name, "type"]}
-                                label="Field Type"
-                                rules={[
-                                  { required: true, message: "Required" },
-                                ]}
-                              >
-                                <Select
-                                  onChange={(value) =>
-                                    handleFieldChange(index, "type", value)
-                                  }
+                            <Input
+                              onChange={(e) =>
+                                handleFieldChange(
+                                  index,
+                                  "fieldName",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name={["fields", index, "type"]}
+                            label={<span className="font-semibold">Type</span>}
+                          >
+                            <Select
+                              onChange={(value) =>
+                                handleFieldChange(index, "type", value)
+                              }
+                            >
+                              <Option value="text">Text</Option>
+                              <Option value="textarea">Textarea</Option>
+                              <Option value="number">Number</Option>
+                              <Option value="select">Select</Option>
+                              <Option value="radio">Radio</Option>
+                              <Option value="checkbox">Checkbox</Option>
+                            </Select>
+                          </Form.Item>
+                          {(field.type === "select" ||
+                            field.type === "radio") && (
+                            <Form.Item
+                              label={
+                                <span className="font-semibold">Options</span>
+                              }
+                            >
+                              {field.options?.map((option, optionIndex) => (
+                                <div
+                                  key={optionIndex}
+                                  className="flex items-center space-x-2 mb-2"
                                 >
-                                  <Option value="text">Text</Option>
-                                  <Option value="number">Number</Option>
-                                  <Option value="boolean">Boolean</Option>
-                                  <Option value="select">Select</Option>
-                                  <Option value="checkbox">Checkbox</Option>
-                                  <Option value="radio">Radio</Option>
-                                  <Option value="switch">Switch</Option>
-                                  <Option value="date">Date</Option>
-                                </Select>
-                              </Form.Item>
-                              <Form.Item
-                                {...field}
-                                name={[field.name, "placeholder"]}
-                                label="Placeholder"
+                                  <Input
+                                    value={option}
+                                    onChange={(e) =>
+                                      handleOptionChange(
+                                        index,
+                                        optionIndex,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder={`Option ${optionIndex + 1}`}
+                                  />
+                                  <Button
+                                    type="text"
+                                    danger
+                                    icon={<MinusCircleOutlined />}
+                                    onClick={() =>
+                                      handleOptionRemove(index, optionIndex)
+                                    }
+                                  />
+                                </div>
+                              ))}
+                              <Button
+                                type="dashed"
+                                onClick={() => handleOptionAdd(index)}
+                                className="w-full"
+                                icon={<PlusOutlined />}
                               >
-                                <Input
-                                  onChange={(e) =>
-                                    handleFieldChange(
-                                      index,
-                                      "placeholder",
-                                      e.target.value
-                                    )
-                                  }
-                                />
-                              </Form.Item>
-                              <Form.Item
-                                {...field}
-                                name={[field.name, "required"]}
-                                label="Required"
-                                valuePropName="checked"
-                              >
-                                <Switch
-                                  onChange={(checked) =>
-                                    handleFieldChange(
-                                      index,
-                                      "required",
-                                      checked
-                                    )
-                                  }
-                                />
-                              </Form.Item>
-
-                              {["select", "checkbox", "radio"].includes(
-                                form.getFieldValue(["fields", index, "type"])
-                              ) && (
-                                <Form.List name={[field.name, "options"]}>
-                                  {(
-                                    options,
-                                    { add: addOption, remove: removeOption }
-                                  ) => (
-                                    <>
-                                      {options.map((option, optionIndex) => (
-                                        <Form.Item
-                                          key={option.key}
-                                          label={
-                                            optionIndex === 0 ? "Options" : ""
-                                          }
-                                          required={false}
-                                        >
-                                          <Input
-                                            placeholder={`Option ${
-                                              optionIndex + 1
-                                            }`}
-                                            style={{
-                                              width: "calc(100% - 32px)",
-                                            }}
-                                            onChange={(e) =>
-                                              handleOptionChange(
-                                                index,
-                                                optionIndex,
-                                                e.target.value
-                                              )
-                                            }
-                                          />
-                                          <MinusCircleOutlined
-                                            className="dynamic-delete-button ml-2"
-                                            onClick={() => {
-                                              removeOption(optionIndex);
-                                              handleOptionRemove(
-                                                index,
-                                                optionIndex
-                                              );
-                                            }}
-                                          />
-                                        </Form.Item>
-                                      ))}
-                                      <Form.Item>
-                                        <Button
-                                          type="dashed"
-                                          onClick={() => {
-                                            addOption();
-                                            handleOptionAdd(index);
-                                          }}
-                                          icon={<PlusOutlined />}
-                                          block
-                                        >
-                                          Add Option
-                                        </Button>
-                                      </Form.Item>
-                                    </>
-                                  )}
-                                </Form.List>
-                              )}
-
-                              <StyledButton
-                                type="text"
-                                danger
-                                onClick={() => {
-                                  remove(field.name);
-                                  removeField(index);
-                                }}
-                                icon={<MinusCircleOutlined />}
-                              >
-                                Remove Field
-                              </StyledButton>
-                            </Card>
-                          </motion.div>
-                        ))}
-                        <Form.Item>
-                          <StyledButton
-                            type="dashed"
-                            onClick={() => {
-                              add();
-                              addField();
-                            }}
-                            block
-                            icon={<PlusOutlined />}
+                                Add Option
+                              </Button>
+                            </Form.Item>
+                          )}
+                          <Form.Item
+                            name={["fields", index, "placeholder"]}
+                            label={
+                              <span className="font-semibold">Placeholder</span>
+                            }
                           >
-                            Add Field
-                          </StyledButton>
-                        </Form.Item>
-                      </AnimatePresence>
-                    )}
-                  </Form.List>
-                </Panel>
-              </Collapse>
+                            <Input
+                              onChange={(e) =>
+                                handleFieldChange(
+                                  index,
+                                  "placeholder",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name={["fields", index, "required"]}
+                            label={
+                              <span className="font-semibold">Required</span>
+                            }
+                            valuePropName="checked"
+                          >
+                            <Switch
+                              onChange={(checked) =>
+                                handleFieldChange(index, "required", checked)
+                              }
+                            />
+                          </Form.Item>
+                        </div>
+                      )}
+                    </div>
+                  )
+              )}
 
               <Form.Item>
-                <StyledButton
+                <Button
+                  type="dashed"
+                  onClick={addField}
+                  className="w-full"
+                  icon={<PlusOutlined />}
+                >
+                  Add Field
+                </Button>
+              </Form.Item>
+
+              <Form.Item>
+                <Button
                   type="primary"
                   htmlType="submit"
+                  className="w-full"
                   icon={<SaveOutlined />}
-                  size="large"
-                  block
                 >
-                  {initialForm ? "Update Form" : "Create Form"}
-                </StyledButton>
+                  Save Form
+                </Button>
               </Form.Item>
             </Form>
-          </Card>
-        </ScrollableDiv>
+          </div>
+        </div>
       </div>
       <div className="w-1/2">
-        <Card title="Form Preview" className="shadow-lg sticky top-0">
-          <FormPreview
-            fields={form.getFieldValue("fields") || []}
-            templateName={templateName}
-            formName={initialForm ? initialForm.name : ""}
-          />
-        </Card>
+        <FormPreview
+          fields={fields}
+          templateName={templateName}
+          formName={form.getFieldValue("formName") || ""}
+        />
       </div>
     </div>
   );

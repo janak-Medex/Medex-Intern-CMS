@@ -130,15 +130,18 @@ const FormsList: React.FC<FormsListProps> = ({
                     Fields: {item.fields.length}
                   </Typography.Text>
                   <div className="flex flex-wrap justify-end">
-                    {item.fields.slice(0, 2).map((field, index) => (
-                      <Tag
-                        key={index}
-                        color="blue"
-                        className="text-xs mr-1 mb-1"
-                      >
-                        {field.type}
-                      </Tag>
-                    ))}
+                    {item.fields.slice(0, 2).map(
+                      (field, index) =>
+                        field && ( // Add this check
+                          <Tag
+                            key={index}
+                            color="blue"
+                            className="text-xs mr-1 mb-1"
+                          >
+                            {field.type}
+                          </Tag>
+                        )
+                    )}
                     {item.fields.length > 2 && (
                       <Tag color="blue" className="text-xs mb-1">
                         +{item.fields.length - 2}

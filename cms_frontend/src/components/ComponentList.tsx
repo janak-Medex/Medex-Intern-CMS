@@ -162,12 +162,12 @@ const ComponentList: React.FC<ComponentListProps> = ({
   };
 
   return (
-    <div className="space-y-4 flex-1 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-lg min-h-full">
+    <div className="space-y-4 flex-1 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-lg min-h-full ">
       <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center">
         <FaClipboardList className="mr-3 text-indigo-600" />
         Component List
       </h2>
-      <div className="space-y-3">
+      <div className="space-y-3 cursor-pointer">
         {components.length === 0 ? (
           <p className="text-gray-600 text-center py-8 bg-white rounded-lg shadow">
             No components available.
@@ -193,7 +193,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
             >
               <div className="flex items-center space-x-3">
                 <FaGripVertical
-                  className={`cursor-move ${
+                  className={`cursor-grab ${
                     isFormComponent(component.component_name)
                       ? "text-blue-200"
                       : "text-gray-400"
