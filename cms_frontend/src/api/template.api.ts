@@ -5,6 +5,8 @@ import { Template } from "../template/Template";
 
 // Fetch templates data
 
+
+
 export const fetchTemplatesData = async (): Promise<Template[]> => {
     try {
         const response = await axiosInstance.get("/templates");

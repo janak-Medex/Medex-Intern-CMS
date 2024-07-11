@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Component as ComponentType } from "../components/types";
+import { ComponentType, TemplateDetails, TableData } from "./types";
 import ComponentList from "../components/ComponentList";
-import axiosInstance from "../http/axiosInstance";
 import FormComponent from "../template/FormComponent";
 import {
   Image,
@@ -22,14 +21,14 @@ import {
   PlusOutlined,
   MenuOutlined,
 } from "@ant-design/icons";
-
 import { HiHome } from "react-icons/hi2";
 import TemplateForm from "../templateForm/TemplateForm";
-
-import { ToastContainer } from "react-toastify"; // Import ToastContainer
+import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import CreateComponent from "../components/createComponents";
-import { TableData, TemplateDetails } from "./types";
+import * as templateApi from "../api/createTemplate.api";
+import { createTableData } from "../utils/CreateTableData";
+
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
 
@@ -55,38 +54,26 @@ const CreateTemplate: React.FC = () => {
   const [isTemplateFormVisible, setIsTemplateFormVisible] =
     useState<boolean>(false);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
-    fetchTemplateDetails();
-    fetchAllComponents();
+    fetchData();
   }, [template_name]);
 
-  const fetchTemplateDetails = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get<TemplateDetails>(
-        `/templates/${template_name}`
-      );
-      setTemplateDetails(response.data);
-      setComponents(response.data.components || []);
-      console.log(response.data.components);
+      const details = await templateApi.fetchTemplateDetails(template_name!);
+      setTemplateDetails(details);
+      setComponents(details.components || []);
+
+      const allComps = await templateApi.fetchAllComponents();
+      setAllComponents(allComps);
     } catch (error) {
-      console.error("Error fetching template details:", error);
-      message.error("Failed to fetch template details");
+      console.error("Error fetching data:", error);
+      message.error("Failed to fetch data");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchAllComponents = async () => {
-    try {
-      const response = await axiosInstance.get<ComponentType[]>("templates");
-      if (response.status === 200) {
-        setAllComponents(response.data);
-        console.log(response.data);
-      }
-    } catch (error) {
-      console.error("Error fetching components:", error);
-      message.error("Failed to fetch all components");
     }
   };
 
@@ -142,7 +129,7 @@ const CreateTemplate: React.FC = () => {
         updatedComponents[index] = newComponent;
         setComponents(updatedComponents);
       }
-      fetchTemplateDetails();
+      await fetchData();
       setIsCreatingComponent(false);
       message.success("Component saved successfully");
     } catch (error) {
@@ -153,9 +140,7 @@ const CreateTemplate: React.FC = () => {
 
   const onDeleteComponent = async (componentId: string) => {
     try {
-      await axiosInstance.delete(
-        `/templates/${templateDetails?._id}/components/${componentId}`
-      );
+      await templateApi.deleteComponent(templateDetails?._id!, componentId);
       setComponents((prevComponents) =>
         prevComponents.filter((comp) => comp._id !== componentId)
       );
@@ -173,26 +158,18 @@ const CreateTemplate: React.FC = () => {
     e.preventDefault();
     if (!activeComponent) return;
     try {
-      const response = await axiosInstance.post<ComponentType>("/components", {
-        component_name: activeComponent.component_name,
-        data: JSON.stringify(activeComponent.data),
-        is_active: true,
-        template_name: template_name,
-      });
+      const savedComponent = await templateApi.saveComponent(
+        activeComponent,
+        template_name!
+      );
       const updatedComponents = components.map((comp) =>
-        comp.component_name === response.data.component_name
-          ? response.data
+        comp.component_name === savedComponent.component_name
+          ? savedComponent
           : comp
       );
       setComponents(updatedComponents);
-
-      // Fetch the latest data for the active component
-      const latestComponentData = await axiosInstance.get<ComponentType>(
-        `/templates/${template_name}/components/${response.data._id}`
-      );
-      setActiveComponent(latestComponentData.data);
-
-      await fetchTemplateDetails();
+      setActiveComponent(savedComponent);
+      await fetchData();
       message.success("Component saved successfully");
     } catch (error) {
       console.error("Error saving component:", error);
@@ -211,16 +188,14 @@ const CreateTemplate: React.FC = () => {
   };
 
   const handleImportComponent = async (component: any) => {
-    // debugger;
     try {
-      const response = await axiosInstance.post<ComponentType>("/components", {
-        ...component,
-        template_name,
-      });
-      setComponents((prevComponents) => [...prevComponents, response.data]);
-      fetchTemplateDetails();
+      const importedComponent = await templateApi.importComponent(
+        component,
+        template_name!
+      );
+      setComponents((prevComponents) => [...prevComponents, importedComponent]);
+      await fetchData();
       message.success("Component imported successfully");
-      // return;
     } catch (error) {
       console.error("Error posting component:", error);
       message.error("Failed to import component");
@@ -231,17 +206,8 @@ const CreateTemplate: React.FC = () => {
   const handleOk = () => setIsModalOpen(false);
   const handleCancel = () => setIsModalOpen(false);
 
-  const tableData: TableData[] = allComponents.map((template) => ({
-    templateName: template.template_name,
-    is_active: template.is_active,
-    componentArray: template.components,
-    components: template.components.map((component: ComponentType) => ({
-      componentName: component.component_name,
-      componentId: component._id,
-      data: component.data,
-      is_active: component.is_active,
-    })),
-  }));
+  const tableData: TableData[] = createTableData(allComponents);
+
   const refreshState = () => {
     setActiveComponent(null);
     setIsCreatingComponent(false);
@@ -250,26 +216,20 @@ const CreateTemplate: React.FC = () => {
     setComponents([...components]);
     message.success("Template view refreshed");
   };
-  const navigate = useNavigate();
+
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
     navigate("/template", { replace: true });
   };
+
   const refetchData = async () => {
     try {
-      // Reset states
       setActiveComponent(null);
       setIsCreatingComponent(false);
       setEditingComponent(null);
       setToggleStates({});
       setComponents([]);
-
-      // Fetch latest template details
-      await fetchTemplateDetails();
-
-      // Fetch all components again
-      await fetchAllComponents();
-
+      await fetchData();
       message.success("Data refreshed successfully");
     } catch (error) {
       console.error("Error refreshing data:", error);
@@ -286,11 +246,11 @@ const CreateTemplate: React.FC = () => {
   };
 
   const handleFormCreated = () => {
-    // Refetch template details or update the state as needed
-    fetchTemplateDetails();
+    fetchData();
   };
+
   return (
-    <Layout className="h-screen ">
+    <Layout className="h-screen">
       <ToastContainer />
       <Header className="bg-white shadow-md flex items-center justify-between px-6 py-2 mb-4 z-10">
         <div className="flex items-center">
@@ -367,7 +327,7 @@ const CreateTemplate: React.FC = () => {
           collapsible
           collapsed={!sidebarVisible}
           collapsedWidth={0}
-          className="border-r border-gray-100 shadow-md bg-white rounded-lg "
+          className="border-r border-gray-100 shadow-md bg-white rounded-lg"
           style={{ height: "calc(100vh - 64px)", overflowY: "auto" }}
         >
           <ComponentList
@@ -389,16 +349,16 @@ const CreateTemplate: React.FC = () => {
           />
         </Sider>
         <Content
-          className="pl-4  overflow-y-hidden"
+          className="pl-4 overflow-y-hidden"
           style={{ height: "calc(100vh - 64px)" }}
         >
           <Spin spinning={loading}>
-            <div className="flex space-x-4 h-full ">
+            <div className="flex space-x-4 h-full">
               <Card
                 className="w-1/2 shadow-lg bg-white overflow-y-auto hide-scrollbar"
                 style={{ height: "calc(100vh - 96px)" }}
               >
-                <h2 className="text-xl font-semibold mb-4 ">
+                <h2 className="text-xl font-semibold mb-4">
                   Component Details
                 </h2>
                 {isCreatingComponent && (
@@ -436,9 +396,7 @@ const CreateTemplate: React.FC = () => {
                 className="w-1/2 shadow-lg bg-white overflow-y-auto hide-scrollbar"
                 style={{ height: "calc(100vh - 96px)" }}
               >
-                <h2 className="text-xl font-semibold mb-4 ">
-                  Component Images
-                </h2>
+                <h2 className="text-xl font-semibold mb-4">Component Images</h2>
                 <div className="space-y-4 flex flex-col items-center justify-center">
                   {!activeComponent && !editingComponent ? (
                     components?.map((component, index) => (
@@ -452,7 +410,7 @@ const CreateTemplate: React.FC = () => {
                               component.component_name
                                 ?.toLocaleLowerCase()
                                 .startsWith("form_")
-                                ? "/images/form.svg" // replace with your default image path
+                                ? "/images/form.svg"
                                 : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
                                     component?.component_image?.split(
                                       "uploads\\"
@@ -476,7 +434,7 @@ const CreateTemplate: React.FC = () => {
                             (
                               activeComponent || editingComponent
                             )?.component_name.startsWith("Form_")
-                              ? "path/to/default/image.png" // replace with your default image path
+                              ? "path/to/default/image.png"
                               : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
                                   (
                                     activeComponent || editingComponent
@@ -529,12 +487,7 @@ const CreateTemplate: React.FC = () => {
                           type="primary"
                           icon={<DownloadOutlined />}
                           size="small"
-                          onClick={() => {
-                            handleImportComponent(
-                              component
-                              // component.componentId
-                            );
-                          }}
+                          onClick={() => handleImportComponent(component)}
                           className="bg-indigo-500 hover:bg-indigo-600 transition duration-300"
                         >
                           Import
