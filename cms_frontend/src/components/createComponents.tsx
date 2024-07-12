@@ -111,6 +111,7 @@ const CreateComponent: React.FC<Props> = ({
       data: [formFieldsObject],
       is_active: true,
       inner_component: innerComponent,
+      components: undefined,
     };
 
     try {
