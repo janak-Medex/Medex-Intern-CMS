@@ -14,6 +14,8 @@
     "axios": "^1.7.2",
     "framer-motion": "^11.2.13",
     "js-cookie": "^3.0.5",
+    "lodash": "^4.17.21",
+    "lodash.debounce": "^4.0.8",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",
@@ -29,6 +31,7 @@
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.6",
+    "@types/lodash": "^4.17.6",
     "@types/react": "^18.2.66",
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^18.2.22",

@@ -24,7 +24,7 @@ export interface TableData {
 export interface ComponentType {
     components: any;
     component_name: string;
-    template_name: string;
+    template_name: any;
     data: any;
     is_active: boolean;
     inner_component: number;

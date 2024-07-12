@@ -14,12 +14,14 @@ import {
   Spin,
   Collapse,
   message,
+  Menu,
+  Dropdown,
 } from "antd";
 import {
   DownloadOutlined,
-  UploadOutlined,
   PlusOutlined,
   MenuOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { HiHome } from "react-icons/hi2";
 import TemplateForm from "../templateForm/TemplateForm";
@@ -28,7 +30,7 @@ import "react-toastify/dist/ReactToastify.css";
 import CreateComponent from "../components/createComponents";
 import * as templateApi from "../api/createTemplate.api";
 import { createTableData } from "../utils/CreateTableData";
-
+import SelectExistingComponent from "../components/selectExistingComponent";
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
 
@@ -53,7 +55,8 @@ const CreateTemplate: React.FC = () => {
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
   const [isTemplateFormVisible, setIsTemplateFormVisible] =
     useState<boolean>(false);
-
+  const [isSelectingComponent, setIsSelectingComponent] =
+    useState<boolean>(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -107,6 +110,7 @@ const CreateTemplate: React.FC = () => {
     setIsCreatingComponent(true);
     setEditingComponent(null);
     setActiveComponent(null);
+    setIsSelectingComponent(false);
   };
 
   const handleCloseCreateComponent = () => {
@@ -252,6 +256,30 @@ const CreateTemplate: React.FC = () => {
   const refreshComponents = async () => {
     await fetchData();
   };
+
+  const handleExistingComponentSelect = (component: ComponentType) => {
+    setComponents((prevComponents) => [...prevComponents, component]);
+    setIsSelectingComponent(false);
+    message.success("Component added successfully");
+  };
+
+  const menu = (
+    <Menu>
+      <Menu.Item key="1" onClick={() => setIsSelectingComponent(true)}>
+        Select Existing Component
+      </Menu.Item>
+      <Menu.Item key="2" onClick={handleOpenCreateComponent}>
+        Create New Component
+      </Menu.Item>
+      <Menu.Item key="3" onClick={handleOpenTemplateForm}>
+        Create Form
+      </Menu.Item>
+      <Menu.Item key="4" onClick={showModal}>
+        Use Existing Component
+      </Menu.Item>
+    </Menu>
+  );
+
   return (
     <Layout className="h-screen">
       <ToastContainer />
@@ -283,36 +311,23 @@ const CreateTemplate: React.FC = () => {
           </h1>
         </div>
         <div className="flex gap-2">
-          <Tooltip title="Create New Component">
+          <Tooltip title="Refresh Data">
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              onClick={refetchData}
+              className="text-indigo-600 hover:bg-indigo-50"
+            />
+          </Tooltip>
+          <Dropdown overlay={menu} placement="bottomRight">
             <Button
               type="primary"
-              onClick={handleOpenCreateComponent}
               icon={<PlusOutlined />}
               className="bg-indigo-500 hover:bg-indigo-600"
             >
-              Create New
+              Add Component
             </Button>
-          </Tooltip>
-          <Tooltip title="Create New Form">
-            <Button
-              type="default"
-              onClick={handleOpenTemplateForm}
-              icon={<PlusOutlined />}
-              className="border-indigo-500 text-indigo-500 hover:bg-indigo-50"
-            >
-              Create Form
-            </Button>
-          </Tooltip>
-          <Tooltip title="Use Existing Component">
-            <Button
-              type="default"
-              onClick={showModal}
-              icon={<UploadOutlined />}
-              className="border-indigo-500 text-indigo-500 hover:bg-indigo-50"
-            >
-              Use Existing
-            </Button>
-          </Tooltip>
+          </Dropdown>
         </div>
       </Header>
       <TemplateForm
@@ -365,6 +380,12 @@ const CreateTemplate: React.FC = () => {
                 <h2 className="text-xl font-semibold mb-4">
                   Component Details
                 </h2>
+                {isSelectingComponent && (
+                  <SelectExistingComponent
+                    onComponentSelect={handleExistingComponentSelect}
+                    templateName={template_name || ""}
+                  />
+                )}
                 {isCreatingComponent && (
                   <CreateComponent
                     key={editingComponent ? editingComponent._id : "new"}
@@ -392,9 +413,11 @@ const CreateTemplate: React.FC = () => {
                     />
                   </div>
                 )}
-                {!activeComponent && !isCreatingComponent && (
-                  <Empty description="Select a component to view details" />
-                )}
+                {!activeComponent &&
+                  !isCreatingComponent &&
+                  !isSelectingComponent && (
+                    <Empty description="Select a component to view details" />
+                  )}
               </Card>
               <Card
                 className="w-1/2 shadow-lg bg-white overflow-y-auto hide-scrollbar"
@@ -404,7 +427,7 @@ const CreateTemplate: React.FC = () => {
                 <div className="space-y-4 flex flex-col items-center justify-center">
                   {!activeComponent && !editingComponent ? (
                     components?.map((component, index) => (
-                      <Card key={index} className="mb-4" size="small">
+                      <Card key={index} className="mb-4 w-full" size="small">
                         <p className="text-center text-lg font-semibold mb-2 text-indigo-600">
                           {component.component_name}
                         </p>
@@ -421,7 +444,8 @@ const CreateTemplate: React.FC = () => {
                                     )[1]
                                   }`
                             }
-                            className="rounded-lg shadow-sm"
+                            className="rounded-lg shadow-sm max-w-full h-auto"
+                            alt={component.component_name}
                           />
                         </div>
                       </Card>

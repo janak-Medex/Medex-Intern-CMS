@@ -17,3 +17,7 @@
 .hide-scrollbar::-webkit-scrollbar-thumb {
   background: transparent;
 }
+
+.hide-choose-file {
+  display: none !important;
+}

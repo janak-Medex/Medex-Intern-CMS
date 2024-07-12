@@ -2,11 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { FaPlus, FaTrash, FaUpload, FaExpand } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import { message } from "antd";
-import {
-  createComponent,
-  updateComponent,
-  ComponentData,
-} from "../api/component.api";
+import { createComponent, updateComponent } from "../api/component.api";
 import SchemaRuleManager from "./SchemaRuleManager";
 import { FormField, Props } from "./types";
 import {
@@ -14,7 +10,7 @@ import {
   handleImageChange,
   toggleFullscreen,
 } from "../utils/ComponentHelpers";
-
+import { ComponentType } from "../template/types";
 const CreateComponent: React.FC<Props> = ({
   onClose,
   onCreate,
@@ -109,9 +105,9 @@ const CreateComponent: React.FC<Props> = ({
       return acc;
     }, {} as Record<string, string>);
 
-    const componentData: ComponentData = {
+    const ComponentType: ComponentType = {
       component_name,
-      template_name,
+      template_name, // remove the comma here
       data: [formFieldsObject],
       is_active: true,
       inner_component: innerComponent,
@@ -120,9 +116,9 @@ const CreateComponent: React.FC<Props> = ({
     try {
       let response;
       if (initialComponent) {
-        response = await updateComponent(componentData, componentImage);
+        response = await updateComponent(ComponentType, componentImage);
       } else {
-        response = await createComponent(componentData, componentImage);
+        response = await createComponent(ComponentType, componentImage);
       }
 
       message.success(

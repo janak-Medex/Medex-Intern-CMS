@@ -14,7 +14,7 @@ export interface SchemaRule {
 export interface Component {
     components: any;
     component_name: string;
-    template_name: string;
+    template_name: string | undefined;
     data: FormField[];
     is_active: boolean;
     inner_component: number;

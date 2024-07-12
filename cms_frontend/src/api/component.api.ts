@@ -2,19 +2,19 @@ import axiosInstance from "../http/axiosInstance";
 
 import { Component } from "../components/types";
 import { message } from "antd";
+import { ComponentType } from "../template/types";
 
 // src/services/api.ts
 
 
-export interface ComponentData {
-    component_name: string;
-    template_name?: string;
-    data: any[];
-    is_active: boolean;
-    inner_component: number;
-}
 
-export const createComponent = async (componentData: ComponentData, componentImage: File | null) => {
+
+export const fetchAllComponents = async (): Promise<ComponentType[]> => {
+    const response = await axiosInstance.get('/components');
+    return response.data;
+};
+
+export const createComponent = async (componentData: ComponentType, componentImage: File | null) => {
     const formData = new FormData();
 
     formData.append("component_name", componentData.component_name);
@@ -38,7 +38,7 @@ export const createComponent = async (componentData: ComponentData, componentIma
     return response.data;
 };
 
-export const updateComponent = async (componentData: ComponentData, componentImage: File | null) => {
+export const updateComponent = async (componentData: ComponentType, componentImage: File | null) => {
     const formData = new FormData();
 
     formData.append("component_name", componentData.component_name);
