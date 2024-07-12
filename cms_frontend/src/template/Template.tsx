@@ -164,7 +164,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
           fetchTemplates();
           settemplate_name("");
           setIsModalOpen(false);
-          navigate(`/create-template/${template_name}`);
+          navigate(`/template/${template_name}`);
         }
       } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
@@ -211,7 +211,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
       case "edit":
         const template = templates.find((t) => t._id === templateId);
         if (template) {
-          navigate(`/create-template/${template.template_name}`);
+          navigate(`/template/${template.template_name}`);
         }
         break;
       case "delete":
@@ -352,7 +352,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               >
                 <div className="flex justify-between items-start mb-4">
                   <Link
-                    to={`/create-template/${template.template_name}`}
+                    to={`/template/${template.template_name}`}
                     className="block w-full"
                   >
                     <h3 className="text-xl font-semibold text-gray-800 hover:text-blue-600 transition-colors duration-300">

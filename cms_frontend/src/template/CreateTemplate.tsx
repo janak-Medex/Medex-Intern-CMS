@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ComponentType, TemplateDetails, TableData } from "./types";
 import ComponentList from "../components/ComponentList";
@@ -16,12 +16,16 @@ import {
   message,
   Menu,
   Dropdown,
+  Space,
 } from "antd";
 import {
   DownloadOutlined,
-  PlusOutlined,
   MenuOutlined,
   ReloadOutlined,
+  AppstoreAddOutlined,
+  FileAddOutlined,
+  FormOutlined,
+  ImportOutlined,
 } from "@ant-design/icons";
 import { HiHome } from "react-icons/hi2";
 import TemplateForm from "../templateForm/TemplateForm";
@@ -31,11 +35,15 @@ import CreateComponent from "../components/createComponents";
 import * as templateApi from "../api/createTemplate.api";
 import { createTableData } from "../utils/CreateTableData";
 import SelectExistingComponent from "../components/selectExistingComponent";
+import { IoIosAdd } from "react-icons/io";
+
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
 
 const CreateTemplate: React.FC = () => {
   const { template_name } = useParams<{ template_name: string }>();
+  const navigate = useNavigate();
+
   const [toggleStates, setToggleStates] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -57,13 +65,10 @@ const CreateTemplate: React.FC = () => {
     useState<boolean>(false);
   const [isSelectingComponent, setIsSelectingComponent] =
     useState<boolean>(false);
-  const navigate = useNavigate();
+  const [selectedMenuKey, setSelectedMenuKey] = useState("");
+  const [addButtonText, setAddButtonText] = useState("Add Component");
 
-  useEffect(() => {
-    fetchData();
-  }, [template_name]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const details = await templateApi.fetchTemplateDetails(template_name!);
@@ -78,110 +83,145 @@ const CreateTemplate: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [template_name]);
 
-  const handleToggle = (component_name: string) => {
-    setToggleStates((prevState) => ({
-      ...prevState,
-      [component_name]: !prevState[component_name],
-    }));
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-    if (!toggleStates[component_name]) {
-      const component = components.find(
-        (comp) => comp.component_name === component_name
-      );
-      if (component) {
-        setActiveComponent({
-          ...component,
-          data: Array.isArray(component.data)
-            ? component.data
-            : [component.data],
-        });
-      } else {
-        setActiveComponent(null);
-      }
-      setIsCreatingComponent(false);
-    } else {
-      setActiveComponent(null);
-    }
-  };
-
-  const handleOpenCreateComponent = () => {
-    setIsCreatingComponent(true);
+  const closeAllComponents = useCallback(() => {
+    setIsCreatingComponent(false);
+    setIsSelectingComponent(false);
     setEditingComponent(null);
     setActiveComponent(null);
-    setIsSelectingComponent(false);
-  };
+    setToggleStates({});
+  }, []);
 
-  const handleCloseCreateComponent = () => {
-    setIsCreatingComponent(false);
-  };
+  const handleToggle = useCallback(
+    (component_name: string, isEditing: boolean = false) => {
+      setToggleStates((prevState) => ({
+        ...prevState,
+        [component_name]: !prevState[component_name],
+      }));
 
-  const addComponent = (component: ComponentType) => {
-    setComponents((prevComponents) => [...prevComponents, component]);
-  };
-
-  const onCreateComponent = async (newComponent: ComponentType) => {
-    try {
-      const index = components.findIndex(
-        (comp) => comp.component_name === newComponent.component_name
-      );
-      if (index === -1) {
-        addComponent(newComponent);
+      if (!toggleStates[component_name] || isEditing) {
+        const component = components.find(
+          (comp) => comp.component_name === component_name
+        );
+        if (component) {
+          setActiveComponent({
+            ...component,
+            data: Array.isArray(component.data)
+              ? component.data
+              : [component.data],
+          });
+          setIsCreatingComponent(isEditing);
+          setIsSelectingComponent(false);
+          setEditingComponent(isEditing ? component : null);
+        } else {
+          setActiveComponent(null);
+          setIsCreatingComponent(false);
+          setIsSelectingComponent(false);
+          setEditingComponent(null);
+        }
       } else {
-        const updatedComponents = [...components];
-        updatedComponents[index] = newComponent;
-        setComponents(updatedComponents);
-      }
-      await fetchData();
-      setIsCreatingComponent(false);
-      message.success("Component saved successfully");
-    } catch (error) {
-      console.error("Error saving component:", error);
-      message.error("Failed to save component");
-    }
-  };
-
-  const onDeleteComponent = async (componentId: string) => {
-    try {
-      await templateApi.deleteComponent(templateDetails?._id!, componentId);
-      setComponents((prevComponents) =>
-        prevComponents.filter((comp) => comp._id !== componentId)
-      );
-      if (activeComponent?._id === componentId) {
         setActiveComponent(null);
+        setIsCreatingComponent(false);
+        setIsSelectingComponent(false);
+        setEditingComponent(null);
       }
-      message.success("Component deleted successfully");
-    } catch (error) {
-      console.error("Error deleting component:", error);
-      message.error("Failed to delete component");
-    }
-  };
+    },
+    [components, toggleStates]
+  );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeComponent) return;
-    try {
-      const savedComponent = await templateApi.saveComponent(
-        activeComponent,
-        template_name!
-      );
-      const updatedComponents = components.map((comp) =>
-        comp.component_name === savedComponent.component_name
-          ? savedComponent
-          : comp
-      );
-      setComponents(updatedComponents);
-      setActiveComponent(savedComponent);
-      await fetchData();
-      message.success("Component saved successfully");
-    } catch (error) {
-      console.error("Error saving component:", error);
-      message.error("Failed to save component");
-    }
-  };
+  const handleOpenCreateComponent = useCallback(() => {
+    closeAllComponents();
+    setIsCreatingComponent(true);
+  }, [closeAllComponents]);
 
-  const handleSetFormData = (updatedFormData: any) => {
+  const handleCloseCreateComponent = useCallback(() => {
+    setIsCreatingComponent(false);
+    setEditingComponent(null);
+    setActiveComponent(null);
+  }, []);
+
+  const addComponent = useCallback((component: ComponentType) => {
+    setComponents((prevComponents) => [...prevComponents, component]);
+  }, []);
+
+  const onCreateComponent = useCallback(
+    async (newComponent: ComponentType) => {
+      try {
+        const index = components.findIndex(
+          (comp) => comp.component_name === newComponent.component_name
+        );
+        if (index === -1) {
+          addComponent(newComponent);
+        } else {
+          setComponents((prevComponents) => {
+            const updatedComponents = [...prevComponents];
+            updatedComponents[index] = newComponent;
+            return updatedComponents;
+          });
+        }
+        await fetchData();
+        setIsCreatingComponent(false);
+        message.success("Component saved successfully");
+      } catch (error) {
+        console.error("Error saving component:", error);
+        message.error("Failed to save component");
+      }
+    },
+    [components, addComponent, fetchData]
+  );
+
+  const onDeleteComponent = useCallback(
+    async (componentId: string) => {
+      try {
+        await templateApi.deleteComponent(templateDetails?._id!, componentId);
+        setComponents((prevComponents) =>
+          prevComponents.filter((comp) => comp._id !== componentId)
+        );
+        if (activeComponent?._id === componentId) {
+          setActiveComponent(null);
+        }
+        message.success("Component deleted successfully");
+      } catch (error) {
+        console.error("Error deleting component:", error);
+        message.error("Failed to delete component");
+      }
+    },
+    [templateDetails, activeComponent]
+  );
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!activeComponent) return;
+      try {
+        const savedComponent = await templateApi.saveComponent(
+          activeComponent,
+          template_name!
+        );
+        setComponents((prevComponents) =>
+          prevComponents.map((comp) =>
+            comp.component_name === savedComponent.component_name
+              ? savedComponent
+              : comp
+          )
+        );
+        setActiveComponent(savedComponent);
+        await fetchData();
+        message.success("Component saved successfully");
+      } catch (error) {
+        console.error("Error saving component:", error);
+        message.error("Failed to save component");
+      }
+    },
+    [activeComponent, template_name, fetchData]
+  );
+
+  const handleSetFormData = useCallback((updatedFormData: any) => {
     setActiveComponent((prevActiveComponent) => {
       if (!prevActiveComponent) return null;
       return {
@@ -189,48 +229,58 @@ const CreateTemplate: React.FC = () => {
         data: updatedFormData,
       };
     });
-  };
+  }, []);
 
-  const handleImportComponent = async (component: any) => {
-    try {
-      const importedComponent = await templateApi.importComponent(
-        component,
-        template_name!
-      );
-      setComponents((prevComponents) => [...prevComponents, importedComponent]);
-      await fetchData();
-      message.success("Component imported successfully");
-    } catch (error) {
-      console.error("Error posting component:", error);
-      message.error("Failed to import component");
-    }
-  };
+  const handleImportComponent = useCallback(
+    async (component: any) => {
+      try {
+        const importedComponent = await templateApi.importComponent(
+          component,
+          template_name!
+        );
+        setComponents((prevComponents) => [
+          ...prevComponents,
+          importedComponent,
+        ]);
+        await fetchData();
+        message.success("Component imported successfully");
+      } catch (error) {
+        console.error("Error posting component:", error);
+        message.error("Failed to import component");
+      }
+    },
+    [template_name, fetchData]
+  );
 
-  const showModal = () => setIsModalOpen(true);
-  const handleOk = () => setIsModalOpen(false);
-  const handleCancel = () => setIsModalOpen(false);
+  const showModal = useCallback(() => setIsModalOpen(true), []);
+  const handleOk = useCallback(() => setIsModalOpen(false), []);
+  const handleCancel = useCallback(() => setIsModalOpen(false), []);
 
-  const tableData: TableData[] = createTableData(allComponents);
+  const tableData: TableData[] = useMemo(
+    () => createTableData(allComponents),
+    [allComponents]
+  );
 
-  const refreshState = () => {
-    setActiveComponent(null);
-    setIsCreatingComponent(false);
-    setEditingComponent(null);
+  const refreshState = useCallback(() => {
+    closeAllComponents();
     setToggleStates({});
-    setComponents([...components]);
+    setAddButtonText("Add Component");
+    setComponents((prevComponents) => [...prevComponents]);
     message.success("Template view refreshed");
-  };
+  }, [closeAllComponents]);
 
-  const handleHomeClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    navigate("/template", { replace: true });
-  };
+  const handleHomeClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      navigate("/template", { replace: true });
+    },
+    [navigate]
+  );
 
-  const refetchData = async () => {
+  const refetchData = useCallback(async () => {
     try {
-      setActiveComponent(null);
-      setIsCreatingComponent(false);
-      setEditingComponent(null);
+      closeAllComponents();
+      setAddButtonText("Add Component");
       setToggleStates({});
       setComponents([]);
       await fetchData();
@@ -239,45 +289,100 @@ const CreateTemplate: React.FC = () => {
       console.error("Error refreshing data:", error);
       message.error("Failed to refresh data");
     }
-  };
+  }, [closeAllComponents, fetchData]);
 
-  const handleOpenTemplateForm = () => {
+  const handleOpenTemplateForm = useCallback(() => {
+    closeAllComponents();
     setIsTemplateFormVisible(true);
-  };
+  }, [closeAllComponents]);
 
-  const handleCloseTemplateForm = () => {
+  const handleCloseTemplateForm = useCallback(() => {
     setIsTemplateFormVisible(false);
-  };
+  }, []);
 
-  const handleFormCreated = () => {
+  const handleFormCreated = useCallback(() => {
     fetchData();
-  };
+  }, [fetchData]);
 
-  const refreshComponents = async () => {
-    await fetchData();
-  };
+  const handleExistingComponentSelect = useCallback(
+    (component: ComponentType) => {
+      setComponents((prevComponents) => [...prevComponents, component]);
+      setIsSelectingComponent(false);
+      message.success("Component added successfully");
+    },
+    []
+  );
 
-  const handleExistingComponentSelect = (component: ComponentType) => {
-    setComponents((prevComponents) => [...prevComponents, component]);
-    setIsSelectingComponent(false);
-    message.success("Component added successfully");
-  };
+  const handleMenuClick = useCallback(
+    (key: string, name: string) => {
+      setSelectedMenuKey(key);
+      setAddButtonText(name);
+      closeAllComponents();
 
-  const menu = (
-    <Menu>
-      <Menu.Item key="1" onClick={() => setIsSelectingComponent(true)}>
-        Select Existing Component
-      </Menu.Item>
-      <Menu.Item key="2" onClick={handleOpenCreateComponent}>
-        Create New Component
-      </Menu.Item>
-      <Menu.Item key="3" onClick={handleOpenTemplateForm}>
-        Create Form
-      </Menu.Item>
-      <Menu.Item key="4" onClick={showModal}>
-        Use Existing Component
-      </Menu.Item>
-    </Menu>
+      switch (key) {
+        case "1":
+          setIsSelectingComponent(true);
+          break;
+        case "2":
+          handleOpenCreateComponent();
+          break;
+        case "3":
+          handleOpenTemplateForm();
+          break;
+        case "4":
+          showModal();
+          break;
+        default:
+          break;
+      }
+    },
+    [
+      closeAllComponents,
+      handleOpenCreateComponent,
+      handleOpenTemplateForm,
+      showModal,
+    ]
+  );
+
+  const menu = useMemo(
+    () => (
+      <Menu selectedKeys={[selectedMenuKey]}>
+        <Menu.Item
+          key="1"
+          onClick={() => handleMenuClick("1", "Select Existing Component")}
+        >
+          <Space>
+            <AppstoreAddOutlined />
+            Select Existing Component
+          </Space>
+        </Menu.Item>
+        <Menu.Item
+          key="2"
+          onClick={() => handleMenuClick("2", "Create New Component")}
+        >
+          <Space>
+            <FileAddOutlined />
+            Create New Component
+          </Space>
+        </Menu.Item>
+        <Menu.Item key="3" onClick={() => handleMenuClick("3", "Create Form")}>
+          <Space>
+            <FormOutlined />
+            Create Form
+          </Space>
+        </Menu.Item>
+        <Menu.Item
+          key="4"
+          onClick={() => handleMenuClick("4", "Import Existing Component")}
+        >
+          <Space>
+            <ImportOutlined />
+            Import Existing Component
+          </Space>
+        </Menu.Item>
+      </Menu>
+    ),
+    [selectedMenuKey, handleMenuClick]
   );
 
   return (
@@ -321,11 +426,18 @@ const CreateTemplate: React.FC = () => {
           </Tooltip>
           <Dropdown overlay={menu} placement="bottomRight">
             <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              className="bg-indigo-500 hover:bg-indigo-600"
+              className="border-1  border-indigo-600 hover:border-gray-400 rounded-full shadow-sm"
+              style={{
+                width: "240px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "8px 16px",
+              }}
+              icon={<IoIosAdd size={20} />}
             >
-              Add Component
+              <span className="text-indigo-300-600">{addButtonText}</span>{" "}
+              {/* Display the button text */}
             </Button>
           </Dropdown>
         </div>
@@ -353,9 +465,7 @@ const CreateTemplate: React.FC = () => {
             toggleStates={toggleStates}
             onToggle={handleToggle}
             onEdit={(component) => {
-              setEditingComponent(component as ComponentType);
-              setIsCreatingComponent(true);
-              setActiveComponent(null);
+              handleToggle(component.component_name, true);
             }}
             onDelete={(componentId) => onDeleteComponent(componentId)}
             onShowComponentForm={(component) => {
@@ -364,7 +474,7 @@ const CreateTemplate: React.FC = () => {
             }}
             template_name={template_name || ""}
             setComponents={setComponents}
-            refreshComponents={refreshComponents}
+            refreshComponents={fetchData}
           />
         </Sider>
         <Content
@@ -386,7 +496,7 @@ const CreateTemplate: React.FC = () => {
                     templateName={template_name || ""}
                   />
                 )}
-                {isCreatingComponent && (
+                {(isCreatingComponent || editingComponent) && (
                   <CreateComponent
                     key={editingComponent ? editingComponent._id : "new"}
                     onClose={handleCloseCreateComponent}
@@ -394,25 +504,27 @@ const CreateTemplate: React.FC = () => {
                     initialComponent={editingComponent}
                   />
                 )}
-                {activeComponent && !isCreatingComponent && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2 text-indigo-600">
-                      {activeComponent.component_name}
-                    </h3>
-                    <FormComponent
-                      formData={
-                        Array.isArray(activeComponent.data)
-                          ? activeComponent.data
-                          : [activeComponent.data]
-                      }
-                      component_name={activeComponent.component_name}
-                      template_name={template_name}
-                      setFormData={handleSetFormData}
-                      handleSubmit={handleSubmit}
-                      refetchData={refetchData}
-                    />
-                  </div>
-                )}
+                {activeComponent &&
+                  !isCreatingComponent &&
+                  !isSelectingComponent && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2 text-indigo-600">
+                        {activeComponent.component_name}
+                      </h3>
+                      <FormComponent
+                        formData={
+                          Array.isArray(activeComponent.data)
+                            ? activeComponent.data
+                            : [activeComponent.data]
+                        }
+                        component_name={activeComponent.component_name}
+                        template_name={template_name}
+                        setFormData={handleSetFormData}
+                        handleSubmit={handleSubmit}
+                        refetchData={refetchData}
+                      />
+                    </div>
+                  )}
                 {!activeComponent &&
                   !isCreatingComponent &&
                   !isSelectingComponent && (
@@ -462,7 +574,7 @@ const CreateTemplate: React.FC = () => {
                             (
                               activeComponent || editingComponent
                             )?.component_name.startsWith("Form_")
-                              ? "path/to/default/image.png"
+                              ? "/images/form.svg"
                               : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
                                   (
                                     activeComponent || editingComponent
@@ -470,6 +582,10 @@ const CreateTemplate: React.FC = () => {
                                 }`
                           }
                           className="rounded-lg shadow-sm"
+                          alt={
+                            activeComponent?.component_name ||
+                            editingComponent?.component_name
+                          }
                         />
                       </div>
                     </Card>
@@ -533,4 +649,4 @@ const CreateTemplate: React.FC = () => {
   );
 };
 
-export default CreateTemplate;
+export default React.memo(CreateTemplate);
