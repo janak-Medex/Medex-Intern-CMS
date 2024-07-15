@@ -494,6 +494,7 @@ const CreateTemplate: React.FC = () => {
                   <SelectExistingComponent
                     onComponentSelect={handleExistingComponentSelect}
                     templateName={template_name || ""}
+                    refetchData={refetchData}
                   />
                 )}
                 {(isCreatingComponent || editingComponent) && (
