@@ -30,11 +30,13 @@ const { Title, Text, Paragraph } = Typography;
 interface SelectExistingComponentProps {
   onComponentSelect: (component: ComponentType) => void;
   templateName: string;
+  refetchData: () => void;
 }
 
 const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
   onComponentSelect,
   templateName,
+  refetchData,
 }) => {
   const [form] = Form.useForm();
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
@@ -113,6 +115,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       onComponentSelect(newComponent);
       message.success("Component added successfully");
       form.resetFields();
+      refetchData();
       setSelectedComponent(null);
       setComponentImagePreview(null);
       setSelectedFilePreviews({});
