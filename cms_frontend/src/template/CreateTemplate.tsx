@@ -305,12 +305,17 @@ const CreateTemplate: React.FC = () => {
   }, [fetchData]);
 
   const handleExistingComponentSelect = useCallback(
-    (component: ComponentType) => {
-      setComponents((prevComponents) => [...prevComponents, component]);
-      setIsSelectingComponent(false);
-      message.success("Component added successfully");
+    async (_component: ComponentType) => {
+      try {
+        await fetchData(); // Refetch data to get the latest components
+        setIsSelectingComponent(false);
+        message.success("Component added successfully");
+      } catch (error) {
+        console.error("Error adding component:", error);
+        message.error("Failed to add component");
+      }
     },
-    []
+    [fetchData]
   );
 
   const handleMenuClick = useCallback(
@@ -493,8 +498,8 @@ const CreateTemplate: React.FC = () => {
                 {isSelectingComponent && (
                   <SelectExistingComponent
                     onComponentSelect={handleExistingComponentSelect}
-                    templateName={template_name || ""}
-                    refetchData={refetchData}
+                    template_name={template_name || ""}
+                    refetchData={fetchData}
                   />
                 )}
                 {(isCreatingComponent || editingComponent) && (

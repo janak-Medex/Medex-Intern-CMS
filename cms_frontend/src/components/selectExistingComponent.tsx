@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 import {
   Select,
   Button,
   message,
-  Form,
   Input,
   Image,
   Card,
@@ -23,28 +22,27 @@ import { fetchAllComponents } from "../api/component.api";
 import { AiOutlineFile } from "react-icons/ai";
 import { RiCloseCircleFill } from "react-icons/ri";
 import { ComponentType } from "../template/types";
+import { submitFormData } from "../api/form.api";
 
 const { Option } = Select;
 const { Title, Text, Paragraph } = Typography;
 
 interface SelectExistingComponentProps {
   onComponentSelect: (component: ComponentType) => void;
-  templateName: string;
+  template_name: string;
   refetchData: () => void;
 }
 
 const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
   onComponentSelect,
-  templateName,
+  template_name,
   refetchData,
 }) => {
-  const [form] = Form.useForm();
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
   const [allComponents, setAllComponents] = useState<ComponentType[]>([]);
-  const [selectedComponent, setSelectedComponent] = useState<string | null>(
-    null
-  );
+  const [selectedComponent, setSelectedComponent] =
+    useState<ComponentType | null>(null);
   const [componentImagePreview, setComponentImagePreview] = useState<
     string | null
   >(null);
@@ -53,6 +51,10 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
   }>({});
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<{ [key: string]: File[] }>(
+    {}
+  );
+  const [formData, setFormData] = useState<{ [key: string]: any }>({});
 
   useEffect(() => {
     fetchComponents();
@@ -76,10 +78,10 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
   };
 
   const handleComponentSelect = (value: string) => {
-    setSelectedComponent(value);
     const selected = allComponents.find((c) => c.component_name === value);
     if (selected) {
-      form.setFieldsValue({
+      setSelectedComponent(selected);
+      setFormData({
         component_name: selected.component_name,
         inner_component: selected.inner_component,
       });
@@ -91,39 +93,18 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       } else {
         setComponentImagePreview(null);
       }
-
       setSelectedFilePreviews({});
-      form.resetFields(["data"]);
-    }
-  };
-
-  const handleSubmit = (values: any) => {
-    const selected = allComponents.find(
-      (c) => c.component_name === selectedComponent
-    );
-    if (selected) {
-      const newComponent: ComponentType = {
-        ...selected,
-        template_name: templateName,
-        data: [
-          {
-            ...values.data,
-          },
-        ],
-        is_active: true,
-      };
-      onComponentSelect(newComponent);
-      message.success("Component added successfully");
-      form.resetFields();
-      refetchData();
-      setSelectedComponent(null);
-      setComponentImagePreview(null);
-      setSelectedFilePreviews({});
+      setSelectedFiles({});
     }
   };
 
   const handleFileSelect = (key: string, files: FileList) => {
     const fileArray = Array.from(files);
+    setSelectedFiles((prev) => ({
+      ...prev,
+      [key]: [...(prev[key] || []), ...fileArray],
+    }));
+
     const newPreviews = fileArray.map((file) => ({
       src: URL.createObjectURL(file),
       type: file.type.startsWith("video/")
@@ -141,13 +122,16 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       [key]: [...(prev[key] || []), ...newPreviews],
     }));
 
-    const currentFiles = form.getFieldValue(["data", key]) || [];
-    form.setFieldsValue({
+    setFormData((prev) => ({
+      ...prev,
       data: {
-        ...form.getFieldValue("data"),
-        [key]: [...currentFiles, ...fileArray],
+        ...prev.data,
+        [key]: [
+          ...(prev.data?.[key] || []),
+          ...fileArray.map((file) => file.name),
+        ],
       },
-    });
+    }));
   };
 
   const handleClearFile = (key: string, fileIndex: number) => {
@@ -157,13 +141,132 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       return newState;
     });
 
-    const currentFiles = form.getFieldValue(["data", key]) || [];
-    form.setFieldsValue({
-      data: {
-        ...form.getFieldValue("data"),
-        [key]: currentFiles.filter((_: any, i: number) => i !== fileIndex),
-      },
+    setFormData((prev) => {
+      const newData = { ...prev.data };
+      newData[key] = newData[key].filter(
+        (_: any, i: number) => i !== fileIndex
+      );
+      return { ...prev, data: newData };
     });
+  };
+
+  const handleInputChange = (key: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      data: { ...prev.data, [key]: value },
+    }));
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!selectedComponent) return;
+
+    try {
+      const formPayload = new FormData();
+      formPayload.append("template_name", template_name);
+      formPayload.append("component_name", selectedComponent.component_name);
+
+      // Handle file uploads and create data array
+      const dataArray = Object.entries(formData.data || {}).map(
+        ([key, value]) => {
+          const dataItem: { [key: string]: any } = {};
+          if (Array.isArray(value)) {
+            const files = selectedFiles[key];
+            if (files && files.length > 0) {
+              const fileDataArray = files.map((file) => {
+                formPayload.append("files", file);
+                return {
+                  name: file.name,
+                  originalName: file.name,
+                };
+              });
+              dataItem[key] = fileDataArray;
+            } else {
+              dataItem[key] = value;
+            }
+          } else {
+            dataItem[key] = value;
+          }
+          return dataItem;
+        }
+      );
+
+      // Append the stringified data array to the FormData
+      formPayload.append("data", JSON.stringify(dataArray));
+
+      // Append other necessary fields
+      formPayload.append("is_active", "true");
+      formPayload.append(
+        "inner_component",
+        selectedComponent.inner_component.toString()
+      );
+
+      console.log("FormData entries:");
+      for (let [key, value] of formPayload.entries()) {
+        if (value instanceof File) {
+          console.log(key, `File: ${value.name}`);
+        } else {
+          console.log(key, value);
+        }
+      }
+
+      const response = await submitFormData(formPayload);
+      console.log("API response:", response);
+
+      if (response.status === 201) {
+        // Update formData with server-returned file paths
+        const updatedFormData = { ...formData };
+        const serverReturnedData = response.data.data;
+
+        console.log("Server returned data:", serverReturnedData);
+
+        if (Array.isArray(serverReturnedData)) {
+          serverReturnedData.forEach((item: any) => {
+            Object.keys(item).forEach((key) => {
+              if (Array.isArray(item[key])) {
+                if (!updatedFormData.data) {
+                  updatedFormData.data = {};
+                }
+                updatedFormData.data[key] = item[key];
+              }
+            });
+          });
+        } else if (
+          typeof serverReturnedData === "object" &&
+          serverReturnedData !== null
+        ) {
+          Object.keys(serverReturnedData).forEach((key) => {
+            if (Array.isArray(serverReturnedData[key])) {
+              if (!updatedFormData.data) {
+                updatedFormData.data = {};
+              }
+              updatedFormData.data[key] = serverReturnedData[key];
+            }
+          });
+        } else {
+          console.warn(
+            "Unexpected server response structure:",
+            serverReturnedData
+          );
+        }
+
+        setFormData(updatedFormData);
+        onComponentSelect(response.data);
+        setSelectedComponent(null);
+        setComponentImagePreview(null);
+        setSelectedFilePreviews({});
+        setSelectedFiles({});
+        await refetchData();
+        message.success("Component added successfully");
+      } else {
+        message.error("Failed to add component");
+      }
+    } catch (error: any) {
+      console.error("Error submitting form:", error);
+      message.error(
+        error.response?.data?.message || "An unexpected error occurred"
+      );
+    }
   };
 
   const getFieldComponent = (key: string) => {
@@ -180,18 +283,13 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
         : "*/*";
 
       return (
-        <Form.Item
-          name={["data", key]}
-          label={
-            <span>
-              {key}{" "}
-              <Tooltip title={`Select ${key} files`}>
-                <InfoCircleOutlined style={{ color: "#1890ff" }} />
-              </Tooltip>
-            </span>
-          }
-          rules={[{ required: true, message: `Please select ${key}` }]}
-        >
+        <div key={key}>
+          <label>
+            {key}{" "}
+            <Tooltip title={`Select ${key} files`}>
+              <InfoCircleOutlined style={{ color: "#1890ff" }} />
+            </Tooltip>
+          </label>
           <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {previews.map((preview, fileIndex) => (
@@ -261,24 +359,23 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
               }}
             />
           </div>
-        </Form.Item>
+        </div>
       );
     } else {
       return (
-        <Form.Item
-          name={["data", key]}
-          label={
-            <span>
-              {key}{" "}
-              <Tooltip title={`Enter ${key}`}>
-                <InfoCircleOutlined style={{ color: "#1890ff" }} />
-              </Tooltip>
-            </span>
-          }
-          rules={[{ required: true, message: `Please enter ${key}` }]}
-        >
-          <Input prefix={<EditOutlined className="site-form-item-icon" />} />
-        </Form.Item>
+        <div key={key}>
+          <label>
+            {key}{" "}
+            <Tooltip title={`Enter ${key}`}>
+              <InfoCircleOutlined style={{ color: "#1890ff" }} />
+            </Tooltip>
+          </label>
+          <Input
+            prefix={<EditOutlined className="site-form-item-icon" />}
+            value={formData.data?.[key] || ""}
+            onChange={(e) => handleInputChange(key, e.target.value)}
+          />
+        </div>
       );
     }
   };
@@ -292,19 +389,14 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
         Select Existing Component
       </Title>
       <Spin spinning={loading}>
-        <Form form={form} onFinish={handleSubmit} layout="vertical">
-          <Form.Item
-            name="select_component"
-            label={
-              <span>
-                Select Component{" "}
-                <Tooltip title="Choose an existing component to add">
-                  <InfoCircleOutlined style={{ color: "#1890ff" }} />
-                </Tooltip>
-              </span>
-            }
-            rules={[{ required: true, message: "Please select a component" }]}
-          >
+        <form onSubmit={handleSubmit}>
+          <div>
+            <label>
+              Select Component{" "}
+              <Tooltip title="Choose an existing component to add">
+                <InfoCircleOutlined style={{ color: "#1890ff" }} />
+              </Tooltip>
+            </label>
             <AutoComplete
               style={{ width: "100%" }}
               placeholder="Search and select a component"
@@ -324,48 +416,37 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                 </Option>
               ))}
             </AutoComplete>
-          </Form.Item>
+          </div>
 
           {selectedComponent && (
             <Card className="mt-4 bg-gray-50">
-              <Form.Item
-                name="component_name"
-                label={
-                  <span>
-                    Component Name{" "}
-                    <Tooltip title="Name of the selected component">
-                      <InfoCircleOutlined style={{ color: "#1890ff" }} />
-                    </Tooltip>
-                  </span>
-                }
-              >
-                <Input disabled={true} />
-              </Form.Item>
+              <div>
+                <label>
+                  Component Name{" "}
+                  <Tooltip title="Name of the selected component">
+                    <InfoCircleOutlined style={{ color: "#1890ff" }} />
+                  </Tooltip>
+                </label>
+                <Input value={formData.component_name} disabled />
+              </div>
 
-              <Form.Item
-                name="inner_component"
-                label={
-                  <span>
-                    Inner Component{" "}
-                    <Tooltip title="Inner component number">
-                      <InfoCircleOutlined style={{ color: "#1890ff" }} />
-                    </Tooltip>
-                  </span>
-                }
-              >
-                <Input disabled={true} />
-              </Form.Item>
+              <div>
+                <label>
+                  Inner Component{" "}
+                  <Tooltip title="Inner component number">
+                    <InfoCircleOutlined style={{ color: "#1890ff" }} />
+                  </Tooltip>
+                </label>
+                <Input value={formData.inner_component} disabled />
+              </div>
 
-              <Form.Item
-                label={
-                  <span>
-                    Component Image{" "}
-                    <Tooltip title="Image associated with this component">
-                      <InfoCircleOutlined style={{ color: "#1890ff" }} />
-                    </Tooltip>
-                  </span>
-                }
-              >
+              <div>
+                <label>
+                  Component Image{" "}
+                  <Tooltip title="Image associated with this component">
+                    <InfoCircleOutlined style={{ color: "#1890ff" }} />
+                  </Tooltip>
+                </label>
                 <div className="flex items-center justify-center">
                   {componentImagePreview ? (
                     <Image
@@ -388,20 +469,16 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                     />
                   )}
                 </div>
-              </Form.Item>
-
-              <div className="space-y-6">
-                {allComponents.find(
-                  (c) => c.component_name === selectedComponent
-                )?.data[0] &&
-                  Object.keys(
-                    allComponents.find(
-                      (c) => c.component_name === selectedComponent
-                    )!.data[0]
-                  ).map((key) => getFieldComponent(key))}
               </div>
 
-              <Form.Item className="mt-8">
+              <div className="space-y-6">
+                {selectedComponent.data[0] &&
+                  Object.keys(selectedComponent.data[0]).map((key) =>
+                    getFieldComponent(key)
+                  )}
+              </div>
+
+              <div className="mt-8">
                 <Button
                   type="primary"
                   htmlType="submit"
@@ -412,10 +489,10 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                 >
                   Save Component
                 </Button>
-              </Form.Item>
+              </div>
             </Card>
           )}
-        </Form>
+        </form>
       </Spin>
 
       {!loading && allComponents.length === 0 && (
