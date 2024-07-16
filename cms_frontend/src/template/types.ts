@@ -7,6 +7,7 @@ export interface TemplateDetails {
     __v: number;
     components: ComponentType[];
     handleSubmit: any;
+    updatedAt: string;
 }
 
 export interface TableData {
@@ -19,6 +20,7 @@ export interface TableData {
         data: any;
         is_active: boolean;
     }[];
+    updatedAt: string;
 }
 
 export interface ComponentType {
@@ -30,4 +32,5 @@ export interface ComponentType {
     inner_component: number;
     component_image?: string;
     _id?: string;
+    updatedAt?: string;
 }

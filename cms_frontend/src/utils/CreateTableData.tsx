@@ -13,5 +13,6 @@ export const createTableData = (
       data: component.data,
       is_active: component.is_active,
     })),
+    updatedAt: template.updatedAt ? template.updatedAt : "", // Add this line
   }));
 };
