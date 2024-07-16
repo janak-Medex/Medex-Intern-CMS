@@ -142,6 +142,12 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       return newState;
     });
 
+    setSelectedFiles((prev) => {
+      const newState = { ...prev };
+      newState[key] = newState[key].filter((_, i) => i !== fileIndex);
+      return newState;
+    });
+
     setFormData((prev) => {
       const newData = { ...prev.data };
       newData[key] = newData[key].filter(
