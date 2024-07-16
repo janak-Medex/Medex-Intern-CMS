@@ -115,7 +115,7 @@ const CreateTemplate: React.FC = () => {
               ? component.data
               : [component.data],
           });
-          setIsCreatingComponent(isEditing);
+          setIsCreatingComponent(false); // Close the create component form
           setIsSelectingComponent(false);
           setEditingComponent(isEditing ? component : null);
         } else {
@@ -656,3 +656,6 @@ const CreateTemplate: React.FC = () => {
 };
 
 export default React.memo(CreateTemplate);
+// select existing component no form component show
+// and while edit it open below it
+// handle all of this
