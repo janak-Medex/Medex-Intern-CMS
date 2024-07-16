@@ -31,10 +31,11 @@ interface SelectExistingComponentProps {
   onComponentSelect: (component: ComponentType) => void;
   template_name: string;
   refetchData: () => void;
+  closeComponent: () => void;
 }
 
 const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
-  onComponentSelect,
+  closeComponent,
   template_name,
   refetchData,
 }) => {
@@ -250,13 +251,12 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
           );
         }
 
-        setFormData(updatedFormData);
-        onComponentSelect(response.data);
+        closeComponent();
+        await refetchData();
         setSelectedComponent(null);
         setComponentImagePreview(null);
         setSelectedFilePreviews({});
         setSelectedFiles({});
-        await refetchData();
         message.success("Component added successfully");
       } else {
         message.error("Failed to add component");

@@ -285,6 +285,7 @@ const CreateTemplate: React.FC = () => {
       setAddButtonText("Add Component");
       setToggleStates({});
       setComponents([]);
+      setIsSelectingComponent(false);
       await fetchData();
       message.success("Data refreshed successfully");
     } catch (error) {
@@ -509,6 +510,7 @@ const CreateTemplate: React.FC = () => {
                     onComponentSelect={handleExistingComponentSelect}
                     template_name={template_name || ""}
                     refetchData={fetchData}
+                    closeComponent={closeAllComponents}
                   />
                 )}
                 {(isCreatingComponent || editingComponent) && (
@@ -591,7 +593,7 @@ const CreateTemplate: React.FC = () => {
                           src={
                             (
                               activeComponent || editingComponent
-                            )?.component_name.startsWith("Form_")
+                            )?.component_name?.startsWith("Form_")
                               ? "/images/form.svg"
                               : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
                                   (
