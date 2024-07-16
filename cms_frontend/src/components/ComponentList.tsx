@@ -161,6 +161,13 @@ const ComponentList: React.FC<ComponentListProps> = ({
     });
   };
 
+  const handleComponentClick = (component: Component) => {
+    if (isFormComponent(component.component_name)) {
+      handleFormClick(component);
+    } else {
+      onShowComponentForm(component);
+    }
+  };
   return (
     <div className="space-y-4 flex-1 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-lg min-h-full ">
       <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center">
@@ -185,11 +192,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
                   ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
                   : "bg-white"
               }`}
-              onClick={() =>
-                isFormComponent(component.component_name)
-                  ? handleFormClick(component)
-                  : onShowComponentForm(component)
-              }
+              onClick={() => handleComponentClick(component)}
             >
               <div className="flex items-center space-x-3">
                 <FaGripVertical
@@ -256,7 +259,9 @@ const ComponentList: React.FC<ComponentListProps> = ({
                         className="text-indigo-500 hover:text-indigo-700 transition-colors duration-200"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onEdit(component);
+                          if (!isFormComponent(component.component_name)) {
+                            onEdit(component);
+                          }
                         }}
                       >
                         <FaEdit size={20} />

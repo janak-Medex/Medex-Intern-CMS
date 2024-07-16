@@ -67,6 +67,8 @@ const CreateTemplate: React.FC = () => {
     useState<boolean>(false);
   const [selectedMenuKey, setSelectedMenuKey] = useState("");
   const [addButtonText, setAddButtonText] = useState("Add Component");
+  const [_selectedComponent, setSelectedComponent] =
+    useState<ComponentType | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -304,11 +306,21 @@ const CreateTemplate: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
+  const handleSetActiveComponent = useCallback((component: ComponentType) => {
+    setActiveComponent(component);
+    setIsCreatingComponent(false);
+    setIsSelectingComponent(false);
+    setEditingComponent(null);
+  }, []);
   const handleExistingComponentSelect = useCallback(
-    async (_component: ComponentType) => {
+    async (component: ComponentType) => {
       try {
-        await fetchData(); // Refetch data to get the latest components
+        setSelectedComponent(component);
         setIsSelectingComponent(false);
+        setIsCreatingComponent(false);
+        setEditingComponent(null);
+        setActiveComponent(component);
+        await fetchData();
         message.success("Component added successfully");
       } catch (error) {
         console.error("Error adding component:", error);
@@ -473,10 +485,7 @@ const CreateTemplate: React.FC = () => {
               handleToggle(component.component_name, true);
             }}
             onDelete={(componentId) => onDeleteComponent(componentId)}
-            onShowComponentForm={(component) => {
-              setActiveComponent(component);
-              setIsCreatingComponent(false);
-            }}
+            onShowComponentForm={handleSetActiveComponent}
             template_name={template_name || ""}
             setComponents={setComponents}
             refreshComponents={fetchData}
@@ -512,7 +521,8 @@ const CreateTemplate: React.FC = () => {
                 )}
                 {activeComponent &&
                   !isCreatingComponent &&
-                  !isSelectingComponent && (
+                  !isSelectingComponent &&
+                  !editingComponent && (
                     <div>
                       <h3 className="text-lg font-semibold mb-2 text-indigo-600">
                         {activeComponent.component_name}
@@ -533,10 +543,12 @@ const CreateTemplate: React.FC = () => {
                   )}
                 {!activeComponent &&
                   !isCreatingComponent &&
-                  !isSelectingComponent && (
+                  !isSelectingComponent &&
+                  !editingComponent && (
                     <Empty description="Select a component to view details" />
                   )}
               </Card>
+
               <Card
                 className="w-1/2 shadow-lg bg-white overflow-y-auto hide-scrollbar"
                 style={{ height: "calc(100vh - 96px)" }}
