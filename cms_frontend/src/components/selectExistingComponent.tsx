@@ -269,24 +269,18 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
         selectedComponent.inner_component.toString()
       );
 
-      console.log("FormData entries:");
-      for (let [key, value] of formPayload.entries()) {
+      for (let [_key, value] of formPayload.entries()) {
         if (value instanceof File) {
-          console.log(key, `File: ${value.name}`);
         } else {
-          console.log(key, value);
         }
       }
 
       const response = await submitFormData(formPayload);
-      console.log("API response:", response);
 
       if (response.status === 201) {
         // Update formData with server-returned file paths
         const updatedFormData = { ...formData };
         const serverReturnedData = response.data.data;
-
-        console.log("Server returned data:", serverReturnedData);
 
         if (Array.isArray(serverReturnedData)) {
           serverReturnedData.forEach((item: any) => {

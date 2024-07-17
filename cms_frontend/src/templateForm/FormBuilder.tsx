@@ -88,8 +88,6 @@ const FormBuilder: React.FC<{
         template_name: templateName,
       };
 
-      console.log("FormData to be sent:", formData);
-
       await createForm(formData);
 
       message.success(
