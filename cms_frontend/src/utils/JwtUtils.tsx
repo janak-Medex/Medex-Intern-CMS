@@ -8,11 +8,18 @@ interface DecodedToken {
   exp: number;
 }
 
-export const decodeToken = (token: string): DecodedToken | null => {
+export const decodeToken = (token: string): Partial<DecodedToken> => {
   try {
-    return jwtDecode<DecodedToken>(token);
+    const decoded = jwtDecode<DecodedToken>(token);
+    return {
+      id: decoded.id,
+      user_name: decoded.user_name,
+      role: decoded.role || "user",
+      iat: decoded.iat,
+      exp: decoded.exp,
+    };
   } catch (error) {
-    console.error("Failed to decode token:", error);
-    return null;
+    console.error("Error decoding token:", error);
+    return { role: "user" };
   }
 };

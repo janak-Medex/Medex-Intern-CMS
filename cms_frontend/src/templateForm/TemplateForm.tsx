@@ -10,6 +10,7 @@ import { Component } from "../components/types";
 import { fetchForms, deleteForm } from "../api/formComponent.api";
 
 const { TabPane } = Tabs;
+
 const StyledModal = styled(Modal)`
   .ant-modal-body {
     padding: 0;
@@ -60,6 +61,7 @@ interface TemplateFormProps {
   onFormCreated: () => void;
   onFormDeleted: () => void;
   initialFormData?: Component | null;
+  userRole: string; // Add this line
 }
 
 const TemplateForm: React.FC<TemplateFormProps> = ({
@@ -68,6 +70,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
   onClose,
   onFormCreated,
   onFormDeleted,
+  userRole, // Add this line
 }) => {
   const [forms, setForms] = useState<FormType[]>([]);
   const [selectedForm, setSelectedForm] = useState<FormType | null>(null);
@@ -104,8 +107,8 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
     try {
       await deleteForm(templateName, formName);
       message.success("Form deleted successfully");
-      fetchFormsList(); // Refresh the forms list
-      onFormDeleted(); // Notify parent component
+      fetchFormsList();
+      onFormDeleted();
     } catch (error) {
       console.error("Error deleting form:", error);
       message.error("Failed to delete form");
@@ -132,7 +135,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       onCancel={onClose}
       footer={null}
       width="90vw"
-      className="overflow-x-hidden" // Add this class to disable horizontal scrolling
+      className="overflow-x-hidden"
     >
       <Spin spinning={loading}>
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
@@ -142,6 +145,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
               onSelectForm={selectForm}
               onDeleteForm={handleDeleteForm}
               templateName={templateName}
+              userRole={userRole} // Pass userRole to FormsList
             />
             <div className="flex justify-center mt-6">
               <StyledButton
@@ -152,6 +156,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
                   setActiveTab("2");
                 }}
                 size="large"
+                disabled={userRole === "user"} // Disable the button for 'user' role
               >
                 Create New Form
               </StyledButton>

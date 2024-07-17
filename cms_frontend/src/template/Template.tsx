@@ -72,10 +72,10 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     if (token) {
       const decodedToken = decodeToken(token);
       if (decodedToken) {
-        setUserRole(decodedToken.role);
+        setUserRole(decodedToken?.role ?? "user");
         setUserInfo({
-          user_name: decodedToken.user_name,
-          role: decodedToken.role,
+          user_name: decodedToken.user_name!, // Add the non-null assertion operator
+          role: decodedToken.role!,
         });
       } else {
         handleLogout();

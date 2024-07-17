@@ -54,6 +54,7 @@ interface FormsListProps {
   onSelectForm: (form: FormType) => void;
   onDeleteForm: (formName: string) => void;
   templateName: string;
+  userRole: string;
 }
 
 const FormsList: React.FC<FormsListProps> = ({
@@ -61,6 +62,7 @@ const FormsList: React.FC<FormsListProps> = ({
   onSelectForm,
   onDeleteForm,
   templateName,
+  userRole,
 }) => {
   const [previewForm, setPreviewForm] = useState<FormType | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -92,27 +94,44 @@ const FormsList: React.FC<FormsListProps> = ({
                       }}
                     />
                   </Tooltip>,
-                  <Tooltip title="Duplicate">
+                  <Tooltip
+                    title={userRole === "user" ? "Not allowed" : "Duplicate"}
+                  >
                     <CopyOutlined
                       key="copy"
+                      style={{
+                        color: userRole === "user" ? "#d9d9d9" : undefined,
+                      }}
                       onClick={() => {
-                        const newForm = {
-                          ...item,
-                          _id: "",
-                          name: `${item.name} (Copy)`,
-                        };
-                        onSelectForm(newForm);
+                        if (userRole !== "user") {
+                          const newForm = {
+                            ...item,
+                            _id: "",
+                            name: `${item.name} (Copy)`,
+                          };
+                          onSelectForm(newForm);
+                        }
                       }}
                     />
                   </Tooltip>,
-                  <Popconfirm
-                    title="Delete this form?"
-                    onConfirm={() => onDeleteForm(item.name)}
-                    okText="Yes"
-                    cancelText="No"
+                  <Tooltip
+                    title={userRole === "user" ? "Not allowed" : "Delete"}
                   >
-                    <DeleteOutlined key="delete" />
-                  </Popconfirm>,
+                    <Popconfirm
+                      title="Delete this form?"
+                      onConfirm={() => onDeleteForm(item.name)}
+                      okText="Yes"
+                      cancelText="No"
+                      disabled={userRole === "user"}
+                    >
+                      <DeleteOutlined
+                        key="delete"
+                        style={{
+                          color: userRole === "user" ? "#d9d9d9" : undefined,
+                        }}
+                      />
+                    </Popconfirm>
+                  </Tooltip>,
                 ]}
               >
                 <div className="flex items-center mb-2">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaEdit,
   FaTrash,
@@ -15,7 +15,8 @@ import {
 } from "../api/component.api";
 import { Component } from "./types";
 import TemplateForm from "../templateForm/TemplateForm";
-
+import { decodeToken } from "../utils/JwtUtils";
+import Cookies from "js-cookie";
 interface ComponentListProps {
   components: Component[];
   toggleStates: { [key: string]: boolean };
@@ -41,7 +42,17 @@ const ComponentList: React.FC<ComponentListProps> = ({
   const [templateFormVisible, setTemplateFormVisible] = useState(false);
   const [selectedForm, setSelectedForm] = useState<Component | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [userRole, setUserRole] = useState<string>("user");
 
+  useEffect(() => {
+    const token = Cookies.get("access_token");
+    if (token) {
+      const decodedToken = decodeToken(token);
+      setUserRole(decodedToken?.role ?? "user");
+    } else {
+      setUserRole("user"); // Default to 'user' if no token is found
+    }
+  }, []);
   const isFormComponent = (componentName: string) =>
     componentName?.toLowerCase().startsWith("form_");
 
@@ -217,14 +228,16 @@ const ComponentList: React.FC<ComponentListProps> = ({
               </div>
               <div className="flex items-center space-x-3">
                 {isFormComponent(component.component_name) ? (
-                  <Tooltip title="Edit Form">
-                    <button
-                      className="text-white hover:text-blue-200 transition-colors duration-200"
-                      onClick={(e) => handleFormEdit(e, component)}
-                    >
-                      <FaEdit size={20} />
-                    </button>
-                  </Tooltip>
+                  userRole !== "user" && (
+                    <Tooltip title="Edit Form">
+                      <button
+                        className="text-white hover:text-blue-200 transition-colors duration-200"
+                        onClick={(e) => handleFormEdit(e, component)}
+                      >
+                        <FaEdit size={20} />
+                      </button>
+                    </Tooltip>
+                  )
                 ) : (
                   <>
                     <Tooltip
@@ -243,30 +256,34 @@ const ComponentList: React.FC<ComponentListProps> = ({
                         unCheckedChildren={<FaToggleOff />}
                       />
                     </Tooltip>
-                    <Tooltip title="Delete">
-                      <button
-                        className="text-red-500 hover:text-red-700 transition-colors duration-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(component._id);
-                        }}
-                      >
-                        <FaTrash size={18} />
-                      </button>
-                    </Tooltip>
-                    <Tooltip title="Edit">
-                      <button
-                        className="text-indigo-500 hover:text-indigo-700 transition-colors duration-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!isFormComponent(component.component_name)) {
-                            onEdit(component);
-                          }
-                        }}
-                      >
-                        <FaEdit size={20} />
-                      </button>
-                    </Tooltip>
+                    {userRole !== "user" && (
+                      <>
+                        <Tooltip title="Delete">
+                          <button
+                            className="text-red-500 hover:text-red-700 transition-colors duration-200"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(component._id);
+                            }}
+                          >
+                            <FaTrash size={18} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip title="Edit">
+                          <button
+                            className="text-indigo-500 hover:text-indigo-700 transition-colors duration-200"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!isFormComponent(component.component_name)) {
+                                onEdit(component);
+                              }
+                            }}
+                          >
+                            <FaEdit size={20} />
+                          </button>
+                        </Tooltip>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -276,6 +293,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
       </div>
       {templateFormVisible && (
         <TemplateForm
+          userRole={userRole}
           templateName={template_name}
           visible={templateFormVisible}
           onClose={() => {
