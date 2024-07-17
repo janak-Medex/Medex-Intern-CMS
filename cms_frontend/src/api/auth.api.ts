@@ -1,5 +1,5 @@
-import axiosInstance from "../http/axiosInstance";
 import Cookies from "js-cookie";
+import axiosInstance from "../http/axiosInstance";
 
 interface LoginResponse {
   accessToken: string;
@@ -33,3 +33,16 @@ export const logout = async () => {
 
   }
 }
+
+export const createUser = async (user_name: string, password: string) => {
+  try {
+    const response = await axiosInstance.post('/user/create', { user_name, password }, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

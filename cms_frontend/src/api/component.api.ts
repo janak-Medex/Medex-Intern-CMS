@@ -1,20 +1,20 @@
 import axiosInstance from "../http/axiosInstance";
-import { toast } from "react-toastify";
 
-import { Component } from "../components/createComponents";
+import { Component } from "../components/types";
+import { message } from "antd";
+import { ComponentType } from "../template/types";
 
 // src/services/api.ts
 
 
-export interface ComponentData {
-    component_name: string;
-    template_name?: string;
-    data: any[];
-    isActive: boolean;
-    inner_component: number;
-}
 
-export const createComponent = async (componentData: ComponentData, componentImage: File | null) => {
+
+export const fetchAllComponents = async (): Promise<ComponentType[]> => {
+    const response = await axiosInstance.get('/components');
+    return response.data;
+};
+
+export const createComponent = async (componentData: ComponentType, componentImage: File | null) => {
     const formData = new FormData();
 
     formData.append("component_name", componentData.component_name);
@@ -22,7 +22,7 @@ export const createComponent = async (componentData: ComponentData, componentIma
         formData.append("template_name", componentData.template_name);
     }
     formData.append("data", JSON.stringify(componentData.data));
-    formData.append("isActive", String(componentData.isActive));
+    formData.append("is_active", String(componentData.is_active));
     formData.append("inner_component", String(componentData.inner_component));
 
     if (componentImage) {
@@ -38,7 +38,7 @@ export const createComponent = async (componentData: ComponentData, componentIma
     return response.data;
 };
 
-export const updateComponent = async (componentData: ComponentData, componentImage: File | null) => {
+export const updateComponent = async (componentData: ComponentType, componentImage: File | null) => {
     const formData = new FormData();
 
     formData.append("component_name", componentData.component_name);
@@ -46,7 +46,7 @@ export const updateComponent = async (componentData: ComponentData, componentIma
         formData.append("template_name", componentData.template_name);
     }
     formData.append("data", JSON.stringify(componentData.data));
-    formData.append("isActive", String(componentData.isActive));
+    formData.append("is_active", String(componentData.is_active));
     formData.append("inner_component", String(componentData.inner_component));
 
     if (componentImage) {
@@ -108,15 +108,15 @@ export const updateComponentOrder = async (
         );
 
         if (response.data.success) {
-            toast.success("Component order updated successfully");
+            message.success("Component order updated successfully");
             return true;
         } else {
-            toast.error("Failed to update component order");
+            message.error("Failed to update component order");
             return false;
         }
     } catch (error) {
         console.error("Error updating component order:", error);
-        toast.error("Failed to update component order");
+        message.error("Failed to update component order");
         return false;
     }
 };
@@ -130,15 +130,15 @@ export const updateComponentStatus = async (
         const response = await axiosInstance.post(`/components`, updatedComponent);
 
         if (response.status === 201) {
-            toast.success("Component status updated successfully");
+            message.success("Component status updated successfully");
             return true;
         } else {
-            toast.error("Failed to update component status");
+            message.error("Failed to update component status");
             return false;
         }
     } catch (error) {
         console.error("Error updating component status:", error);
-        toast.error("Failed to update component status");
+        message.error("Failed to update component status");
         return false;
     }
 };
