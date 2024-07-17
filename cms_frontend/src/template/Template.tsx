@@ -19,6 +19,9 @@ import {
   fetchTemplatesData,
   updateTemplateStatus,
 } from "../api/template.api";
+import CreateUser from "../login/createUserForm";
+import { TiUserAddOutline } from "react-icons/ti";
+import { decodeToken } from "../utils/JwtUtils";
 
 const { Search } = Input;
 
@@ -54,7 +57,24 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     key: "updatedAt",
     direction: "desc",
   });
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [userRole, setUserRole] = useState<"admin" | "user" | null>(null);
 
+  useEffect(() => {
+    const token = Cookies.get("access_token");
+    if (token) {
+      const decodedToken = decodeToken(token);
+      if (decodedToken) {
+        setUserRole(decodedToken.role);
+      } else {
+        // Handle invalid token (e.g., logout user)
+        handleLogout();
+      }
+    } else {
+      // Handle missing token (e.g., redirect to login)
+      handleLogout();
+    }
+  }, []);
   useEffect(() => {
     checkLoginStatus();
   }, []);
@@ -181,7 +201,6 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
 
   const handleLogout = () => {
     logout();
-    setIsLoggedIn(false);
     onLogout();
   };
   const handleSwitchChange = async (checked: boolean, templateId: string) => {
@@ -270,6 +289,15 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-gray-800 text-3xl font-bold">Templates</h1>
           <div className="flex items-center space-x-6">
+            {userRole === "admin" && (
+              <button
+                onClick={() => setShowCreateUser(true)}
+                className="flex items-center rounded-lg bg-green-500 hover:bg-green-600 text-white py-2 px-4 transition duration-300"
+              >
+                <TiUserAddOutline style={{ marginRight: "8px" }} />
+                Create User
+              </button>
+            )}
             <Search
               placeholder="Search templates"
               onChange={(e) => handleSearch(e.target.value)}
@@ -348,7 +376,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               <div
                 key={template._id}
                 className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out 
-                            ${view === "grid" ? "p-6" : "p-5"}`}
+                              ${view === "grid" ? "p-6" : "p-5"}`}
               >
                 <div className="flex justify-between items-start mb-4">
                   <Link
@@ -415,6 +443,10 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
             </button>
           </div>
         </div>
+      </Modal>
+
+      <Modal show={showCreateUser} onClose={() => setShowCreateUser(false)}>
+        <CreateUser onClose={() => setShowCreateUser(false)} />
       </Modal>
     </div>
   );
