@@ -56,6 +56,9 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
     {}
   );
   const [formData, setFormData] = useState<{ [key: string]: any }>({});
+  const [validationErrors, setValidationErrors] = useState<{
+    [key: string]: string;
+  }>({});
 
   useEffect(() => {
     fetchComponents();
@@ -85,6 +88,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       setFormData({
         component_name: selected.component_name,
         inner_component: selected.inner_component,
+        data: {},
       });
       if (selected.component_image) {
         const src = selected.component_image.startsWith("http")
@@ -96,6 +100,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       }
       setSelectedFilePreviews({});
       setSelectedFiles({});
+      setValidationErrors({});
     }
   };
 
@@ -133,6 +138,13 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
         ],
       },
     }));
+
+    // Clear validation error for this field
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[key];
+      return newErrors;
+    });
   };
 
   const handleClearFile = (key: string, fileIndex: number) => {
@@ -155,6 +167,14 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       );
       return { ...prev, data: newData };
     });
+
+    // Set validation error if field is empty after clearing
+    if (selectedFiles[key].length === 1) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [key]: `${key} is required`,
+      }));
+    }
   };
 
   const handleInputChange = (key: string, value: string) => {
@@ -162,11 +182,52 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       ...prev,
       data: { ...prev.data, [key]: value },
     }));
+
+    // Clear validation error for this field
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[key];
+      return newErrors;
+    });
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedComponent) return;
+
+    // Reset validation errors
+    setValidationErrors({});
+
+    // Validate all fields
+    const errors: { [key: string]: string } = {};
+
+    if (!formData.component_name) {
+      errors.component_name = "Component name is required";
+    }
+
+    if (!formData.inner_component) {
+      errors.inner_component = "Inner component is required";
+    }
+
+    // Validate all data fields
+    if (selectedComponent.data[0]) {
+      Object.keys(selectedComponent.data[0]).forEach((key) => {
+        if (
+          !formData.data ||
+          !formData.data[key] ||
+          (Array.isArray(formData.data[key]) && formData.data[key].length === 0)
+        ) {
+          errors[key] = `${key} is required`;
+        }
+      });
+    }
+
+    // If there are validation errors, set them and return
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      message.error("Please fill in all required fields");
+      return;
+    }
 
     try {
       const formPayload = new FormData();
@@ -365,6 +426,11 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
               }}
             />
           </div>
+          {validationErrors[key] && (
+            <div className="text-red-500 text-sm mt-1">
+              {validationErrors[key]}
+            </div>
+          )}
         </div>
       );
     } else {
@@ -381,6 +447,11 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
             value={formData.data?.[key] || ""}
             onChange={(e) => handleInputChange(key, e.target.value)}
           />
+          {validationErrors[key] && (
+            <div className="text-red-500 text-sm mt-1">
+              {validationErrors[key]}
+            </div>
+          )}
         </div>
       );
     }
@@ -422,6 +493,11 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                 </Option>
               ))}
             </AutoComplete>
+            {validationErrors.component_name && (
+              <div className="text-red-500 text-sm mt-1">
+                {validationErrors.component_name}
+              </div>
+            )}
           </div>
 
           {selectedComponent && (
@@ -444,6 +520,11 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                   </Tooltip>
                 </label>
                 <Input value={formData.inner_component} disabled />
+                {validationErrors.inner_component && (
+                  <div className="text-red-500 text-sm mt-1">
+                    {validationErrors.inner_component}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -516,7 +597,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
           <Text strong>Note:</Text> Select an existing component from the
           dropdown above. You can modify the component's data before adding it
           to your template. The component image cannot be changed when selecting
-          an existing component.
+          an existing component. All fields are required.
         </Paragraph>
       </div>
     </Card>
