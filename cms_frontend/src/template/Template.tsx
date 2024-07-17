@@ -3,13 +3,14 @@ import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
 import Cookies from "js-cookie";
-import { Switch, Tooltip, Input, Menu, Dropdown, message } from "antd";
+import { Switch, Tooltip, Input, Menu, Dropdown, message, Avatar } from "antd";
 import {
   LogoutOutlined,
   MoreOutlined,
   DeleteOutlined,
   EditOutlined,
   DownOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
 import { logout } from "../api/auth.api";
@@ -37,6 +38,11 @@ export interface Template {
   status: number;
 }
 
+interface UserInfo {
+  user_name: string;
+  role: "admin" | "user";
+}
+
 type SortKey = "template name" | "updatedAt" | "is_active";
 
 type SortConfig = {
@@ -59,6 +65,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   });
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [userRole, setUserRole] = useState<"admin" | "user" | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   useEffect(() => {
     const token = Cookies.get("access_token");
@@ -66,15 +73,18 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
       const decodedToken = decodeToken(token);
       if (decodedToken) {
         setUserRole(decodedToken.role);
+        setUserInfo({
+          user_name: decodedToken.user_name,
+          role: decodedToken.role,
+        });
       } else {
-        // Handle invalid token (e.g., logout user)
         handleLogout();
       }
     } else {
-      // Handle missing token (e.g., redirect to login)
       handleLogout();
     }
   }, []);
+
   useEffect(() => {
     checkLoginStatus();
   }, []);
@@ -203,6 +213,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     logout();
     onLogout();
   };
+
   const handleSwitchChange = async (checked: boolean, templateId: string) => {
     try {
       const template = await updateTemplateStatus(templateId, checked);
@@ -210,7 +221,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
       message.success(
         `Template '${template.template_name}' is now ${statusMessage}`
       );
-      fetchTemplates(); // Refresh the templates after update
+      fetchTemplates();
     } catch (error) {
       console.error("Error updating template status:", error);
       message.error("Failed to update template status");
@@ -292,7 +303,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
             {userRole === "admin" && (
               <button
                 onClick={() => setShowCreateUser(true)}
-                className="flex items-center rounded-lg bg-green-500 hover:bg-green-600 text-white py-2 px-4 transition duration-300"
+                className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 transition duration-300"
               >
                 <TiUserAddOutline style={{ marginRight: "8px" }} />
                 Create User
@@ -304,6 +315,18 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               style={{ width: 300 }}
               className="border-2 border-gray-200 rounded-lg"
             />
+            {userInfo?.user_name && (
+              <div className="flex items-center space-x-2 bg-gray-100 rounded-full py-1 px-3">
+                <Avatar
+                  icon={<UserOutlined />}
+                  size="small"
+                  style={{ backgroundColor: "#1890ff" }}
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  {userInfo.user_name}
+                </span>
+              </div>
+            )}
             <Tooltip title="Logout">
               <button
                 onClick={handleLogout}
