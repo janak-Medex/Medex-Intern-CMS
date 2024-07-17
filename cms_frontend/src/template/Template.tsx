@@ -316,7 +316,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               className="border-2 border-gray-200 rounded-lg"
             />
             {userInfo?.user_name && (
-              <div className="flex items-center space-x-2 bg-gray-100 rounded-full py-1 px-3">
+              <div className="flex items-center space-x-2 bg-blue-100 rounded-full py-1 px-3">
                 <Avatar
                   icon={<UserOutlined />}
                   size="small"

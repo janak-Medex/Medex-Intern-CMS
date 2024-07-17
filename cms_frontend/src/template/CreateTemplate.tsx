@@ -19,7 +19,9 @@ import {
   Space,
   List,
   Input,
+  Avatar,
 } from "antd";
+import { UserOutlined } from "@ant-design/icons";
 import {
   DownloadOutlined,
   MenuOutlined,
@@ -41,7 +43,8 @@ import { IoIosAdd } from "react-icons/io";
 import { FaCode, FaFile, FaImage, FaTable, FaVideo } from "react-icons/fa";
 import { IoSearchOutline } from "react-icons/io5";
 import { BiChevronRight } from "react-icons/bi";
-
+import Cookies from "js-cookie";
+import { DecodedToken, decodeToken } from "../utils/JwtUtils";
 const { Content, Header, Sider } = Layout;
 const { Panel } = Collapse;
 
@@ -78,6 +81,28 @@ const CreateTemplate: React.FC = () => {
     []
   );
   const [searchTerm, setSearchTerm] = useState("");
+  const [userRole, setUserRole] = useState<string>("user");
+  const [userInfo, setUserInfo] = useState<DecodedToken | null>(null);
+
+  useEffect(() => {
+    const token = Cookies.get("access_token");
+    if (token) {
+      try {
+        const decodedToken = decodeToken(token);
+        if (decodedToken) {
+          setUserInfo(decodedToken);
+          setUserRole(decodedToken.role || "user");
+        }
+      } catch (error) {
+        console.error("Error decoding token:", error);
+        setUserRole("user");
+        setUserInfo(null);
+      }
+    } else {
+      setUserRole("user");
+      setUserInfo(null);
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -432,21 +457,28 @@ const CreateTemplate: React.FC = () => {
             Select Existing Component
           </Space>
         </Menu.Item>
-        <Menu.Item
-          key="2"
-          onClick={() => handleMenuClick("2", "Create New Component")}
-        >
-          <Space>
-            <FileAddOutlined />
-            Create New Component
-          </Space>
-        </Menu.Item>
-        <Menu.Item key="3" onClick={() => handleMenuClick("3", "Create Form")}>
-          <Space>
-            <FormOutlined />
-            Create Form
-          </Space>
-        </Menu.Item>
+        {userRole !== "user" && (
+          <Menu.Item
+            key="2"
+            onClick={() => handleMenuClick("2", "Create New Component")}
+          >
+            <Space>
+              <FileAddOutlined />
+              Create New Component
+            </Space>
+          </Menu.Item>
+        )}
+        {userRole !== "user" && (
+          <Menu.Item
+            key="3"
+            onClick={() => handleMenuClick("3", "Create Form")}
+          >
+            <Space>
+              <FormOutlined />
+              Create Form
+            </Space>
+          </Menu.Item>
+        )}
         <Menu.Item
           key="4"
           onClick={() => handleMenuClick("4", "Import Existing Component")}
@@ -458,7 +490,7 @@ const CreateTemplate: React.FC = () => {
         </Menu.Item>
       </Menu>
     ),
-    [selectedMenuKey, handleMenuClick]
+    [selectedMenuKey, handleMenuClick, userRole]
   );
 
   return (
@@ -491,6 +523,7 @@ const CreateTemplate: React.FC = () => {
               : "Loading..."}
           </h1>
         </div>
+
         <div className="flex gap-2">
           <Tooltip title="Refresh Data">
             <Button
@@ -500,6 +533,7 @@ const CreateTemplate: React.FC = () => {
               className="text-indigo-600 hover:bg-indigo-50"
             />
           </Tooltip>
+
           <Dropdown overlay={menu} placement="bottomRight">
             <Button
               className="border-1  border-indigo-600 hover:border-gray-400 rounded-full shadow-sm"
@@ -516,6 +550,18 @@ const CreateTemplate: React.FC = () => {
               {/* Display the button text */}
             </Button>
           </Dropdown>
+          {userInfo?.user_name && (
+            <div className="flex items-center space-x-2 bg-blue-100 rounded-full py-1 px-3">
+              <Avatar
+                icon={<UserOutlined />}
+                size="small"
+                style={{ backgroundColor: "#1890ff" }}
+              />
+              <span className="text-sm font-medium text-gray-700">
+                {userInfo.user_name}
+              </span>
+            </div>
+          )}
         </div>
       </Header>
       <TemplateForm
@@ -524,6 +570,7 @@ const CreateTemplate: React.FC = () => {
         onClose={handleCloseTemplateForm}
         onFormCreated={handleFormCreated}
         onFormDeleted={refetchData}
+        userRole={userRole}
       />
       <Layout className="flex-1 overflow-hidden">
         <Sider

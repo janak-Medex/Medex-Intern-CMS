@@ -1,6 +1,6 @@
 import { jwtDecode } from "jwt-decode";
 
-interface DecodedToken {
+export interface DecodedToken {
   id: string;
   user_name: string;
   role: "admin" | "user";
@@ -8,7 +8,7 @@ interface DecodedToken {
   exp: number;
 }
 
-export const decodeToken = (token: string): Partial<DecodedToken> => {
+export const decodeToken = (token: string): DecodedToken | null => {
   try {
     const decoded = jwtDecode<DecodedToken>(token);
     return {
@@ -20,6 +20,6 @@ export const decodeToken = (token: string): Partial<DecodedToken> => {
     };
   } catch (error) {
     console.error("Error decoding token:", error);
-    return { role: "user" };
+    return null;
   }
 };
