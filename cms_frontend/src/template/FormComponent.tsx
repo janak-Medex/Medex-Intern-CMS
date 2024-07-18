@@ -434,7 +434,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
           )}
         </div>
       );
-    } else if (key.toLowerCase().includes("list")) {
+    } else if (key.toLowerCase().includes("_list") || /\blist\b/i.test(key)) {
       const inputKey = `${index}-${key}`;
       return (
         <div className="mb-8 ">
