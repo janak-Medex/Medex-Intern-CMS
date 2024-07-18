@@ -341,6 +341,7 @@ const FormBuilder: React.FC<{
                               <Option value="switch">Switch</Option>
                               <Option value="boolean">Boolean</Option>
                               <Option value="date">Date</Option>
+                              <Option value="file">File</Option>
                               <Option value="other">Other</Option>
                             </Select>
                           </Form.Item>
