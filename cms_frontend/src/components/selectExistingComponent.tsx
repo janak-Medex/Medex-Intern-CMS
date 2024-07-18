@@ -500,7 +500,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
           )}
         </div>
       );
-    } else if (key.toLowerCase().includes("list")) {
+    } else if (key.toLowerCase().includes("_list") || /\blist\b/i.test(key)) {
       return (
         <div key={key} className="mb-8">
           <label>
