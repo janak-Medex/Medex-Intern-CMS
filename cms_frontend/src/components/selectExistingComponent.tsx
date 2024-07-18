@@ -17,10 +17,12 @@ import {
   InfoCircleOutlined,
   EditOutlined,
   UploadOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import { fetchAllComponents } from "../api/component.api";
-import { AiOutlineFile } from "react-icons/ai";
+import { AiOutlineFile, AiOutlineEdit } from "react-icons/ai";
 import { RiCloseCircleFill } from "react-icons/ri";
+import { IoBagCheckOutline } from "react-icons/io5";
 import { ComponentType } from "../template/types";
 import { submitFormData } from "../api/form.api";
 
@@ -58,6 +60,10 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
   const [formData, setFormData] = useState<{ [key: string]: any }>({});
   const [validationErrors, setValidationErrors] = useState<{
     [key: string]: string;
+  }>({});
+  const [inputValues, setInputValues] = useState<{ [key: string]: string }>({});
+  const [editingTags, setEditingTags] = useState<{
+    [key: string]: string | null;
   }>({});
 
   useEffect(() => {
@@ -101,6 +107,8 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       setSelectedFilePreviews({});
       setSelectedFiles({});
       setValidationErrors({});
+      setInputValues({});
+      setEditingTags({});
     }
   };
 
@@ -139,7 +147,6 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       },
     }));
 
-    // Clear validation error for this field
     setValidationErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[key];
@@ -168,7 +175,6 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       return { ...prev, data: newData };
     });
 
-    // Set validation error if field is empty after clearing
     if (selectedFiles[key].length === 1) {
       setValidationErrors((prev) => ({
         ...prev,
@@ -183,7 +189,89 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       data: { ...prev.data, [key]: value },
     }));
 
-    // Clear validation error for this field
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[key];
+      return newErrors;
+    });
+  };
+
+  const handleInputChangeForList = (key: string, value: string) => {
+    setInputValues((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handleInputConfirm = (key: string) => {
+    const inputValue = inputValues[key]?.trim();
+    if (!inputValue) return; // Exit if there's no input value
+
+    setFormData((prev) => {
+      const currentData = prev.data || {};
+      const currentTags = Array.isArray(currentData[key])
+        ? currentData[key]
+        : [];
+
+      let newTags;
+      if (editingTags[key]) {
+        // We're editing an existing tag
+        newTags = currentTags.map((tag: string) =>
+          tag === editingTags[key] ? inputValue : tag
+        );
+      } else {
+        // We're adding a new tag
+        if (!currentTags.includes(inputValue)) {
+          newTags = [...currentTags, inputValue];
+        } else {
+          newTags = currentTags; // Tag already exists, no change
+        }
+      }
+
+      return {
+        ...prev,
+        data: {
+          ...currentData,
+          [key]: newTags,
+        },
+      };
+    });
+
+    setInputValues((prev) => ({ ...prev, [key]: "" }));
+    setEditingTags((prev) => ({ ...prev, [key]: null }));
+  };
+  const handleTagClose = (key: string, removedTag: string) => {
+    if (removedTag === editingTags[key]) {
+      setEditingTags((prev) => ({ ...prev, [key]: null }));
+      setInputValues((prev) => ({ ...prev, [key]: "" }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        data: {
+          ...prev.data,
+          [key]: (prev.data[key] || []).filter(
+            (tag: string) => tag !== removedTag
+          ),
+        },
+      }));
+    }
+  };
+
+  const handleEditTags = (key: string, tagToEdit: string) => {
+    if (editingTags[key] === tagToEdit) {
+      setEditingTags((prev) => ({ ...prev, [key]: null }));
+      setInputValues((prev) => ({ ...prev, [key]: "" }));
+    } else if (Object.values(editingTags).every((tag) => tag === null)) {
+      setInputValues((prev) => ({ ...prev, [key]: tagToEdit }));
+      setEditingTags((prev) => ({ ...prev, [key]: tagToEdit }));
+    } else {
+      message.warning(
+        "Please complete editing the current tag before editing another."
+      );
+      return; // Exit early if we can't start editing
+    }
+
+    // Clear the validation error for this field
     setValidationErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[key];
@@ -195,10 +283,8 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
     e.preventDefault();
     if (!selectedComponent) return;
 
-    // Reset validation errors
     setValidationErrors({});
 
-    // Validate all fields
     const errors: { [key: string]: string } = {};
 
     if (!formData.component_name) {
@@ -209,7 +295,6 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       errors.inner_component = "Inner component is required";
     }
 
-    // Validate all data fields
     if (selectedComponent.data[0]) {
       Object.keys(selectedComponent.data[0]).forEach((key) => {
         if (
@@ -222,7 +307,6 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       });
     }
 
-    // If there are validation errors, set them and return
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       message.error("Please fill in all required fields");
@@ -234,7 +318,6 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       formPayload.append("template_name", template_name);
       formPayload.append("component_name", selectedComponent.component_name);
 
-      // Handle file uploads and create data array
       const dataArray = Object.entries(formData.data || {}).map(
         ([key, value]) => {
           const dataItem: { [key: string]: any } = {};
@@ -259,26 +342,16 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
         }
       );
 
-      // Append the stringified data array to the FormData
       formPayload.append("data", JSON.stringify(dataArray));
-
-      // Append other necessary fields
       formPayload.append("is_active", "true");
       formPayload.append(
         "inner_component",
         selectedComponent.inner_component.toString()
       );
 
-      for (let [_key, value] of formPayload.entries()) {
-        if (value instanceof File) {
-        } else {
-        }
-      }
-
       const response = await submitFormData(formPayload);
 
       if (response.status === 201) {
-        // Update formData with server-returned file paths
         const updatedFormData = { ...formData };
         const serverReturnedData = response.data.data;
 
@@ -427,9 +500,93 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
           )}
         </div>
       );
+    } else if (key.toLowerCase().includes("list")) {
+      return (
+        <div key={key} className="mb-8">
+          <label>
+            {key}{" "}
+            <Tooltip title={`Enter ${key} items`}>
+              <InfoCircleOutlined style={{ color: "#1890ff" }} />
+            </Tooltip>
+          </label>
+          <div className="flex flex-col mb-4">
+            <Input.TextArea
+              value={inputValues[key] || ""}
+              onChange={(e) => handleInputChangeForList(key, e.target.value)}
+              onBlur={() => handleInputConfirm(key)}
+              onPressEnter={(e) => {
+                if (!e.shiftKey) {
+                  e.preventDefault();
+                  handleInputConfirm(key);
+                }
+              }}
+              placeholder="Type content and press enter to add (Shift+Enter for new line)"
+              className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500 mb-2 resize-y"
+              rows={3}
+            />
+            <Button
+              onClick={() => handleInputConfirm(key)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors duration-300 self-end"
+            >
+              Add
+            </Button>
+          </div>
+          <div className="min-h-[100px] max-h-60 overflow-y-auto border rounded-lg p-2 bg-gray-50 custom-scrollbar">
+            {formData.data[key] &&
+            Array.isArray(formData.data[key]) &&
+            formData.data[key].length > 0 ? (
+              formData.data[key].map((item: string, itemIndex: number) => (
+                <div
+                  key={itemIndex}
+                  className={`relative bg-white p-3 rounded mb-2 pr-16 shadow-sm ${
+                    editingTags[key] === item ? "border-2 border-blue-500" : ""
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{item}</p>
+                  <div className="absolute top-1 right-1 flex">
+                    {editingTags[key] === item ? (
+                      <button
+                        onClick={() => handleEditTags(key, item)}
+                        className="text-green-500 hover:text-green-700 mr-2"
+                        title="Complete Editing"
+                      >
+                        <IoBagCheckOutline />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleEditTags(key, item)}
+                        className="text-blue-500 hover:text-blue-700 mr-2"
+                        title="Edit Tag"
+                      >
+                        <AiOutlineEdit />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleTagClose(key, item)}
+                      className="text-red-500 hover:text-red-700"
+                      title="Remove Tag"
+                    >
+                      <CloseOutlined />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                No items added yet
+              </div>
+            )}
+          </div>
+          {validationErrors[key] && (
+            <div className="text-red-500 text-sm mt-1">
+              {validationErrors[key]}
+            </div>
+          )}
+        </div>
+      );
     } else {
       return (
-        <div key={key}>
+        <div key={key} className="mb-4">
           <label>
             {key}{" "}
             <Tooltip title={`Enter ${key}`}>
