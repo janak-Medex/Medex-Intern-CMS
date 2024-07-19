@@ -491,7 +491,7 @@ const CreateTemplate: React.FC = () => {
           </Tooltip>
           <Dropdown overlay={menu} placement="bottomRight">
             <Button
-              className="border-1 border-indigo-600 hover:border-gray-400 rounded-full shadow-sm"
+              className="border-1  border-indigo-600 hover:border-gray-400 rounded-full shadow-sm"
               style={{
                 width: "240px",
                 display: "flex",
@@ -505,7 +505,7 @@ const CreateTemplate: React.FC = () => {
             </Button>
           </Dropdown>
           {userInfo?.user_name && (
-            <div className="flex items-center space-x-2 bg-blue-100 rounded-full py-1 px-3">
+            <div className="flex items-center  space-x-2 bg-blue-100 rounded-full py-1 px-3">
               <Avatar
                 icon={<UserOutlined />}
                 size="small"
@@ -528,7 +528,7 @@ const CreateTemplate: React.FC = () => {
       />
       <Layout className="flex-1 overflow-hidden">
         <Sider
-          width={300}
+          width={350}
           theme="light"
           trigger={null}
           collapsible
