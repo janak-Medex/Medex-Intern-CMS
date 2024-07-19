@@ -1,29 +1,20 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ComponentType, TemplateDetails, TableData } from "./types";
 import ComponentList from "../components/ComponentList";
-import FormComponent from "../template/FormComponent";
 import {
-  Image,
-  Button,
-  Modal,
   Layout,
-  Card,
+  Button,
   Tooltip,
-  Empty,
   Spin,
-  Collapse,
   message,
-  Menu,
   Dropdown,
   Space,
-  List,
-  Input,
   Avatar,
+  Menu,
 } from "antd";
-import { UserOutlined } from "@ant-design/icons";
 import {
-  DownloadOutlined,
+  UserOutlined,
   MenuOutlined,
   ReloadOutlined,
   AppstoreAddOutlined,
@@ -32,21 +23,16 @@ import {
   ImportOutlined,
 } from "@ant-design/icons";
 import { HiHome } from "react-icons/hi2";
-import TemplateForm from "../templateForm/TemplateForm";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import CreateComponent from "../components/createComponents";
-import * as templateApi from "../api/createTemplate.api";
-import { createTableData } from "../utils/CreateTableData";
-import SelectExistingComponent from "../components/selectExistingComponent";
 import { IoIosAdd } from "react-icons/io";
-import { FaCode, FaFile, FaImage, FaTable, FaVideo } from "react-icons/fa";
-import { IoSearchOutline } from "react-icons/io5";
-import { BiChevronRight } from "react-icons/bi";
 import Cookies from "js-cookie";
 import { DecodedToken, decodeToken } from "../utils/JwtUtils";
-const { Content, Header, Sider } = Layout;
-const { Panel } = Collapse;
+import * as templateApi from "../api/createTemplate.api";
+import { createTableData } from "../utils/CreateTableData";
+import ComponentSection from "./ComponentSection";
+import ImportModal from "./ImportModal";
+import TemplateForm from "../templateForm/TemplateForm";
+
+const { Header, Sider, Content } = Layout;
 
 const CreateTemplate: React.FC = () => {
   const { template_name } = useParams<{ template_name: string }>();
@@ -66,7 +52,6 @@ const CreateTemplate: React.FC = () => {
   const [editingComponent, setEditingComponent] =
     useState<ComponentType | null>(null);
   const [allComponents, setAllComponents] = useState<ComponentType[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
   const [isTemplateFormVisible, setIsTemplateFormVisible] =
@@ -75,8 +60,7 @@ const CreateTemplate: React.FC = () => {
     useState<boolean>(false);
   const [selectedMenuKey, setSelectedMenuKey] = useState("");
   const [addButtonText, setAddButtonText] = useState("Add Component");
-  const [_selectedComponent, setSelectedComponent] =
-    useState<ComponentType | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [activeTemplateKey, setActiveTemplateKey] = useState<string | string[]>(
     []
   );
@@ -151,7 +135,7 @@ const CreateTemplate: React.FC = () => {
               ? component.data
               : [component.data],
           });
-          setIsCreatingComponent(false); // Close the create component form
+          setIsCreatingComponent(false);
           setIsSelectingComponent(false);
           setEditingComponent(isEditing ? component : null);
         } else {
@@ -347,10 +331,10 @@ const CreateTemplate: React.FC = () => {
     setIsSelectingComponent(false);
     setEditingComponent(null);
   }, []);
+
   const handleExistingComponentSelect = useCallback(
     async (component: ComponentType) => {
       try {
-        setSelectedComponent(component);
         setIsSelectingComponent(false);
         setIsCreatingComponent(false);
         setEditingComponent(null);
@@ -364,28 +348,15 @@ const CreateTemplate: React.FC = () => {
     },
     [fetchData]
   );
+
   const handleTemplateChange = (key: string | string[]) => {
-    // If no panel is open or a different panel is clicked, open the new one
     if (Array.isArray(key) && key.length > 0) {
       setActiveTemplateKey(key[key.length - 1]);
     } else if (typeof key === "string") {
       setActiveTemplateKey(key);
     } else {
-      // If the same panel is clicked or key is empty, close all panels
       setActiveTemplateKey([]);
     }
-  };
-
-  const getComponentIcon = (componentName: string) => {
-    const lowerName = componentName.toLowerCase();
-    if (lowerName.includes("video"))
-      return <FaVideo className="text-red-500" />;
-    if (lowerName.includes("image"))
-      return <FaImage className="text-purple-500" />;
-    if (lowerName.includes("file")) return <FaFile className="text-blue-500" />;
-    if (lowerName.includes("table"))
-      return <FaTable className="text-green-500" />;
-    return <FaCode className="text-orange-500" />;
   };
 
   const filteredTableData = useMemo(() => {
@@ -400,19 +371,6 @@ const CreateTemplate: React.FC = () => {
       }))
       .filter((template) => template.componentArray.length > 0);
   }, [tableData, searchTerm]);
-
-  function formatDate(updatedAt: any) {
-    if (!updatedAt) return "N/A";
-
-    const date = new Date(updatedAt);
-    return date.toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
 
   const handleMenuClick = useCallback(
     (key: string, name: string) => {
@@ -495,7 +453,6 @@ const CreateTemplate: React.FC = () => {
 
   return (
     <Layout className="h-screen">
-      <ToastContainer />
       <Header className="bg-white shadow-md flex items-center justify-between px-6 py-2 mb-4 z-10">
         <div className="flex items-center">
           <Button
@@ -523,7 +480,6 @@ const CreateTemplate: React.FC = () => {
               : "Loading..."}
           </h1>
         </div>
-
         <div className="flex gap-2">
           <Tooltip title="Refresh Data">
             <Button
@@ -533,10 +489,9 @@ const CreateTemplate: React.FC = () => {
               className="text-indigo-600 hover:bg-indigo-50"
             />
           </Tooltip>
-
           <Dropdown overlay={menu} placement="bottomRight">
             <Button
-              className="border-1  border-indigo-600 hover:border-gray-400 rounded-full shadow-sm"
+              className="border-1 border-indigo-600 hover:border-gray-400 rounded-full shadow-sm"
               style={{
                 width: "240px",
                 display: "flex",
@@ -546,8 +501,7 @@ const CreateTemplate: React.FC = () => {
               }}
               icon={<IoIosAdd size={20} />}
             >
-              <span className="text-indigo-300-600">{addButtonText}</span>{" "}
-              {/* Display the button text */}
+              <span className="text-indigo-600">{addButtonText}</span>
             </Button>
           </Dropdown>
           {userInfo?.user_name && (
@@ -602,228 +556,36 @@ const CreateTemplate: React.FC = () => {
           style={{ height: "calc(100vh - 64px)" }}
         >
           <Spin spinning={loading}>
-            <div className="flex space-x-4 h-full">
-              <Card
-                className="w-1/2 shadow-lg bg-white overflow-y-auto hide-scrollbar"
-                style={{ height: "calc(100vh - 96px)" }}
-              >
-                <h2 className="text-xl font-semibold mb-4">
-                  Component Details
-                </h2>
-                {isSelectingComponent && (
-                  <SelectExistingComponent
-                    onComponentSelect={handleExistingComponentSelect}
-                    template_name={template_name || ""}
-                    refetchData={fetchData}
-                    closeComponent={closeAllComponents}
-                  />
-                )}
-                {(isCreatingComponent || editingComponent) && (
-                  <CreateComponent
-                    key={editingComponent ? editingComponent._id : "new"}
-                    onClose={handleCloseCreateComponent}
-                    onCreate={onCreateComponent}
-                    initialComponent={editingComponent}
-                  />
-                )}
-                {activeComponent &&
-                  !isCreatingComponent &&
-                  !isSelectingComponent &&
-                  !editingComponent && (
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2 text-indigo-600">
-                        {activeComponent.component_name}
-                      </h3>
-                      <FormComponent
-                        formData={
-                          Array.isArray(activeComponent.data)
-                            ? activeComponent.data
-                            : [activeComponent.data]
-                        }
-                        component_name={activeComponent.component_name}
-                        template_name={template_name}
-                        setFormData={handleSetFormData}
-                        handleSubmit={handleSubmit}
-                        refetchData={refetchData}
-                      />
-                    </div>
-                  )}
-                {!activeComponent &&
-                  !isCreatingComponent &&
-                  !isSelectingComponent &&
-                  !editingComponent && (
-                    <Empty description="Select a component to view details" />
-                  )}
-              </Card>
-
-              <Card
-                className="w-1/2 shadow-lg bg-white overflow-y-auto hide-scrollbar"
-                style={{ height: "calc(100vh - 96px)" }}
-              >
-                <h2 className="text-xl font-semibold mb-4">Component Images</h2>
-                <div className="space-y-4 flex flex-col items-center justify-center">
-                  {!activeComponent && !editingComponent ? (
-                    components?.map((component, index) => (
-                      <Card key={index} className="mb-4 w-full" size="small">
-                        <p className="text-center text-lg font-semibold mb-2 text-indigo-600">
-                          {component.component_name}
-                        </p>
-                        <div className="flex justify-center items-center">
-                          <Image
-                            src={
-                              component.component_name
-                                ?.toLocaleLowerCase()
-                                .startsWith("form_")
-                                ? "/images/form.svg"
-                                : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                                    component?.component_image?.split(
-                                      "uploads\\"
-                                    )[1]
-                                  }`
-                            }
-                            className="rounded-lg shadow-sm max-w-full h-auto"
-                            alt={component.component_name}
-                          />
-                        </div>
-                      </Card>
-                    ))
-                  ) : (
-                    <Card size="small">
-                      <p className="text-center text-xl font-semibold mb-2 text-indigo-700">
-                        {activeComponent?.component_name ||
-                          editingComponent?.component_name}
-                      </p>
-                      <div className="flex justify-center items-center">
-                        <Image
-                          src={
-                            (
-                              activeComponent || editingComponent
-                            )?.component_name?.startsWith("Form_")
-                              ? "/images/form.svg"
-                              : `${import.meta.env.VITE_APP_BASE_IMAGE_URL}${
-                                  (
-                                    activeComponent || editingComponent
-                                  )?.component_image?.split("uploads\\")[1]
-                                }`
-                          }
-                          className="rounded-lg shadow-sm"
-                          alt={
-                            activeComponent?.component_name ||
-                            editingComponent?.component_name
-                          }
-                        />
-                      </div>
-                    </Card>
-                  )}
-                </div>
-              </Card>
-            </div>
+            <ComponentSection
+              isSelectingComponent={isSelectingComponent}
+              isCreatingComponent={isCreatingComponent}
+              editingComponent={editingComponent}
+              activeComponent={activeComponent}
+              components={components}
+              template_name={template_name}
+              handleExistingComponentSelect={handleExistingComponentSelect}
+              fetchData={fetchData}
+              closeAllComponents={closeAllComponents}
+              handleCloseCreateComponent={handleCloseCreateComponent}
+              onCreateComponent={onCreateComponent}
+              handleSetFormData={handleSetFormData}
+              handleSubmit={handleSubmit}
+              refetchData={refetchData}
+            />
           </Spin>
         </Content>
       </Layout>
-      jsxCopy
-      <Modal
-        title={null}
-        open={isModalOpen}
-        onOk={handleOk}
-        onCancel={handleCancel}
-        width={900}
-        footer={null}
-        className="rounded-2xl overflow-hidden"
-        bodyStyle={{ padding: 0 }}
-      >
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-white">
-              Import Existing Components
-            </h2>
-            <Input
-              placeholder="Search components..."
-              prefix={<IoSearchOutline className="text-gray-400" />}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-72 rounded-full border-none"
-            />
-          </div>
-        </div>
-
-        <div className="max-h-[65vh] overflow-y-auto p-6 custom-scrollbar">
-          <Collapse
-            activeKey={activeTemplateKey}
-            onChange={(key) => handleTemplateChange(key as string)}
-            className="bg-white shadow-sm rounded-xl"
-            expandIcon={({ isActive }) => (
-              <BiChevronRight
-                className={`w-5 h-5 text-indigo-600 transition-transform duration-200 ${
-                  isActive ? "transform rotate-90" : ""
-                }`}
-              />
-            )}
-          >
-            {filteredTableData.map((data, index) => (
-              <Panel
-                header={
-                  <div className="flex items-center justify-between py-3 px-2">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-lg flex items-center justify-center shadow-md">
-                        <span className="text-2xl font-bold text-white">
-                          {data.templateName.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-semibold text-indigo-700 text-xl">
-                          {data.templateName}
-                        </span>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Last updated: {formatDate(data.updatedAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <span className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-sm font-medium rounded-full">
-                        {data.componentArray.length} components
-                      </span>
-                    </div>
-                  </div>
-                }
-                key={index.toString()}
-                className="border-b last:border-b-0 hover:bg-gray-50 transition-colors duration-200"
-              >
-                <List
-                  itemLayout="horizontal"
-                  dataSource={data.componentArray}
-                  renderItem={(component) => (
-                    <List.Item
-                      key={component.component_name}
-                      className="py-4 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-                    >
-                      <div className="flex items-center justify-between w-full px-4">
-                        <div className="flex items-center space-x-4">
-                          <div className="text-2xl text-indigo-600">
-                            {getComponentIcon(component.component_name)}
-                          </div>
-                          <div className="font-medium text-gray-800">
-                            {component.component_name}
-                          </div>
-                        </div>
-                        <Tooltip title="Import Component" key="import">
-                          <Button
-                            type="primary"
-                            icon={<DownloadOutlined />}
-                            onClick={() => handleImportComponent(component)}
-                            className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 border-none shadow-md transition duration-300 text-sm px-4 py-2 rounded-full"
-                          >
-                            Import
-                          </Button>
-                        </Tooltip>
-                      </div>
-                    </List.Item>
-                  )}
-                />
-              </Panel>
-            ))}
-          </Collapse>
-        </div>
-      </Modal>
+      <ImportModal
+        isModalOpen={isModalOpen}
+        handleOk={handleOk}
+        handleCancel={handleCancel}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        filteredTableData={filteredTableData}
+        activeTemplateKey={activeTemplateKey}
+        handleTemplateChange={handleTemplateChange}
+        handleImportComponent={handleImportComponent}
+      />
     </Layout>
   );
 };

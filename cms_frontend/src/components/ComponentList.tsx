@@ -185,7 +185,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
         <FaClipboardList className="mr-3 text-indigo-600" />
         Component List
       </h2>
-      <div className="space-y-3 cursor-pointer">
+      <div className="space-y-3 cursor-pointer ">
         {components.length === 0 ? (
           <p className="text-gray-600 text-center py-8 bg-white rounded-lg shadow">
             No components available.
