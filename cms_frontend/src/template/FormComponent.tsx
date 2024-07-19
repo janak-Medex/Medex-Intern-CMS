@@ -1,13 +1,16 @@
-import React, { useState, useEffect, FormEvent } from "react";
+import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import {
   AiOutlineFileImage,
   AiOutlineClose,
   AiOutlineVideoCamera,
   AiOutlineFile,
+  AiOutlineEdit,
 } from "react-icons/ai";
 import { Image, message } from "antd";
+import { CloseOutlined } from "@ant-design/icons";
 import Cookies from "js-cookie";
 import { submitFormData } from "../api/form.api";
+import { IoBagCheckOutline } from "react-icons/io5";
 
 interface FormComponentProps {
   template_name: any;
@@ -29,9 +32,11 @@ const FormComponent: React.FC<FormComponentProps> = ({
     [key: string]: any[][];
   }>({});
   const [errors, setErrors] = useState<{ [key: string]: string[] }>({});
+  const [inputValues, setInputValues] = useState<{ [key: string]: string }>({});
+  const [editingTags, setEditingTags] = useState<{
+    [key: string]: string | null;
+  }>({});
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
-
-  useEffect(() => {}, [formData]);
 
   useEffect(() => {
     if (!Array.isArray(formData) || formData.length === 0) {
@@ -161,6 +166,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         if (
           value === null ||
           value === undefined ||
+          value === "" ||
           (Array.isArray(value) && value.length === 0)
         ) {
           if (!newErrors[key]) {
@@ -182,10 +188,10 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }
 
     const formPayload = new FormData();
+
     formPayload.append("template_name", template_name);
     formPayload.append("component_name", component_name);
 
-    // Handle file uploads and create data array
     const dataArray = formData.map((item) => {
       const dataItem: { [key: string]: any } = {};
       Object.entries(item).forEach(([key, value]) => {
@@ -195,7 +201,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
               formPayload.append(`files`, fileItem);
               return { name: fileItem.name, originalName: fileItem.name };
             }
-            return fileItem; // For existing files, keep the string path
+            return fileItem;
           });
         } else {
           dataItem[key] = value;
@@ -204,10 +210,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
       return dataItem;
     });
 
-    // Append the stringified data array to the FormData
     formPayload.append("data", JSON.stringify(dataArray));
-
-    // Append other necessary fields
     formPayload.append("is_active", "true");
     formPayload.append("inner_component", "1");
 
@@ -231,6 +234,106 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }
   };
 
+  const handleInputChange = (
+    index: number,
+    key: string,
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setInputValues((prev) => ({
+      ...prev,
+      [`${index}-${key}`]: e.target.value,
+    }));
+  };
+
+  const handleInputConfirm = (
+    e:
+      | React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+      | React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
+    index: number,
+    key: string
+  ) => {
+    e.preventDefault();
+    const inputKey = `${index}-${key}`;
+    const inputValue = inputValues[inputKey];
+    if (inputValue && !formData[index][key].includes(inputValue.trim())) {
+      const newData = [...formData];
+      newData[index] = {
+        ...newData[index],
+        [key]: [...(newData[index][key] || []), inputValue.trim()],
+      };
+      setFormData(newData);
+    }
+    setInputValues((prev) => ({ ...prev, [inputKey]: "" }));
+    setEditingTags((prev) => ({ ...prev, [inputKey]: null }));
+  };
+  const handleInputBlur = (
+    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
+    index: number,
+    key: string
+  ) => {
+    handleInputConfirm(e, index, key);
+  };
+
+  const handleTagClose = (
+    e: React.MouseEvent,
+    index: number,
+    key: string,
+    removedTag: string
+  ) => {
+    e.preventDefault(); // Prevent default behavior
+    e.stopPropagation(); // Stop event propagation
+
+    const inputKey = `${index}-${key}`;
+    if (removedTag === editingTags[inputKey]) {
+      setEditingTags((prev) => ({ ...prev, [inputKey]: null }));
+    }
+    const newData = [...formData];
+    newData[index] = {
+      ...newData[index],
+      [key]: newData[index][key].filter((tag: string) => tag !== removedTag),
+    };
+    setFormData(newData);
+  };
+
+  const handleEditTags = (
+    e: React.MouseEvent,
+    index: number,
+    key: string,
+    tagToEdit: string
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const inputKey = `${index}-${key}`;
+
+    // Check if this specific tag is already being edited
+    if (editingTags[inputKey] === tagToEdit) {
+      // If it is, close the edit mode and add the tag back to the list
+      setEditingTags((prev) => ({ ...prev, [inputKey]: null }));
+      setInputValues((prev) => ({ ...prev, [inputKey]: "" }));
+      const newData = [...formData];
+      newData[index] = {
+        ...newData[index],
+        [key]: [...newData[index][key], tagToEdit],
+      };
+      setFormData(newData);
+    } else if (Object.values(editingTags).every((tag) => tag === null)) {
+      // If no tag is being edited, start editing this one
+      setInputValues((prev) => ({ ...prev, [inputKey]: tagToEdit }));
+      setEditingTags((prev) => ({ ...prev, [inputKey]: tagToEdit }));
+      const newData = [...formData];
+      newData[index] = {
+        ...newData[index],
+        [key]: newData[index][key].filter((tag: string) => tag !== tagToEdit),
+      };
+      setFormData(newData);
+    } else {
+      // If another tag is being edited, show a warning
+      message.warning(
+        "Please complete editing the current tag before editing another."
+      );
+    }
+  };
   const getFieldComponent = (index: number, key: string, value: any) => {
     if (
       key.includes("image") ||
@@ -281,7 +384,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                         ),
                       }}
                       className="max-w-full max-h-full object-contain"
-                      style={{ minHeight: "32px", maxHeight: "112px" }} // Adjust these values as needed
+                      style={{ minHeight: "32px", maxHeight: "112px" }}
                     />
                   )}
                   {preview.type === "file" && (
@@ -299,7 +402,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     e.stopPropagation();
                     handleClearFile(index, key, fileIndex);
                   }}
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 z-10"
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 z-10 hover:bg-red-600 transition-colors duration-200"
                 >
                   <AiOutlineClose />
                 </button>
@@ -325,6 +428,87 @@ const FormComponent: React.FC<FormComponentProps> = ({
                   handleFileSelect(index, key, e.target.files);
               }}
             />
+          </div>
+          {errors[key]?.[index] && (
+            <p className="text-red-500 text-sm mt-1">{errors[key][index]}</p>
+          )}
+        </div>
+      );
+    } else if (key.toLowerCase().includes("_list") || /\blist\b/i.test(key)) {
+      const inputKey = `${index}-${key}`;
+      return (
+        <div className="mb-8 ">
+          <label className="block text-gray-800 font-semibold mb-2">
+            {key}
+          </label>
+          <div className="flex flex-col mb-4 ">
+            <textarea
+              value={inputValues[inputKey] || ""}
+              onChange={(e) => handleInputChange(index, key, e)}
+              onBlur={(e) => handleInputBlur(e, index, key)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleInputConfirm(e, index, key);
+                }
+              }}
+              placeholder="Type content and press enter to add (Shift+Enter for new line)"
+              className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500 mb-2 resize-y"
+              rows={3}
+            />
+            <button
+              type="button"
+              onClick={(e) => handleInputConfirm(e as any, index, key)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors duration-300 self-end"
+            >
+              Add
+            </button>
+          </div>
+          <div className="min-h-[100px] max-h-60 overflow-y-auto border rounded-lg p-2 bg-gray-50 custom-scrollbar ">
+            {value && Array.isArray(value) && value.length > 0 ? (
+              value.map((item, itemIndex) => (
+                <div
+                  key={itemIndex}
+                  className={`relative bg-white p-3 rounded mb-2 pr-16 shadow-sm ${
+                    editingTags[`${index}-${key}`] === item
+                      ? "border-2 border-blue-500"
+                      : ""
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{item}</p>
+                  <div className="absolute top-1 right-1 flex">
+                    {editingTags[`${index}-${key}`] === item ? (
+                      <button
+                        onClick={(e) => handleEditTags(e, index, key, item)}
+                        className="text-green-500 hover:text-green-700 mr-2"
+                        title="Complete Editing"
+                      >
+                        <IoBagCheckOutline />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => handleEditTags(e, index, key, item)}
+                        className="text-blue-500 hover:text-blue-700 mr-2"
+                        title="Edit Tag"
+                      >
+                        <AiOutlineEdit />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => handleTagClose(e, index, key, item)}
+                      className="text-red-500 hover:text-red-700"
+                      title="Remove Tag"
+                    >
+                      <CloseOutlined />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                No items added yet
+              </div>
+            )}
           </div>
           {errors[key]?.[index] && (
             <p className="text-red-500 text-sm mt-1">{errors[key][index]}</p>
@@ -359,29 +543,27 @@ const FormComponent: React.FC<FormComponentProps> = ({
   }
 
   return (
-    <>
-      <form
-        onSubmit={handleFormSubmit}
-        className="max-w-2xl mx-auto font-sans bg-white p-6 rounded-lg shadow-md"
-      >
-        {formData.map((item, index) => (
-          <div key={index} className="mb-8">
-            <h3 className="text-lg font-semibold mb-4">Item {index + 1}</h3>
-            {Object.entries(item).map(([key, value]) =>
-              getFieldComponent(index, key, value)
-            )}
-          </div>
-        ))}
-        <div className="flex justify-center mb-8">
-          <button
-            type="submit"
-            className="px-6 py-3 w-full text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none transition-colors duration-300"
-          >
-            Submit
-          </button>
+    <form
+      onSubmit={handleFormSubmit}
+      className="max-w-2xl mx-auto font-sans bg-white p-6 rounded-lg shadow-md"
+    >
+      {formData.map((item, index) => (
+        <div key={index} className="mb-8">
+          <h3 className="text-lg font-semibold mb-4">Item {index + 1}</h3>
+          {Object.entries(item).map(([key, value]) =>
+            getFieldComponent(index, key, value)
+          )}
         </div>
-      </form>
-    </>
+      ))}
+      <div className="flex justify-center mb-8">
+        <button
+          type="submit"
+          className="px-6 py-3 w-full text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none transition-colors duration-300"
+        >
+          Submit
+        </button>
+      </div>
+    </form>
   );
 };
 
