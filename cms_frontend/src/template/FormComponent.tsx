@@ -6,7 +6,7 @@ import {
   AiOutlineFile,
   AiOutlineEdit,
 } from "react-icons/ai";
-import { Image, message } from "antd";
+import { Image, message, Spin } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import Cookies from "js-cookie";
 import { submitFormData } from "../api/form.api";
@@ -36,6 +36,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   const [editingTags, setEditingTags] = useState<{
     [key: string]: string | null;
   }>({});
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
   useEffect(() => {
@@ -187,6 +188,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
       return;
     }
 
+    setIsSubmitting(true);
+
     const formPayload = new FormData();
 
     formPayload.append("template_name", template_name);
@@ -231,6 +234,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
       message.error(
         error.response?.data?.message || "An unexpected error occurred"
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -266,6 +271,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
     setInputValues((prev) => ({ ...prev, [inputKey]: "" }));
     setEditingTags((prev) => ({ ...prev, [inputKey]: null }));
   };
+
   const handleInputBlur = (
     e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
     index: number,
@@ -280,8 +286,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
     key: string,
     removedTag: string
   ) => {
-    e.preventDefault(); // Prevent default behavior
-    e.stopPropagation(); // Stop event propagation
+    e.preventDefault();
+    e.stopPropagation();
 
     const inputKey = `${index}-${key}`;
     if (removedTag === editingTags[inputKey]) {
@@ -306,9 +312,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
     const inputKey = `${index}-${key}`;
 
-    // Check if this specific tag is already being edited
     if (editingTags[inputKey] === tagToEdit) {
-      // If it is, close the edit mode and add the tag back to the list
       setEditingTags((prev) => ({ ...prev, [inputKey]: null }));
       setInputValues((prev) => ({ ...prev, [inputKey]: "" }));
       const newData = [...formData];
@@ -318,7 +322,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
       };
       setFormData(newData);
     } else if (Object.values(editingTags).every((tag) => tag === null)) {
-      // If no tag is being edited, start editing this one
       setInputValues((prev) => ({ ...prev, [inputKey]: tagToEdit }));
       setEditingTags((prev) => ({ ...prev, [inputKey]: tagToEdit }));
       const newData = [...formData];
@@ -328,12 +331,12 @@ const FormComponent: React.FC<FormComponentProps> = ({
       };
       setFormData(newData);
     } else {
-      // If another tag is being edited, show a warning
       message.warning(
         "Please complete editing the current tag before editing another."
       );
     }
   };
+
   const getFieldComponent = (index: number, key: string, value: any) => {
     if (
       key.includes("image") ||
@@ -403,6 +406,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     handleClearFile(index, key, fileIndex);
                   }}
                   className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 z-10 hover:bg-red-600 transition-colors duration-200"
+                  disabled={isSubmitting}
                 >
                   <AiOutlineClose />
                 </button>
@@ -411,7 +415,11 @@ const FormComponent: React.FC<FormComponentProps> = ({
           </div>
           <div className="flex items-center">
             <label
-              className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg cursor-pointer hover:bg-indigo-500 transition-colors duration-300"
+              className={`flex items-center justify-center px-4 py-2 ${
+                isSubmitting
+                  ? "bg-indigo-300 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-500 cursor-pointer"
+              } text-white rounded-lg transition-colors duration-300`}
               htmlFor={`${index}-${key}-file-input`}
             >
               <Icon className="mr-2" />
@@ -427,6 +435,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                 if (e.target.files && e.target.files.length > 0)
                   handleFileSelect(index, key, e.target.files);
               }}
+              disabled={isSubmitting}
             />
           </div>
           {errors[key]?.[index] && (
@@ -455,11 +464,17 @@ const FormComponent: React.FC<FormComponentProps> = ({
               placeholder="Type content and press enter to add (Shift+Enter for new line)"
               className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500 mb-2 resize-y"
               rows={3}
+              disabled={isSubmitting}
             />
             <button
               type="button"
               onClick={(e) => handleInputConfirm(e as any, index, key)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors duration-300 self-end"
+              className={`px-4 py-2 ${
+                isSubmitting
+                  ? "bg-indigo-300 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-500"
+              } text-white rounded-lg transition-colors duration-300 self-end`}
+              disabled={isSubmitting}
             >
               Add
             </button>
@@ -482,6 +497,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                         onClick={(e) => handleEditTags(e, index, key, item)}
                         className="text-green-500 hover:text-green-700 mr-2"
                         title="Complete Editing"
+                        disabled={isSubmitting}
                       >
                         <IoBagCheckOutline />
                       </button>
@@ -490,6 +506,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                         onClick={(e) => handleEditTags(e, index, key, item)}
                         className="text-blue-500 hover:text-blue-700 mr-2"
                         title="Edit Tag"
+                        disabled={isSubmitting}
                       >
                         <AiOutlineEdit />
                       </button>
@@ -498,6 +515,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                       onClick={(e) => handleTagClose(e, index, key, item)}
                       className="text-red-500 hover:text-red-700"
                       title="Remove Tag"
+                      disabled={isSubmitting}
                     >
                       <CloseOutlined />
                     </button>
@@ -528,6 +546,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
             className={`w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500 ${
               errors[key]?.[index] ? "border-red-500" : ""
             }`}
+            disabled={isSubmitting}
           />
           {errors[key]?.[index] && (
             <p className="text-red-500 text-sm mt-1">{errors[key][index]}</p>
@@ -545,8 +564,13 @@ const FormComponent: React.FC<FormComponentProps> = ({
   return (
     <form
       onSubmit={handleFormSubmit}
-      className="max-w-2xl mx-auto font-sans bg-white p-6 rounded-lg shadow-md"
+      className="max-w-2xl mx-auto font-sans bg-white p-6 rounded-lg shadow-md relative"
     >
+      {isSubmitting && (
+        <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50">
+          <Spin size="large" />
+        </div>
+      )}
       {formData.map((item, index) => (
         <div key={index} className="mb-8">
           <h3 className="text-lg font-semibold mb-4">Item {index + 1}</h3>
@@ -558,9 +582,14 @@ const FormComponent: React.FC<FormComponentProps> = ({
       <div className="flex justify-center mb-8">
         <button
           type="submit"
-          className="px-6 py-3 w-full text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none transition-colors duration-300"
+          className={`px-6 py-3 w-full text-white ${
+            isSubmitting
+              ? "bg-indigo-300 cursor-not-allowed"
+              : "bg-indigo-600 hover:bg-indigo-700"
+          } rounded-lg focus:outline-none transition-colors duration-300`}
+          disabled={isSubmitting}
         >
-          Submit
+          {isSubmitting ? "Submitting..." : "Submit"}
         </button>
       </div>
     </form>

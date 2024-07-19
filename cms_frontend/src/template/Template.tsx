@@ -3,7 +3,7 @@ import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
 import Cookies from "js-cookie";
-import { Switch, Tooltip, Input, Menu, Dropdown, message, Avatar } from "antd";
+import { Switch, Input, Menu, Dropdown, message, Avatar } from "antd";
 import {
   LogoutOutlined,
   MoreOutlined,
@@ -74,7 +74,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
       if (decodedToken) {
         setUserRole(decodedToken?.role ?? "user");
         setUserInfo({
-          user_name: decodedToken.user_name!, // Add the non-null assertion operator
+          user_name: decodedToken.user_name!,
           role: decodedToken.role!,
         });
       } else {
@@ -217,7 +217,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   const handleSwitchChange = async (checked: boolean, templateId: string) => {
     try {
       const template = await updateTemplateStatus(templateId, checked);
-      const statusMessage = checked ? "is_active" : "inactive";
+      const statusMessage = checked ? "active" : "inactive";
       message.success(
         `Template '${template.template_name}' is now ${statusMessage}`
       );
@@ -290,6 +290,46 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     </Menu>
   );
 
+  const userMenu = (
+    <Menu className="bg-gradient-to-br from-white to-blue-50 shadow-xl rounded-xl p-6 w-72">
+      <div className="flex flex-col items-center mb-6 pt-4">
+        <Avatar
+          src={""}
+          size={80}
+          icon={<UserOutlined className="text-blue-500" />}
+          className="border-4 border-blue-200 shadow-md bg-gray-100"
+        />
+        <h3 className="text-2xl font-bold mt-3 text-gray-800">
+          {userInfo?.user_name}
+        </h3>
+        <p className="text-sm text-blue-500 font-medium">Welcome Back</p>
+        {/* <p className="text-sm text-blue-500 font-medium">{userInfo?.email}</p> */}
+      </div>
+      <Menu.Item
+        key="1"
+        className="hover:bg-blue-100 rounded-lg transition-colors duration-200"
+      >
+        <button className="w-full text-left py-3 px-4 font-semibold text-gray-700 flex items-center">
+          <UserOutlined className="mr-3 text-blue-500" />
+          Role: {userInfo?.role}
+        </button>
+      </Menu.Item>
+      <Menu.Divider className="my-3 border-blue-100" />
+      <Menu.Item
+        key="2"
+        className="hover:bg-red-100 rounded-lg transition-colors duration-200"
+      >
+        <button
+          onClick={handleLogout}
+          className="w-full text-left py-3 px-4 font-semibold text-red-600 flex items-center"
+        >
+          <LogoutOutlined className="mr-3" />
+          Logout
+        </button>
+      </Menu.Item>
+    </Menu>
+  );
+
   if (!isLoggedIn) {
     return null;
   }
@@ -315,26 +355,26 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               style={{ width: 300 }}
               className="border-2 border-gray-200 rounded-lg"
             />
-            {userInfo?.user_name && (
-              <div className="flex items-center space-x-2 bg-blue-100 rounded-full py-1 px-3">
-                <Avatar
-                  icon={<UserOutlined />}
-                  size="small"
-                  style={{ backgroundColor: "#1890ff" }}
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  {userInfo.user_name}
-                </span>
-              </div>
-            )}
-            <Tooltip title="Logout">
-              <button
-                onClick={handleLogout}
-                className="text-gray-600 hover:text-gray-800 transition duration-300"
+            {userInfo && (
+              <Dropdown
+                overlay={userMenu}
+                trigger={["click"]}
+                placement="bottomRight"
               >
-                <LogoutOutlined style={{ fontSize: "24px" }} />
-              </button>
-            </Tooltip>
+                <div className="cursor-pointer flex items-center space-x-2 bg-gray-100 rounded-full py-1 px-3 hover:bg-gray-200 transition-colors duration-300">
+                  <Avatar
+                    src="https://example.com/default-avatar.png"
+                    size={32}
+                    className="border-4 border-blue-200 shadow-md bg-gray-100"
+                    icon={<UserOutlined className="text-blue-500" />}
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    {userInfo.user_name}
+                  </span>
+                  <DownOutlined style={{ fontSize: "12px" }} />
+                </div>
+              </Dropdown>
+            )}
           </div>
         </div>
       </div>
