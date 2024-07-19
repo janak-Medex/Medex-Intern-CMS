@@ -3,16 +3,16 @@ import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
 import Cookies from "js-cookie";
-import { Switch, Tooltip, Input, Menu, Dropdown } from "antd";
+import { Switch, Input, Menu, Dropdown, message, Avatar } from "antd";
 import {
   LogoutOutlined,
   MoreOutlined,
   DeleteOutlined,
   EditOutlined,
   DownOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
-import { toast } from "react-toastify";
 import { logout } from "../api/auth.api";
 import {
   createTemplate,
@@ -20,6 +20,9 @@ import {
   fetchTemplatesData,
   updateTemplateStatus,
 } from "../api/template.api";
+import CreateUser from "../login/createUserForm";
+import { TiUserAddOutline } from "react-icons/ti";
+import { decodeToken } from "../utils/JwtUtils";
 
 const { Search } = Input;
 
@@ -33,6 +36,11 @@ export interface Template {
   is_active: boolean;
   updatedAt: string;
   status: number;
+}
+
+interface UserInfo {
+  user_name: string;
+  role: "admin" | "user";
 }
 
 type SortKey = "template name" | "updatedAt" | "is_active";
@@ -55,6 +63,27 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     key: "updatedAt",
     direction: "desc",
   });
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [userRole, setUserRole] = useState<"admin" | "user" | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+
+  useEffect(() => {
+    const token = Cookies.get("access_token");
+    if (token) {
+      const decodedToken = decodeToken(token);
+      if (decodedToken) {
+        setUserRole(decodedToken?.role ?? "user");
+        setUserInfo({
+          user_name: decodedToken.user_name!,
+          role: decodedToken.role!,
+        });
+      } else {
+        handleLogout();
+      }
+    } else {
+      handleLogout();
+    }
+  }, []);
 
   useEffect(() => {
     checkLoginStatus();
@@ -165,7 +194,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
           fetchTemplates();
           settemplate_name("");
           setIsModalOpen(false);
-          navigate(`/create-template/${template_name}`);
+          navigate(`/template/${template_name}`);
         }
       } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
@@ -182,20 +211,20 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
 
   const handleLogout = () => {
     logout();
-    setIsLoggedIn(false);
     onLogout();
   };
+
   const handleSwitchChange = async (checked: boolean, templateId: string) => {
     try {
       const template = await updateTemplateStatus(templateId, checked);
-      const statusMessage = checked ? "is_active" : "inactive";
-      toast.success(
+      const statusMessage = checked ? "active" : "inactive";
+      message.success(
         `Template '${template.template_name}' is now ${statusMessage}`
       );
-      fetchTemplates(); // Refresh the templates after update
+      fetchTemplates();
     } catch (error) {
       console.error("Error updating template status:", error);
-      toast.error("Failed to update template status");
+      message.error("Failed to update template status");
     }
   };
 
@@ -212,7 +241,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
       case "edit":
         const template = templates.find((t) => t._id === templateId);
         if (template) {
-          navigate(`/create-template/${template.template_name}`);
+          navigate(`/template/${template.template_name}`);
         }
         break;
       case "delete":
@@ -261,6 +290,46 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     </Menu>
   );
 
+  const userMenu = (
+    <Menu className="bg-gradient-to-br from-white to-blue-50 shadow-xl rounded-xl p-6 w-72">
+      <div className="flex flex-col items-center mb-6 pt-4">
+        <Avatar
+          src={""}
+          size={80}
+          icon={<UserOutlined className="text-blue-500" />}
+          className="border-4 border-blue-200 shadow-md bg-gray-100"
+        />
+        <h3 className="text-2xl font-bold mt-3 text-gray-800">
+          {userInfo?.user_name}
+        </h3>
+        <p className="text-sm text-blue-500 font-medium">Welcome Back</p>
+        {/* <p className="text-sm text-blue-500 font-medium">{userInfo?.email}</p> */}
+      </div>
+      <Menu.Item
+        key="1"
+        className="hover:bg-blue-100 rounded-lg transition-colors duration-200"
+      >
+        <button className="w-full text-left py-3 px-4 font-semibold text-gray-700 flex items-center">
+          <UserOutlined className="mr-3 text-blue-500" />
+          Role: {userInfo?.role}
+        </button>
+      </Menu.Item>
+      <Menu.Divider className="my-3 border-blue-100" />
+      <Menu.Item
+        key="2"
+        className="hover:bg-red-100 rounded-lg transition-colors duration-200"
+      >
+        <button
+          onClick={handleLogout}
+          className="w-full text-left py-3 px-4 font-semibold text-red-600 flex items-center"
+        >
+          <LogoutOutlined className="mr-3" />
+          Logout
+        </button>
+      </Menu.Item>
+    </Menu>
+  );
+
   if (!isLoggedIn) {
     return null;
   }
@@ -271,20 +340,41 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-gray-800 text-3xl font-bold">Templates</h1>
           <div className="flex items-center space-x-6">
+            {userRole === "admin" && (
+              <button
+                onClick={() => setShowCreateUser(true)}
+                className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 transition duration-300"
+              >
+                <TiUserAddOutline style={{ marginRight: "8px" }} />
+                Create User
+              </button>
+            )}
             <Search
               placeholder="Search templates"
               onChange={(e) => handleSearch(e.target.value)}
               style={{ width: 300 }}
               className="border-2 border-gray-200 rounded-lg"
             />
-            <Tooltip title="Logout">
-              <button
-                onClick={handleLogout}
-                className="text-gray-600 hover:text-gray-800 transition duration-300"
+            {userInfo && (
+              <Dropdown
+                overlay={userMenu}
+                trigger={["click"]}
+                placement="bottomRight"
               >
-                <LogoutOutlined style={{ fontSize: "24px" }} />
-              </button>
-            </Tooltip>
+                <div className="cursor-pointer flex items-center space-x-2 bg-gray-100 rounded-full py-1 px-3 hover:bg-gray-200 transition-colors duration-300">
+                  <Avatar
+                    src="https://example.com/default-avatar.png"
+                    size={32}
+                    className="border-4 border-blue-200 shadow-md bg-gray-100"
+                    icon={<UserOutlined className="text-blue-500" />}
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    {userInfo.user_name}
+                  </span>
+                  <DownOutlined style={{ fontSize: "12px" }} />
+                </div>
+              </Dropdown>
+            )}
           </div>
         </div>
       </div>
@@ -349,11 +439,11 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               <div
                 key={template._id}
                 className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out 
-                            ${view === "grid" ? "p-6" : "p-5"}`}
+                              ${view === "grid" ? "p-6" : "p-5"}`}
               >
                 <div className="flex justify-between items-start mb-4">
                   <Link
-                    to={`/create-template/${template.template_name}`}
+                    to={`/template/${template.template_name}`}
                     className="block w-full"
                   >
                     <h3 className="text-xl font-semibold text-gray-800 hover:text-blue-600 transition-colors duration-300">
@@ -416,6 +506,10 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
             </button>
           </div>
         </div>
+      </Modal>
+
+      <Modal show={showCreateUser} onClose={() => setShowCreateUser(false)}>
+        <CreateUser onClose={() => setShowCreateUser(false)} />
       </Modal>
     </div>
   );
