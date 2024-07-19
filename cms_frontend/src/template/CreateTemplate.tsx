@@ -491,13 +491,14 @@ const CreateTemplate: React.FC = () => {
           </Tooltip>
           <Dropdown overlay={menu} placement="bottomRight">
             <Button
-              className="border-1  border-indigo-600 hover:border-gray-400 rounded-full shadow-sm"
+              className="border-1 border-indigo-600 hover:border-gray-400 rounded-full shadow-sm"
               style={{
                 width: "240px",
                 display: "flex",
-                justifyContent: "space-between",
+                justifyContent: "center",
                 alignItems: "center",
                 padding: "8px 16px",
+                gap: "8px", // Optional: adds space between the icon and text
               }}
               icon={<IoIosAdd size={20} />}
             >

@@ -18,6 +18,7 @@ import {
   EditOutlined,
   UploadOutlined,
   CloseOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import { fetchAllComponents } from "../api/component.api";
 import { AiOutlineFile, AiOutlineEdit } from "react-icons/ai";
@@ -53,6 +54,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
     [key: string]: any[];
   }>({});
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<{ [key: string]: File[] }>(
     {}
@@ -205,7 +207,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
 
   const handleInputConfirm = (key: string) => {
     const inputValue = inputValues[key]?.trim();
-    if (!inputValue) return; // Exit if there's no input value
+    if (!inputValue) return;
 
     setFormData((prev) => {
       const currentData = prev.data || {};
@@ -215,16 +217,14 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
 
       let newTags;
       if (editingTags[key]) {
-        // We're editing an existing tag
         newTags = currentTags.map((tag: string) =>
           tag === editingTags[key] ? inputValue : tag
         );
       } else {
-        // We're adding a new tag
         if (!currentTags.includes(inputValue)) {
           newTags = [...currentTags, inputValue];
         } else {
-          newTags = currentTags; // Tag already exists, no change
+          newTags = currentTags;
         }
       }
 
@@ -240,6 +240,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
     setInputValues((prev) => ({ ...prev, [key]: "" }));
     setEditingTags((prev) => ({ ...prev, [key]: null }));
   };
+
   const handleTagClose = (key: string, removedTag: string) => {
     if (removedTag === editingTags[key]) {
       setEditingTags((prev) => ({ ...prev, [key]: null }));
@@ -268,10 +269,9 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       message.warning(
         "Please complete editing the current tag before editing another."
       );
-      return; // Exit early if we can't start editing
+      return;
     }
 
-    // Clear the validation error for this field
     setValidationErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[key];
@@ -284,7 +284,6 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
     if (!selectedComponent) return;
 
     setValidationErrors({});
-
     const errors: { [key: string]: string } = {};
 
     if (!formData.component_name) {
@@ -312,6 +311,8 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       message.error("Please fill in all required fields");
       return;
     }
+
+    setSubmitting(true);
 
     try {
       const formPayload = new FormData();
@@ -400,6 +401,8 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       message.error(
         error.response?.data?.message || "An unexpected error occurred"
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -469,6 +472,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                     onClick={() => handleClearFile(key, fileIndex)}
                     size="small"
                     className="absolute top-1 right-1 z-10"
+                    disabled={submitting}
                   />
                 </div>
               ))}
@@ -478,6 +482,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
               onClick={() =>
                 document.getElementById(`${key}-file-input`)?.click()
               }
+              disabled={submitting}
             >
               Select {key}
             </Button>
@@ -491,6 +496,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                 if (e.target.files && e.target.files.length > 0)
                   handleFileSelect(key, e.target.files);
               }}
+              disabled={submitting}
             />
           </div>
           {validationErrors[key] && (
@@ -523,10 +529,12 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
               placeholder="Type content and press enter to add (Shift+Enter for new line)"
               className="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500 mb-2 resize-y"
               rows={3}
+              disabled={submitting}
             />
             <Button
               onClick={() => handleInputConfirm(key)}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors duration-300 self-end"
+              disabled={submitting}
             >
               Add
             </Button>
@@ -549,6 +557,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                         onClick={() => handleEditTags(key, item)}
                         className="text-green-500 hover:text-green-700 mr-2"
                         title="Complete Editing"
+                        disabled={submitting}
                       >
                         <IoBagCheckOutline />
                       </button>
@@ -557,6 +566,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                         onClick={() => handleEditTags(key, item)}
                         className="text-blue-500 hover:text-blue-700 mr-2"
                         title="Edit Tag"
+                        disabled={submitting}
                       >
                         <AiOutlineEdit />
                       </button>
@@ -565,6 +575,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                       onClick={() => handleTagClose(key, item)}
                       className="text-red-500 hover:text-red-700"
                       title="Remove Tag"
+                      disabled={submitting}
                     >
                       <CloseOutlined />
                     </button>
@@ -597,6 +608,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
             prefix={<EditOutlined className="site-form-item-icon" />}
             value={formData.data?.[key] || ""}
             onChange={(e) => handleInputChange(key, e.target.value)}
+            disabled={submitting}
           />
           {validationErrors[key] && (
             <div className="text-red-500 text-sm mt-1">
@@ -616,7 +628,10 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
       <Title level={3} className="mb-6 text-center text-indigo-700">
         Select Existing Component
       </Title>
-      <Spin spinning={loading}>
+      <Spin
+        spinning={loading || submitting}
+        indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />}
+      >
         <form onSubmit={handleSubmit}>
           <div>
             <label>
@@ -634,6 +649,7 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                 handleComponentSelect(value);
               }}
               value={searchValue}
+              disabled={submitting}
             >
               {allComponents.map((component) => (
                 <Option
@@ -720,12 +736,13 @@ const SelectExistingComponent: React.FC<SelectExistingComponentProps> = ({
                 <Button
                   type="primary"
                   htmlType="submit"
-                  icon={<PlusOutlined />}
+                  icon={submitting ? <LoadingOutlined /> : <PlusOutlined />}
                   size="large"
                   block
                   className="bg-indigo-600 hover:bg-indigo-700 border-indigo-600 hover:border-indigo-700"
+                  disabled={submitting}
                 >
-                  Save Component
+                  {submitting ? "Saving Component..." : "Save Component"}
                 </Button>
               </div>
             </Card>

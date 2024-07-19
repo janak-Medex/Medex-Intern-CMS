@@ -3,16 +3,16 @@ import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
 import Cookies from "js-cookie";
-import { Switch, Tooltip, Input, Menu, Dropdown, message, Avatar } from "antd";
+import { Switch, Tooltip, Input, Menu, Dropdown } from "antd";
 import {
   LogoutOutlined,
   MoreOutlined,
   DeleteOutlined,
   EditOutlined,
   DownOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
+import { toast } from "react-toastify";
 import { logout } from "../api/auth.api";
 import {
   createTemplate,
@@ -20,9 +20,6 @@ import {
   fetchTemplatesData,
   updateTemplateStatus,
 } from "../api/template.api";
-import CreateUser from "../login/createUserForm";
-import { TiUserAddOutline } from "react-icons/ti";
-import { decodeToken } from "../utils/JwtUtils";
 
 const { Search } = Input;
 
@@ -36,11 +33,6 @@ export interface Template {
   is_active: boolean;
   updatedAt: string;
   status: number;
-}
-
-interface UserInfo {
-  user_name: string;
-  role: "admin" | "user";
 }
 
 type SortKey = "template name" | "updatedAt" | "is_active";
@@ -63,27 +55,6 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     key: "updatedAt",
     direction: "desc",
   });
-  const [showCreateUser, setShowCreateUser] = useState(false);
-  const [userRole, setUserRole] = useState<"admin" | "user" | null>(null);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-
-  useEffect(() => {
-    const token = Cookies.get("access_token");
-    if (token) {
-      const decodedToken = decodeToken(token);
-      if (decodedToken) {
-        setUserRole(decodedToken?.role ?? "user");
-        setUserInfo({
-          user_name: decodedToken.user_name!, // Add the non-null assertion operator
-          role: decodedToken.role!,
-        });
-      } else {
-        handleLogout();
-      }
-    } else {
-      handleLogout();
-    }
-  }, []);
 
   useEffect(() => {
     checkLoginStatus();
@@ -194,7 +165,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
           fetchTemplates();
           settemplate_name("");
           setIsModalOpen(false);
-          navigate(`/template/${template_name}`);
+          navigate(`/create-template/${template_name}`);
         }
       } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
@@ -211,20 +182,20 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
 
   const handleLogout = () => {
     logout();
+    setIsLoggedIn(false);
     onLogout();
   };
-
   const handleSwitchChange = async (checked: boolean, templateId: string) => {
     try {
       const template = await updateTemplateStatus(templateId, checked);
       const statusMessage = checked ? "is_active" : "inactive";
-      message.success(
+      toast.success(
         `Template '${template.template_name}' is now ${statusMessage}`
       );
-      fetchTemplates();
+      fetchTemplates(); // Refresh the templates after update
     } catch (error) {
       console.error("Error updating template status:", error);
-      message.error("Failed to update template status");
+      toast.error("Failed to update template status");
     }
   };
 
@@ -241,7 +212,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
       case "edit":
         const template = templates.find((t) => t._id === templateId);
         if (template) {
-          navigate(`/template/${template.template_name}`);
+          navigate(`/create-template/${template.template_name}`);
         }
         break;
       case "delete":
@@ -300,33 +271,12 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-gray-800 text-3xl font-bold">Templates</h1>
           <div className="flex items-center space-x-6">
-            {userRole === "admin" && (
-              <button
-                onClick={() => setShowCreateUser(true)}
-                className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 transition duration-300"
-              >
-                <TiUserAddOutline style={{ marginRight: "8px" }} />
-                Create User
-              </button>
-            )}
             <Search
               placeholder="Search templates"
               onChange={(e) => handleSearch(e.target.value)}
               style={{ width: 300 }}
               className="border-2 border-gray-200 rounded-lg"
             />
-            {userInfo?.user_name && (
-              <div className="flex items-center space-x-2 bg-blue-100 rounded-full py-1 px-3">
-                <Avatar
-                  icon={<UserOutlined />}
-                  size="small"
-                  style={{ backgroundColor: "#1890ff" }}
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  {userInfo.user_name}
-                </span>
-              </div>
-            )}
             <Tooltip title="Logout">
               <button
                 onClick={handleLogout}
@@ -399,11 +349,11 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               <div
                 key={template._id}
                 className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out 
-                              ${view === "grid" ? "p-6" : "p-5"}`}
+                            ${view === "grid" ? "p-6" : "p-5"}`}
               >
                 <div className="flex justify-between items-start mb-4">
                   <Link
-                    to={`/template/${template.template_name}`}
+                    to={`/create-template/${template.template_name}`}
                     className="block w-full"
                   >
                     <h3 className="text-xl font-semibold text-gray-800 hover:text-blue-600 transition-colors duration-300">
@@ -466,10 +416,6 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
             </button>
           </div>
         </div>
-      </Modal>
-
-      <Modal show={showCreateUser} onClose={() => setShowCreateUser(false)}>
-        <CreateUser onClose={() => setShowCreateUser(false)} />
       </Modal>
     </div>
   );
