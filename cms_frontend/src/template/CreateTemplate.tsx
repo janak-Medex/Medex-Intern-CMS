@@ -10,11 +10,9 @@ import {
   message,
   Dropdown,
   Space,
-  Avatar,
   Menu,
 } from "antd";
 import {
-  UserOutlined,
   MenuOutlined,
   ReloadOutlined,
   AppstoreAddOutlined,
@@ -31,6 +29,7 @@ import { createTableData } from "../utils/CreateTableData";
 import ComponentSection from "./ComponentSection";
 import ImportModal from "./ImportModal";
 import TemplateForm from "../templateForm/TemplateForm";
+import UserInfo from "./UserInfo";
 
 const { Header, Sider, Content } = Layout;
 
@@ -66,7 +65,7 @@ const CreateTemplate: React.FC = () => {
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [userRole, setUserRole] = useState<string>("user");
-  const [userInfo, setUserInfo] = useState<DecodedToken | null>(null);
+  const [_userInfo, setUserInfo] = useState<DecodedToken | null>(null);
 
   useEffect(() => {
     const token = Cookies.get("access_token");
@@ -451,6 +450,15 @@ const CreateTemplate: React.FC = () => {
     [selectedMenuKey, handleMenuClick, userRole]
   );
 
+  const handleLogout = useCallback(() => {
+    // Implement your logout logic here
+    // For example, clear cookies, reset state, etc.
+    Cookies.remove("access_token");
+    setUserInfo(null);
+    setUserRole("user");
+    navigate("/login"); // Redirect to login page
+  }, [navigate]);
+
   return (
     <Layout className="h-screen">
       <Header className="bg-white shadow-md flex items-center justify-between px-6 py-2 mb-4 z-10">
@@ -498,25 +506,14 @@ const CreateTemplate: React.FC = () => {
                 justifyContent: "center",
                 alignItems: "center",
                 padding: "8px 16px",
-                gap: "8px", // Optional: adds space between the icon and text
+                gap: "8px",
               }}
               icon={<IoIosAdd size={20} />}
             >
               <span className="text-indigo-600">{addButtonText}</span>
             </Button>
           </Dropdown>
-          {userInfo?.user_name && (
-            <div className="flex items-center  space-x-2 bg-blue-100 rounded-full py-1 px-3">
-              <Avatar
-                icon={<UserOutlined />}
-                size="small"
-                style={{ backgroundColor: "#1890ff" }}
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {userInfo.user_name}
-              </span>
-            </div>
-          )}
+          <UserInfo onLogout={handleLogout} />
         </div>
       </Header>
       <TemplateForm
