@@ -183,12 +183,12 @@ const ComponentList: React.FC<ComponentListProps> = ({
   };
 
   return (
-    <div className="space-y-4 flex-1 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-lg min-h-full overflow-hidden ">
+    <div className="space-y-4 flex-1 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-lg min-h-full overflow-hidden">
       <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center">
         <FaClipboardList className="mr-3 text-indigo-600" />
         Component List
       </h2>
-      <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-200px)] pr-2 custom-scrollbar">
+      <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-200px)] pr-2 custom-scrollbar pb-5">
         {components.length === 0 ? (
           <p className="text-gray-600 text-center py-8 bg-white rounded-lg shadow">
             No components available.
@@ -203,17 +203,23 @@ const ComponentList: React.FC<ComponentListProps> = ({
               onDrop={(e) => handleDrop(e, component)}
               className={`flex items-center justify-between rounded-lg p-4 transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-md ${
                 isFormComponent(component.component_name)
-                  ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
-                  : "bg-white"
+                  ? component.is_active
+                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
+                    : "bg-gradient-to-r from-gray-400 to-gray-500 text-white"
+                  : component.is_active
+                  ? "bg-white border-l-4 border-green-500"
+                  : "bg-gray-100 border-l-4 border-red-500"
               }`}
               onClick={() => handleComponentClick(component)}
             >
-              <div className="flex items-center space-x-3 flex-grow min-w-0">
+              <div className="flex items-center space-x-3 flex-grow min-w-0 cursor-pointer">
                 <FaGripVertical
                   className={`cursor-grab flex-shrink-0 ${
                     isFormComponent(component.component_name)
                       ? "text-blue-200"
-                      : "text-gray-400"
+                      : component.is_active
+                      ? "text-gray-400"
+                      : "text-gray-500"
                   }`}
                 />
                 <Tooltip title={component.component_name}>
@@ -221,19 +227,47 @@ const ComponentList: React.FC<ComponentListProps> = ({
                     className={`font-medium truncate ${
                       isFormComponent(component.component_name)
                         ? "text-white"
-                        : "text-gray-700"
+                        : component.is_active
+                        ? "text-gray-700"
+                        : "text-gray-500"
                     }`}
                   >
                     {component.component_name}
                   </span>
                 </Tooltip>
                 {isFormComponent(component.component_name) && (
-                  <Badge count="Form" style={{ backgroundColor: "#10B981" }} />
+                  <Badge
+                    count="Form"
+                    style={{
+                      backgroundColor: component.is_active
+                        ? "#10B981"
+                        : "#6B7280",
+                    }}
+                  />
                 )}
               </div>
               <div className="flex items-center space-x-3 flex-shrink-0">
                 {isFormComponent(component.component_name) ? (
-                  userRole !== "user" && (
+                  <>
+                    <Tooltip
+                      title={component.is_active ? "Active" : "Inactive"}
+                    >
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (component._id) {
+                            handleToggle(component._id);
+                          }
+                        }}
+                        className="text-white hover:text-blue-200 transition-colors duration-200"
+                      >
+                        {component.is_active ? (
+                          <FaToggleOn size={24} />
+                        ) : (
+                          <FaToggleOff size={24} />
+                        )}
+                      </button>
+                    </Tooltip>
                     <Tooltip title="Edit Form">
                       <button
                         className="text-white hover:text-blue-200 transition-colors duration-200"
@@ -242,7 +276,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
                         <FaEdit size={20} />
                       </button>
                     </Tooltip>
-                  )
+                  </>
                 ) : (
                   <>
                     <Tooltip
@@ -256,9 +290,9 @@ const ComponentList: React.FC<ComponentListProps> = ({
                             handleToggle(component._id);
                           }
                         }}
-                        className="bg-gray-300"
-                        checkedChildren={<FaToggleOn />}
-                        unCheckedChildren={<FaToggleOff />}
+                        className={`${
+                          component.is_active ? "bg-green-500" : "bg-gray-300"
+                        }`}
                       />
                     </Tooltip>
                     {userRole !== "user" && (
@@ -279,9 +313,7 @@ const ComponentList: React.FC<ComponentListProps> = ({
                             className="text-indigo-500 hover:text-indigo-700 transition-colors duration-200"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (!isFormComponent(component.component_name)) {
-                                onEdit(component);
-                              }
+                              onEdit(component);
                             }}
                           >
                             <FaEdit size={20} />
