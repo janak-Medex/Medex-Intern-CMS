@@ -33,7 +33,7 @@ import UserInfo from "./UserInfo";
 
 const { Header, Sider, Content } = Layout;
 
-const CreateTemplate: React.FC = () => {
+const CreateTemplate: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { template_name } = useParams<{ template_name: string }>();
   const navigate = useNavigate();
 
@@ -66,7 +66,13 @@ const CreateTemplate: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [userRole, setUserRole] = useState<string>("user");
   const [_userInfo, setUserInfo] = useState<DecodedToken | null>(null);
+  const [isLoggedOut, setIsLoggedOut] = useState(false);
 
+  useEffect(() => {
+    if (isLoggedOut) {
+      navigate("/", { replace: true });
+    }
+  }, [isLoggedOut, navigate]);
   useEffect(() => {
     const token = Cookies.get("access_token");
     if (token) {
@@ -75,15 +81,15 @@ const CreateTemplate: React.FC = () => {
         if (decodedToken) {
           setUserInfo(decodedToken);
           setUserRole(decodedToken.role || "user");
+        } else {
+          setIsLoggedOut(true);
         }
       } catch (error) {
         console.error("Error decoding token:", error);
-        setUserRole("user");
-        setUserInfo(null);
+        setIsLoggedOut(true);
       }
     } else {
-      setUserRole("user");
-      setUserInfo(null);
+      setIsLoggedOut(true);
     }
   }, []);
 
@@ -451,13 +457,8 @@ const CreateTemplate: React.FC = () => {
   );
 
   const handleLogout = useCallback(() => {
-    // Implement your logout logic here
-    // For example, clear cookies, reset state, etc.
-    Cookies.remove("access_token");
-    setUserInfo(null);
-    setUserRole("user");
-    navigate("/login"); // Redirect to login page
-  }, [navigate]);
+    onLogout();
+  }, [onLogout]);
 
   return (
     <Layout className="h-screen">

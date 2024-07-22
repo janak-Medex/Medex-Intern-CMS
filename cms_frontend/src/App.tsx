@@ -5,12 +5,13 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import Login from "./login/cms.login.tsx";
-import CreateTemplate from "./template/CreateTemplate.tsx";
+import Login from "./login/cms.login";
+import CreateTemplate from "./template/CreateTemplate";
 import ProtectedRoute from "./routes/protected.route";
 import Cookies from "js-cookie";
-import Template from "./template/Template.tsx";
+import Template from "./template/Template";
 import { ToastContainer } from "react-toastify";
+import { logout } from "./api/auth.api";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
@@ -21,9 +22,14 @@ function App() {
     setIsAuthenticated(true);
   }, []);
 
-  const handleLogout = useCallback(() => {
-    Cookies.remove("access_token");
-    setIsAuthenticated(false);
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout();
+      setIsAuthenticated(false);
+    } catch (error) {
+      console.error("Error during logout:", error);
+      setIsAuthenticated(false);
+    }
   }, []);
 
   return (
@@ -31,7 +37,6 @@ function App() {
       <ToastContainer />
       <Router>
         <Routes>
-          {/* Route for Login */}
           <Route
             path="/"
             element={
@@ -42,28 +47,22 @@ function App() {
               )
             }
           />
-
-          {/* Protected Routes */}
           <Route
             path="/template"
             element={
-              isAuthenticated ? (
-                <ProtectedRoute
-                  element={<Template onLogout={handleLogout} />}
-                />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                element={<Template onLogout={handleLogout} />}
+              />
             }
           />
           <Route
             path="/template/:template_name"
             element={
-              isAuthenticated ? (
-                <ProtectedRoute element={<CreateTemplate />} />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                element={<CreateTemplate onLogout={handleLogout} />}
+              />
             }
           />
         </Routes>
