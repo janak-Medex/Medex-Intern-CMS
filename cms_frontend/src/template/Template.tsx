@@ -3,16 +3,15 @@ import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
 import Cookies from "js-cookie";
-import { Switch, Input, Menu, Dropdown, message, Button } from "antd";
+import { Switch, Input, Menu, Dropdown, message } from "antd";
 import {
   MoreOutlined,
   DeleteOutlined,
   EditOutlined,
   DownOutlined,
-  AppstoreOutlined,
-  UnorderedListOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
+import { logout } from "../api/auth.api";
 import {
   createTemplate,
   deleteTemplate,
@@ -21,6 +20,7 @@ import {
 } from "../api/template.api";
 import CreateUser from "../login/createUserForm";
 import { TiUserAddOutline } from "react-icons/ti";
+import { decodeToken } from "../utils/JwtUtils";
 import UserInfo from "./UserInfo";
 
 const { Search } = Input;
@@ -37,16 +37,17 @@ export interface Template {
   status: number;
 }
 
+interface UserInfo {
+  user_name: string;
+  role: "admin" | "user";
+}
+
 type SortKey = "template name" | "updatedAt" | "is_active";
 
 type SortConfig = {
   key: SortKey;
   direction: "asc" | "desc";
 };
-
-interface User {
-  role: "admin" | "user";
-}
 
 const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   const navigate = useNavigate();
@@ -62,7 +63,26 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     direction: "desc",
   });
   const [showCreateUser, setShowCreateUser] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<"admin" | "user" | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+
+  useEffect(() => {
+    const token = Cookies.get("access_token");
+    if (token) {
+      const decodedToken = decodeToken(token);
+      if (decodedToken) {
+        setUserRole(decodedToken?.role ?? "user");
+        setUserInfo({
+          user_name: decodedToken.user_name!,
+          role: decodedToken.role!,
+        });
+      } else {
+        handleLogout();
+      }
+    } else {
+      handleLogout();
+    }
+  }, []);
 
   useEffect(() => {
     checkLoginStatus();
@@ -71,7 +91,6 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   useEffect(() => {
     if (isLoggedIn) {
       fetchTemplates();
-      fetchUserInfo();
     } else {
       navigate("/");
     }
@@ -88,15 +107,6 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   const checkLoginStatus = () => {
     const accessToken = Cookies.get("access_token");
     setIsLoggedIn(!!accessToken);
-  };
-
-  const fetchUserInfo = async () => {
-    try {
-      const response = await axios.get("/api/user/info");
-      setUser(response.data);
-    } catch (error) {
-      console.error("Error fetching user info:", error);
-    }
   };
 
   const fetchTemplates = async () => {
@@ -199,6 +209,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   };
 
   const handleLogout = () => {
+    logout();
     onLogout();
   };
 
@@ -233,17 +244,11 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
         }
         break;
       case "delete":
-        if (user?.role === "admin") {
-          try {
-            await deleteTemplate(templateId);
-            fetchTemplates();
-            message.success("Template deleted successfully");
-          } catch (error) {
-            console.error("Error deleting template:", error);
-            message.error("Failed to delete template");
-          }
-        } else {
-          message.error("You don't have permission to delete templates");
+        try {
+          await deleteTemplate(templateId);
+          fetchTemplates();
+        } catch (error) {
+          console.error("Error deleting template:", error);
         }
         break;
       default:
@@ -260,15 +265,13 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
       >
         Edit
       </Menu.Item>
-      {user?.role === "admin" && (
-        <Menu.Item
-          key="2"
-          icon={<DeleteOutlined />}
-          onClick={() => handleTemplateAction("delete", templateId)}
-        >
-          Delete
-        </Menu.Item>
-      )}
+      <Menu.Item
+        key="2"
+        icon={<DeleteOutlined />}
+        onClick={() => handleTemplateAction("delete", templateId)}
+      >
+        Delete
+      </Menu.Item>
     </Menu>
   );
 
@@ -296,10 +299,10 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-gray-800 text-3xl font-bold">Templates</h1>
           <div className="flex items-center space-x-6">
-            {user?.role === "admin" && (
+            {userRole === "admin" && (
               <button
                 onClick={() => setShowCreateUser(true)}
-                className="flex items-center rounded-lg bg-green-600 hover:bg-green-700 text-white py-2 px-4 transition duration-300"
+                className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 transition duration-300"
               >
                 <TiUserAddOutline style={{ marginRight: "8px" }} />
                 Create User
@@ -311,7 +314,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               style={{ width: 300 }}
               className="border-2 border-gray-200 rounded-lg"
             />
-            <UserInfo onLogout={handleLogout} />
+            {userInfo && <UserInfo user={userInfo} onLogout={handleLogout} />}
           </div>
         </div>
       </div>
@@ -326,25 +329,31 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
             <span className="text-lg font-semibold">New Template</span>
           </button>
           <div className="flex space-x-3">
-            <Button
-              icon={<AppstoreOutlined />}
+            <button
               onClick={() => handleViewChange("grid")}
-              type={view === "grid" ? "primary" : "default"}
+              className={`px-4 py-2 rounded-lg ${
+                view === "grid"
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-white text-gray-600"
+              } transition-colors duration-300`}
             >
               Grid
-            </Button>
-            <Button
-              icon={<UnorderedListOutlined />}
+            </button>
+            <button
               onClick={() => handleViewChange("list")}
-              type={view === "list" ? "primary" : "default"}
+              className={`px-4 py-2 rounded-lg ${
+                view === "list"
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-white text-gray-600"
+              } transition-colors duration-300`}
             >
               List
-            </Button>
+            </button>
             <Dropdown overlay={sortMenu} trigger={["click"]}>
-              <Button>
+              <button className="px-4 py-2 rounded-lg bg-white text-gray-600 transition-colors duration-300">
                 Sort by {sortConfig.key}{" "}
                 {sortConfig.direction === "asc" ? "↑" : "↓"} <DownOutlined />
-              </Button>
+              </button>
             </Dropdown>
           </div>
         </div>
@@ -370,7 +379,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               <div
                 key={template._id}
                 className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out 
-                              ${view === "grid" ? "p-6" : "p-5"}`}
+                      ${view === "grid" ? "p-6" : "p-5"}`}
               >
                 <div className="flex justify-between items-start mb-4">
                   <Link

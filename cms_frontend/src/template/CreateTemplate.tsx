@@ -514,7 +514,13 @@ const CreateTemplate: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               <span className="text-indigo-600">{addButtonText}</span>
             </Button>
           </Dropdown>
-          <UserInfo onLogout={handleLogout} />
+          <UserInfo
+            onLogout={handleLogout}
+            user={{
+              user_name: "",
+              role: "admin",
+            }}
+          />
         </div>
       </Header>
       <TemplateForm
