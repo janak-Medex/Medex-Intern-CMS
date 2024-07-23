@@ -1,190 +1,146 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   Form,
   Input,
   Select,
-  Switch,
-  Checkbox,
+  TreeSelect,
   Radio,
+  Checkbox,
+  Switch,
   DatePicker,
-  Empty,
   Upload,
-  Modal,
+  Button,
 } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
-import { motion, AnimatePresence } from "framer-motion";
-import { FieldType, FormPreviewProps } from "./types";
-import type { RcFile, UploadProps } from "antd/es/upload";
-import type { UploadFile } from "antd/es/upload/interface";
+import { UploadOutlined } from "@ant-design/icons";
+import { FieldType, NestedOption } from "./types";
 
-const { Option } = Select;
 const { TextArea } = Input;
 
-const getBase64 = (file: RcFile): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
+const FormPreview: React.FC<{
+  fields: FieldType[];
+  templateName: string;
+  formName: string;
+}> = ({ fields, templateName, formName }) => {
+  const [form] = Form.useForm();
 
-const FormPreview: React.FC<FormPreviewProps> = ({ fields }) => {
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState("");
-  const [previewTitle, setPreviewTitle] = useState("");
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-
-  const handleCancel = () => setPreviewOpen(false);
-
-  const handlePreview = async (file: UploadFile) => {
-    if (!file.url && !file.preview) {
-      file.preview = await getBase64(file.originFileObj as RcFile);
-    }
-
-    setPreviewImage(file.url || (file.preview as string));
-    setPreviewOpen(true);
-    setPreviewTitle(
-      file.name || file.url!.substring(file.url!.lastIndexOf("/") + 1)
-    );
+  const transformOptions = (options: (string | NestedOption)[]): any[] => {
+    return options.map((option, _index) => {
+      if (typeof option === "string") {
+        return { value: option, label: option };
+      } else {
+        return {
+          value: option.label,
+          label: option.label,
+          children:
+            option.options.length > 0
+              ? transformOptions(option.options)
+              : undefined,
+        };
+      }
+    });
   };
 
-  const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) =>
-    setFileList(newFileList);
-
-  const uploadButton = (
-    <div>
-      <PlusOutlined />
-      <div style={{ marginTop: 8 }}>Upload</div>
-    </div>
-  );
-
   const renderField = (field: FieldType) => {
-    switch (field.type) {
+    const { type, placeholder, options } = field;
+
+    switch (type) {
       case "text":
-        return <Input placeholder={field.placeholder} className="w-full" />;
+        return <Input placeholder={placeholder} />;
+      case "textarea":
+        return <TextArea rows={4} placeholder={placeholder} />;
       case "number":
-        return (
-          <Input
-            type="number"
-            placeholder={field.placeholder}
-            className="w-full"
-          />
-        );
-      case "boolean":
-        return <Switch />;
+        return <Input type="number" placeholder={placeholder} />;
       case "select":
         return (
-          <Select placeholder={field.placeholder} className="w-full">
-            {field.options?.map((option, index) => (
-              <Option key={index} value={option}>
-                {option}
-              </Option>
-            ))}
-          </Select>
+          <Select
+            style={{ width: "100%" }}
+            placeholder={placeholder}
+            options={transformOptions(options || [])}
+          />
         );
-      case "checkbox":
+      case "selectNested":
         return (
-          <Checkbox.Group className="w-full">
-            {field.options?.map((option, index) => (
-              <Checkbox key={index} value={option} className="mb-2 block">
-                {option}
-              </Checkbox>
-            ))}
-          </Checkbox.Group>
+          <TreeSelect
+            style={{ width: "100%" }}
+            dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
+            treeData={transformOptions(options || [])}
+            placeholder={placeholder}
+            treeDefaultExpandAll
+          />
         );
       case "radio":
         return (
-          <Radio.Group className="w-full">
-            {field.options?.map((option, index) => (
-              <Radio key={index} value={option} className="mb-2 block">
-                {option}
+          <Radio.Group>
+            {options?.map((option, index) => (
+              <Radio
+                key={index}
+                value={typeof option === "string" ? option : option.label}
+              >
+                {typeof option === "string" ? option : option.label}
               </Radio>
             ))}
           </Radio.Group>
         );
+      case "checkbox":
+        return (
+          <Checkbox.Group>
+            {options?.map((option, index) => (
+              <Checkbox
+                key={index}
+                value={typeof option === "string" ? option : option.label}
+              >
+                {typeof option === "string" ? option : option.label}
+              </Checkbox>
+            ))}
+          </Checkbox.Group>
+        );
       case "switch":
+      case "boolean":
         return <Switch />;
       case "date":
-        return <DatePicker className="w-full" />;
-      case "textarea":
-        return <TextArea placeholder={field.placeholder} className="w-full" />;
+        return <DatePicker />;
       case "file":
         return (
-          <>
-            <Upload
-              action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
-              listType="picture-card"
-              fileList={fileList}
-              onPreview={handlePreview}
-              onChange={handleChange}
-              multiple
-            >
-              {fileList.length >= 8 ? null : uploadButton}
-            </Upload>
-            <Modal
-              open={previewOpen}
-              title={previewTitle}
-              footer={null}
-              onCancel={handleCancel}
-            >
-              <img alt="example" style={{ width: "100%" }} src={previewImage} />
-            </Modal>
-          </>
+          <Upload>
+            <Button icon={<UploadOutlined />}>Click to Upload</Button>
+          </Upload>
         );
       default:
-        return <Input placeholder={field.placeholder} className="w-full" />;
+        return <Input placeholder={placeholder} />;
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-gray-50 p-8 rounded-xl shadow-lg">
-      <h2 className="text-3xl font-bold mb-8 text-gray-800">Form Preview</h2>
-      <AnimatePresence>
-        {fields.length > 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            {fields.map((field, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="mb-8 bg-white p-6 rounded-lg shadow-sm"
-              >
-                <Form.Item
-                  label={
-                    <span className="text-lg font-medium text-gray-700">
-                      {field.fieldName}
-                    </span>
-                  }
-                  required={field.required}
-                  className="mb-2"
-                >
-                  <div className="mt-2">{renderField(field)}</div>
-                  {field.description && (
-                    <p className="mt-2 text-sm text-gray-500">
-                      {field.description}
-                    </p>
-                  )}
-                </Form.Item>
-              </motion.div>
-            ))}
-          </motion.div>
-        ) : (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <span className="text-gray-500">
-                No fields added yet. Start building your form!
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <h3 className="text-2xl font-bold mb-6">Form Preview: {formName}</h3>
+      <p className="mb-4">Template: {templateName}</p>
+      <Form form={form} layout="vertical">
+        {fields.map((field, index) => (
+          <Form.Item
+            key={index}
+            label={
+              <span>
+                {field.fieldName}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
               </span>
             }
-          />
-        )}
-      </AnimatePresence>
+            name={field.fieldName}
+            rules={[
+              {
+                required: field.required,
+                message: `${field.fieldName} is required`,
+              },
+            ]}
+          >
+            {renderField(field)}
+          </Form.Item>
+        ))}
+        <Form.Item>
+          <Button type="primary" htmlType="submit">
+            Submit
+          </Button>
+        </Form.Item>
+      </Form>
     </div>
   );
 };

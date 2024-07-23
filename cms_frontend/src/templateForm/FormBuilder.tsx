@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Form, Input, Select, Button, Switch, message } from "antd";
+import {
+  Form,
+  Input,
+  Select,
+  Button,
+  Switch,
+  message,
+  Radio,
+  Checkbox,
+} from "antd";
 import {
   PlusOutlined,
   MinusCircleOutlined,
@@ -9,9 +18,11 @@ import {
   DownOutlined,
 } from "@ant-design/icons";
 import FormPreview from "./FormPreview";
-import { FormType, FieldType } from "./types";
+import { FormType, FieldType, NestedOption } from "./types";
 import { createForm } from "../api/formComponent.api";
 import "./scrollbar.css";
+import { BiChevronDown, BiChevronRight } from "react-icons/bi";
+
 const { Option } = Select;
 
 const FormBuilder: React.FC<{
@@ -49,8 +60,8 @@ const FormBuilder: React.FC<{
     const handleResize = () => {
       if (formBuilderRef.current && formPreviewRef.current) {
         const windowHeight = window.innerHeight;
-        const headerHeight = 64; // Adjust this value based on your actual header height
-        const contentHeight = windowHeight - headerHeight - 32; // 32px for padding
+        const headerHeight = 64;
+        const contentHeight = windowHeight - headerHeight - 32;
         formBuilderRef.current.style.height = `${contentHeight}px`;
         formPreviewRef.current.style.height = `${contentHeight}px`;
       }
@@ -138,29 +149,157 @@ const FormBuilder: React.FC<{
       } else if (name === "required") {
         newFields[index] = { ...newFields[index], required: value };
       } else {
-        newFields[index] = { ...newFields[index], [name]: value };
+        newFields[index] = { ...newFields[index], [name]: String(value) };
       }
       setFields(newFields);
       form.setFieldsValue({ fields: newFields });
     }
   };
 
-  const handleOptionAdd = (fieldIndex: number) => {
+  const NestedOption: React.FC<{
+    option: string | NestedOption;
+    path: number[];
+    onAdd: (path: number[]) => void;
+    onRemove: (path: number[]) => void;
+    onChange: (path: number[], value: string, isGroup: boolean) => void;
+    depth?: number;
+  }> = ({ option, path, onAdd, onRemove, onChange, depth = 0 }) => {
+    const [isExpanded, setIsExpanded] = useState(true);
+    const handleToggle = () => setIsExpanded(!isExpanded);
+    const isGroup = typeof option !== "string";
+
+    return (
+      <div className={`mb-2 ${depth > 0 ? "ml-6" : ""}`}>
+        <div className="flex items-center space-x-2">
+          {isGroup && (
+            <Button
+              type="text"
+              size="small"
+              icon={isExpanded ? <BiChevronDown /> : <BiChevronRight />}
+              onClick={handleToggle}
+            />
+          )}
+          <Input
+            value={isGroup ? option.label : option}
+            onChange={(e) => onChange(path, e.target.value, isGroup)}
+            placeholder={`${isGroup ? "Group" : "Option"} ${path.join(".")}`}
+            className={isGroup ? "font-semibold" : ""}
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={() => onAdd(path)}
+          />
+          <Button
+            type="text"
+            size="small"
+            danger
+            icon={<MinusCircleOutlined />}
+            onClick={() => onRemove(path)}
+          />
+        </div>
+        {isGroup && isExpanded && (
+          <div className="mt-2 border-l-2 border-gray-200 pl-4">
+            {option.options.map((subOption, index) => (
+              <NestedOption
+                key={index}
+                option={subOption}
+                path={[...path, index]}
+                onAdd={onAdd}
+                onRemove={onRemove}
+                onChange={onChange}
+                depth={depth + 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderNestedOptions = (
+    options: (string | NestedOption)[],
+    fieldIndex: number
+  ) => {
+    return options.map((option, index) => (
+      <NestedOption
+        key={index}
+        option={option}
+        path={[index]}
+        onAdd={(path) => handleNestedOptionAdd(fieldIndex, path)}
+        onRemove={(path) => handleNestedOptionRemove(fieldIndex, path)}
+        onChange={(path, value, isGroup) =>
+          handleNestedOptionChange(fieldIndex, path, value, isGroup)
+        }
+      />
+    ));
+  };
+
+  const handleNestedOptionChange = (
+    fieldIndex: number,
+    path: number[],
+    value: string,
+    isGroup: boolean
+  ) => {
     const newFields = [...fields];
-    if (
-      newFields[fieldIndex].type === "checkbox" &&
-      !newFields[fieldIndex].options
-    ) {
-      newFields[fieldIndex].options = [];
+    let current: any = newFields[fieldIndex].options;
+    for (let i = 0; i < path.length - 1; i++) {
+      current = current[path[i]].options;
     }
-    newFields[fieldIndex].options?.push("");
+    if (isGroup) {
+      current[path[path.length - 1]].label = value;
+    } else {
+      current[path[path.length - 1]] = value;
+    }
     setFields(newFields);
     form.setFieldsValue({ fields: newFields });
   };
 
-  const handleOptionRemove = (fieldIndex: number, optionIndex: number) => {
+  const handleNestedOptionAdd = (fieldIndex: number, path: number[]) => {
     const newFields = [...fields];
-    newFields[fieldIndex].options?.splice(optionIndex, 1);
+    let current: any = newFields[fieldIndex].options;
+    for (let i = 0; i < path.length; i++) {
+      if (i === path.length - 1) {
+        if (typeof current[path[i]] === "string") {
+          current[path[i]] = {
+            label: current[path[i]],
+            options: [""],
+          };
+        } else {
+          current[path[i]].options.push("");
+        }
+      } else {
+        current = current[path[i]].options;
+      }
+    }
+    setFields(newFields);
+    form.setFieldsValue({ fields: newFields });
+  };
+
+  const handleNestedOptionRemove = (fieldIndex: number, path: number[]) => {
+    const newFields = [...fields];
+    let current: any = newFields[fieldIndex].options;
+    for (let i = 0; i < path.length - 1; i++) {
+      current = current[path[i]].options;
+    }
+    current.splice(path[path.length - 1], 1);
+    setFields(newFields);
+    form.setFieldsValue({ fields: newFields });
+  };
+
+  const handleOptionAdd = (fieldIndex: number) => {
+    const newFields = [...fields];
+    if (
+      ["select", "selectNested", "radio", "checkbox"].includes(
+        newFields[fieldIndex].type
+      )
+    ) {
+      if (!newFields[fieldIndex].options) {
+        newFields[fieldIndex].options = [];
+      }
+      newFields[fieldIndex].options?.push("");
+    }
     setFields(newFields);
     form.setFieldsValue({ fields: newFields });
   };
@@ -171,12 +310,25 @@ const FormBuilder: React.FC<{
     value: string
   ) => {
     const newFields = [...fields];
-    if (!newFields[fieldIndex].options) {
-      newFields[fieldIndex].options = [];
+    if (newFields[fieldIndex].options) {
+      const option = newFields[fieldIndex].options[optionIndex];
+      if (typeof option === "string") {
+        newFields[fieldIndex].options[optionIndex] = value;
+      } else {
+        newFields[fieldIndex].options[optionIndex] = {
+          ...option,
+          label: value,
+        };
+      }
+      setFields(newFields);
+      form.setFieldsValue({ fields: newFields });
     }
-    const options = newFields[fieldIndex].options;
-    if (Array.isArray(options)) {
-      options[optionIndex] = value;
+  };
+
+  const handleOptionRemove = (fieldIndex: number, optionIndex: number) => {
+    const newFields = [...fields];
+    if (newFields[fieldIndex].options) {
+      newFields[fieldIndex].options.splice(optionIndex, 1);
       setFields(newFields);
       form.setFieldsValue({ fields: newFields });
     }
@@ -233,12 +385,54 @@ const FormBuilder: React.FC<{
     }
   };
 
+  const renderOptions = (field: FieldType, index: number) => {
+    if (["select", "radio", "checkbox"].includes(field.type)) {
+      return (
+        <Form.Item label={<span className="font-semibold">Options</span>}>
+          <div className="border p-4 rounded-lg bg-gray-50">
+            {field.options?.map((option, optionIndex) => (
+              <div
+                key={optionIndex}
+                className="flex items-center space-x-2 mb-2"
+              >
+                {field.type === "radio" && <Radio disabled />}
+                {field.type === "checkbox" && <Checkbox disabled />}
+                <Input
+                  value={typeof option === "string" ? option : option.label}
+                  onChange={(e) =>
+                    handleOptionChange(index, optionIndex, e.target.value)
+                  }
+                  placeholder={`Option ${optionIndex + 1}`}
+                />
+                <Button
+                  type="text"
+                  danger
+                  icon={<MinusCircleOutlined />}
+                  onClick={() => handleOptionRemove(index, optionIndex)}
+                />
+              </div>
+            ))}
+            <Button
+              type="dashed"
+              onClick={() => handleOptionAdd(index)}
+              className="w-full mt-2"
+              icon={<PlusOutlined />}
+            >
+              Add Option
+            </Button>
+          </div>
+        </Form.Item>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="flex gap-6">
       <div className="w-1/2 ">
         <div
           ref={formBuilderRef}
-          className="max-h-[70vh] overflow-y-auto pr-4  custom-scrollbar"
+          className="max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar"
           onScroll={handleScroll}
         >
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -270,19 +464,19 @@ const FormBuilder: React.FC<{
                       onDragStart={(e) => handleDragStart(e, field, index)}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, index)}
-                      className="bg-white rounded-lg shadow-sm p-2 mb-2 border border-gray-200 cursor-move"
+                      className="bg-white rounded-lg shadow-sm p-4 mb-4 border border-gray-200 cursor-move"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <DragOutlined className="text-gray-400" />
-                          <span className="font-medium">
+                          <span className="font-medium text-lg">
                             {field.fieldName || `Field ${index + 1}`}
                             {field.required && (
-                              <span className="text-red-500">*</span>
+                              <span className="text-red-500 ml-1">*</span>
                             )}
                           </span>
                         </div>
-                        <div className="flex items-center space-x-1">
+                        <div className="flex items-center space-x-2">
                           <Button
                             type="text"
                             size="small"
@@ -305,7 +499,7 @@ const FormBuilder: React.FC<{
                         </div>
                       </div>
                       {expandedFields[index] && (
-                        <div className="mt-2">
+                        <div className="mt-4 space-y-4">
                           <Form.Item
                             name={["fields", index, "fieldName"]}
                             label={
@@ -336,6 +530,9 @@ const FormBuilder: React.FC<{
                               <Option value="textarea">Textarea</Option>
                               <Option value="number">Number</Option>
                               <Option value="select">Select</Option>
+                              <Option value="selectNested">
+                                Nested select
+                              </Option>
                               <Option value="radio">Radio</Option>
                               <Option value="checkbox">Checkbox</Option>
                               <Option value="switch">Switch</Option>
@@ -345,50 +542,31 @@ const FormBuilder: React.FC<{
                               <Option value="other">Other</Option>
                             </Select>
                           </Form.Item>
-                          {(field.type === "select" ||
-                            field.type === "radio" ||
-                            field.type === "checkbox") && (
+                          {field.type === "selectNested" && (
                             <Form.Item
                               label={
-                                <span className="font-semibold">Options</span>
+                                <span className="font-semibold">
+                                  Nested Options
+                                </span>
                               }
                             >
-                              {field.options?.map((option, optionIndex) => (
-                                <div
-                                  key={optionIndex}
-                                  className="flex items-center space-x-2 mb-2"
+                              <div className="border p-4 rounded-lg bg-gray-50">
+                                {renderNestedOptions(
+                                  field.options || [],
+                                  index
+                                )}
+                                <Button
+                                  type="dashed"
+                                  onClick={() => handleOptionAdd(index)}
+                                  className="w-full mt-4"
+                                  icon={<PlusOutlined />}
                                 >
-                                  <Input
-                                    value={option}
-                                    onChange={(e) =>
-                                      handleOptionChange(
-                                        index,
-                                        optionIndex,
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder={`Option ${optionIndex + 1}`}
-                                  />
-                                  <Button
-                                    type="text"
-                                    danger
-                                    icon={<MinusCircleOutlined />}
-                                    onClick={() =>
-                                      handleOptionRemove(index, optionIndex)
-                                    }
-                                  />
-                                </div>
-                              ))}
-                              <Button
-                                type="dashed"
-                                onClick={() => handleOptionAdd(index)}
-                                className="w-full"
-                                icon={<PlusOutlined />}
-                              >
-                                Add Option
-                              </Button>
+                                  Add Option
+                                </Button>
+                              </div>
                             </Form.Item>
                           )}
+                          {renderOptions(field, index)}
                           <Form.Item
                             name={["fields", index, "placeholder"]}
                             label={
@@ -448,17 +626,18 @@ const FormBuilder: React.FC<{
           </div>
         </div>
       </div>
-      <div className="max-h-[70vh] overflow-y-auto pr-4  custom-scrollbar w-1/2">
+      <div className="w-1/2">
         <div
           ref={formPreviewRef}
-          className=" bg-white rounded-lg shadow-lg "
-          onScroll={handleScroll} // Add this line if you want to handle scroll event
+          className="max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar"
         >
-          <FormPreview
-            fields={fields}
-            templateName={templateName}
-            formName={form.getFieldValue("formName") || ""}
-          />
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <FormPreview
+              fields={fields}
+              templateName={templateName}
+              formName={form.getFieldValue("formName") || ""}
+            />
+          </div>
         </div>
       </div>
     </div>
