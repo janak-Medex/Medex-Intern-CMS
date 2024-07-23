@@ -75,7 +75,9 @@ const FormBuilder: React.FC<{
   }, []);
 
   useEffect(() => {
-    setFormBuilderScrollPosition(formBuilderRef.current.scrollTop);
+    if (formBuilderRef.current) {
+      setFormBuilderScrollPosition(formBuilderRef.current.scrollTop);
+    }
   }, [formBuilderScrollPosition]);
 
   const resetForm = useCallback(() => {
@@ -319,12 +321,13 @@ const FormBuilder: React.FC<{
     (fieldIndex: number, optionIndex: number, value: string) => {
       setFields((prevFields) => {
         const newFields = [...prevFields];
-        if (newFields[fieldIndex].options) {
-          const option = newFields[fieldIndex].options[optionIndex];
+        const field = newFields[fieldIndex];
+        if (field && field.options) {
+          const option = field.options[optionIndex];
           if (typeof option === "string") {
-            newFields[fieldIndex].options[optionIndex] = value;
-          } else {
-            newFields[fieldIndex].options[optionIndex] = {
+            field.options[optionIndex] = value;
+          } else if (option && typeof option === "object") {
+            field.options[optionIndex] = {
               ...option,
               label: value,
             };
@@ -340,8 +343,9 @@ const FormBuilder: React.FC<{
     (fieldIndex: number, optionIndex: number) => {
       setFields((prevFields) => {
         const newFields = [...prevFields];
-        if (newFields[fieldIndex].options) {
-          newFields[fieldIndex].options.splice(optionIndex, 1);
+        const field = newFields[fieldIndex];
+        if (field && field.options) {
+          field.options.splice(optionIndex, 1);
         }
         return newFields;
       });
