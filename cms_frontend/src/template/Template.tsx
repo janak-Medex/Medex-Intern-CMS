@@ -1,3 +1,5 @@
+// Template.tsx
+
 import React, { useState, useEffect } from "react";
 import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
@@ -22,6 +24,7 @@ import CreateUser from "../login/createUserForm";
 import { TiUserAddOutline } from "react-icons/ti";
 import { decodeToken } from "../utils/JwtUtils";
 import UserInfo from "./UserInfo";
+import FormSubmissionsModal from "./FormSubmissionsModal";
 
 const { Search } = Input;
 
@@ -65,6 +68,9 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [userRole, setUserRole] = useState<"admin" | "user" | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [showFormSubmissionsModal, setShowFormSubmissionsModal] =
+    useState(false);
+  const [formType, setFormType] = useState<"booking" | "generic" | null>(null);
 
   useEffect(() => {
     const token = Cookies.get("access_token");
@@ -256,6 +262,11 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     }
   };
 
+  const handleFormSubmissionsClick = (type: "booking" | "generic") => {
+    setFormType(type);
+    setShowFormSubmissionsModal(true);
+  };
+
   const menu = (templateId: string) => (
     <Menu>
       <Menu.Item
@@ -300,13 +311,38 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
           <h1 className="text-gray-800 text-3xl font-bold">Templates</h1>
           <div className="flex items-center space-x-6">
             {userRole === "admin" && (
-              <button
-                onClick={() => setShowCreateUser(true)}
-                className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 transition duration-300"
-              >
-                <TiUserAddOutline style={{ marginRight: "8px" }} />
-                Create User
-              </button>
+              <>
+                <Dropdown
+                  overlay={
+                    <Menu>
+                      <Menu.Item
+                        key="booking"
+                        onClick={() => handleFormSubmissionsClick("booking")}
+                      >
+                        Booking Form Submissions
+                      </Menu.Item>
+                      <Menu.Item
+                        key="generic"
+                        onClick={() => handleFormSubmissionsClick("generic")}
+                      >
+                        Generic Form Submissions
+                      </Menu.Item>
+                    </Menu>
+                  }
+                  placement="bottomRight"
+                >
+                  <button className="flex items-center rounded-lg bg-green-600 hover:bg-green-700 text-white py-2 px-4 transition duration-300">
+                    View Form Submissions
+                  </button>
+                </Dropdown>
+                <button
+                  onClick={() => setShowCreateUser(true)}
+                  className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 transition duration-300"
+                >
+                  <TiUserAddOutline style={{ marginRight: "8px" }} />
+                  Create User
+                </button>
+              </>
             )}
             <Search
               placeholder="Search templates"
@@ -451,6 +487,12 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
       <Modal show={showCreateUser} onClose={() => setShowCreateUser(false)}>
         <CreateUser onClose={() => setShowCreateUser(false)} />
       </Modal>
+
+      <FormSubmissionsModal
+        show={showFormSubmissionsModal}
+        onClose={() => setShowFormSubmissionsModal(false)}
+        formType={formType}
+      />
     </div>
   );
 };
