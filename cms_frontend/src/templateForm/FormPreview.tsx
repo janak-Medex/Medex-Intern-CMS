@@ -58,7 +58,7 @@ const FormPreview: React.FC<{
             options={transformOptions(options || [])}
           />
         );
-      case "nestedSelect":
+      case "Nested select":
         return (
           <TreeSelect
             style={{ width: "100%" }}
