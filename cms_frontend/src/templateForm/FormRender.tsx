@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from "react";
+import { message } from "antd";
 import axiosInstance from "../http/axiosInstance";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  CardElement,
+  Elements,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
+
+const stripePromise = loadStripe(
+  "pk_test_51PfxfMDABU1U1jxAZbOpil26MSyGYTbVC8ACplXYG9ms3oaXdTxqCftGVF8MeIZnpaYi2VtG1jJwUxVdhM5iNnze00HhLOCXm3"
+);
 
 interface FieldType {
   type: string;
@@ -31,6 +43,11 @@ const DynamicFormRenderer: React.FC = () => {
     null
   );
   const [loading, setLoading] = useState<boolean>(false);
+  const [formData, setFormData] = useState<{ [key: string]: any }>({});
+  const [showStripeElement, setShowStripeElement] = useState<boolean>(false);
+
+  const stripe = useStripe();
+  const elements = useElements();
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -40,6 +57,7 @@ const DynamicFormRenderer: React.FC = () => {
         setTemplates(response.data);
       } catch (error) {
         console.error("Error fetching templates:", error);
+        message.error("Failed to fetch templates. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -50,6 +68,86 @@ const DynamicFormRenderer: React.FC = () => {
 
   const handleTemplateClick = (template: TemplateType) => {
     setSelectedTemplate(template);
+    setFormData({});
+    setShowStripeElement(false);
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value, type } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+    }));
+
+    if (name === "payment method") {
+      setShowStripeElement(value === "stripe");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!stripe || !elements) {
+      message.error("Stripe.js hasn't loaded yet.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const paymentMethod = formData["payment method"];
+      let gateway = "cash on counter";
+      let stripeToken;
+      let cardInfo;
+
+      if (paymentMethod === "stripe") {
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+          throw new Error("Card Element not found");
+        }
+
+        const { error, paymentMethod: stripePaymentMethod } =
+          await stripe.createPaymentMethod({
+            type: "card",
+            card: cardElement,
+          });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (stripePaymentMethod.card) {
+          stripeToken = stripePaymentMethod.id;
+          gateway = `stripe_${stripePaymentMethod.card.brand}`;
+          cardInfo = {
+            last4: stripePaymentMethod.card.last4,
+            expMonth: stripePaymentMethod.card.exp_month,
+            expYear: stripePaymentMethod.card.exp_year,
+            brand: stripePaymentMethod.card.brand,
+          };
+        }
+      } else if (paymentMethod === "khalti") {
+        gateway = "khalti";
+      }
+
+      const response = await axiosInstance.post("/formData/submit", {
+        template_name: selectedTemplate?.template_name,
+        form_name: selectedTemplate?.forms[0].name,
+        formData: { ...formData, gateway, stripeToken, cardInfo },
+      });
+
+      message.success("Form submitted successfully!");
+      console.log("Form submitted successfully:", response.data);
+      // Reset form or redirect user as needed
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      message.error("Failed to submit form. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderTemplateList = () => (
@@ -88,36 +186,59 @@ const DynamicFormRenderer: React.FC = () => {
   );
 
   const renderForm = (form: FormType) => (
-    <div className="w-[50vw]  bg-white shadow-lg rounded-lg overflow-hidden">
+    <div className="w-[50vw] bg-white shadow-lg rounded-lg overflow-hidden">
       <h3 className="text-xl font-bold p-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
         {form.name}
       </h3>
-      <form key={form._id.$oid} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6">
         {form.fields.map((field) => getFieldComponent(field))}
-        <div className="pt-4">
-          <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-3 px-4 rounded-md hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
-          >
-            Submit
-          </button>
-        </div>
+        {showStripeElement && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Card Details
+            </label>
+            <CardElement
+              className="w-full p-3 border border-gray-300 rounded-md"
+              options={{
+                style: {
+                  base: {
+                    fontSize: "16px",
+                    color: "#32325d",
+                    "::placeholder": {
+                      color: "#a0aec0",
+                    },
+                  },
+                },
+              }}
+            />
+          </div>
+        )}
+        <button
+          type="submit"
+          className={`${
+            loading ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"
+          } text-white font-semibold py-2 px-4 rounded-md transition duration-300 ease-in-out`}
+          disabled={loading}
+        >
+          {loading ? "Submitting..." : "Submit"}
+        </button>
       </form>
     </div>
   );
 
   const getFieldComponent = (field: FieldType) => {
-    const baseClasses =
-      "w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition duration-300 ease-in-out bg-white text-gray-700";
-    const labelClasses = "block text-sm font-medium text-gray-700 mb-1";
     const requiredProps = field.required ? { required: true } : {};
+    const labelClasses = "block text-sm font-medium text-gray-700 mb-1";
+    const inputClasses = "w-full p-3 border border-gray-300 rounded-md";
 
     switch (field.type) {
       case "text":
       case "number":
+      case "email":
+      case "tel":
       case "date":
         return (
-          <div className="mb-4">
+          <div key={field.fieldName} className="mb-4">
             <label htmlFor={field.fieldName} className={labelClasses}>
               {field.fieldName}
               {field.required && <span className="text-red-500 ml-1">*</span>}
@@ -127,14 +248,16 @@ const DynamicFormRenderer: React.FC = () => {
               id={field.fieldName}
               name={field.fieldName}
               placeholder={field.placeholder}
-              className={baseClasses}
+              onChange={handleInputChange}
+              value={formData[field.fieldName] || ""}
+              className={inputClasses}
               {...requiredProps}
             />
           </div>
         );
       case "textarea":
         return (
-          <div className="mb-4">
+          <div key={field.fieldName} className="mb-4">
             <label htmlFor={field.fieldName} className={labelClasses}>
               {field.fieldName}
               {field.required && <span className="text-red-500 ml-1">*</span>}
@@ -143,14 +266,16 @@ const DynamicFormRenderer: React.FC = () => {
               id={field.fieldName}
               name={field.fieldName}
               placeholder={field.placeholder}
-              className={`${baseClasses} h-24 resize-none`}
+              onChange={handleInputChange}
+              value={formData[field.fieldName] || ""}
+              className={`${inputClasses} h-24`}
               {...requiredProps}
             />
           </div>
         );
       case "select":
         return (
-          <div className="mb-4">
+          <div key={field.fieldName} className="mb-4">
             <label htmlFor={field.fieldName} className={labelClasses}>
               {field.fieldName}
               {field.required && <span className="text-red-500 ml-1">*</span>}
@@ -158,10 +283,12 @@ const DynamicFormRenderer: React.FC = () => {
             <select
               id={field.fieldName}
               name={field.fieldName}
-              className={baseClasses}
+              onChange={handleInputChange}
+              value={formData[field.fieldName] || ""}
+              className={inputClasses}
               {...requiredProps}
             >
-              <option value="">Select an option</option>
+              <option value="">{field.placeholder}</option>
               {field.options?.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -172,22 +299,24 @@ const DynamicFormRenderer: React.FC = () => {
         );
       case "radio":
         return (
-          <div className="mb-4">
+          <div key={field.fieldName} className="mb-4">
             <label className={labelClasses}>
               {field.fieldName}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
             <div className="mt-2 space-y-2">
               {field.options?.map((option) => (
-                <label key={option} className="inline-flex items-center mr-4">
+                <label key={option} className="inline-flex items-center">
                   <input
                     type="radio"
                     name={field.fieldName}
                     value={option}
-                    className="form-radio h-4 w-4 text-blue-600"
+                    onChange={handleInputChange}
+                    checked={formData[field.fieldName] === option}
+                    className="form-radio text-blue-500"
                     {...requiredProps}
                   />
-                  <span className="ml-2 text-sm text-gray-700">{option}</span>
+                  <span className="ml-2">{option}</span>
                 </label>
               ))}
             </div>
@@ -195,125 +324,42 @@ const DynamicFormRenderer: React.FC = () => {
         );
       case "checkbox":
         return (
-          <div className="mb-4">
-            <label className={labelClasses}>
-              {field.fieldName}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
+          <div key={field.fieldName} className="mb-4">
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                name={field.fieldName}
+                onChange={handleInputChange}
+                checked={formData[field.fieldName] || false}
+                className="form-checkbox text-blue-500"
+                {...requiredProps}
+              />
+              <span className="ml-2">{field.fieldName}</span>
             </label>
-            <div className="mt-2 space-y-2">
-              {field.options ? (
-                field.options.map((option) => (
-                  <label key={option} className="inline-flex items-center mr-4">
-                    <input
-                      type="checkbox"
-                      name={field.fieldName}
-                      value={option}
-                      className="form-checkbox h-4 w-4 text-blue-600 rounded"
-                      {...requiredProps}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{option}</span>
-                  </label>
-                ))
-              ) : (
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    name={field.fieldName}
-                    className="form-checkbox h-4 w-4 text-blue-600 rounded"
-                    {...requiredProps}
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    {field.placeholder}
-                  </span>
-                </label>
-              )}
-            </div>
-          </div>
-        );
-      case "switch":
-        return (
-          <div className="mb-4">
-            <label className="inline-flex items-center cursor-pointer">
-              <span className={`${labelClasses} mr-3`}>
-                {field.fieldName}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </span>
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  name={field.fieldName}
-                  className="sr-only peer"
-                  {...requiredProps}
-                />
-                <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </div>
-            </label>
-          </div>
-        );
-      case "boolean":
-        return (
-          <div className="mb-4">
-            <label htmlFor={field.fieldName} className={labelClasses}>
-              {field.fieldName}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </label>
-            <select
-              id={field.fieldName}
-              name={field.fieldName}
-              className={baseClasses}
-              {...requiredProps}
-            >
-              <option value="">Select an option</option>
-              <option value="true">True</option>
-              <option value="false">False</option>
-            </select>
           </div>
         );
       default:
-        return (
-          <div className="mb-4">
-            <label htmlFor={field.fieldName} className={labelClasses}>
-              {field.fieldName}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </label>
-            <input
-              type="text"
-              id={field.fieldName}
-              name={field.fieldName}
-              placeholder={field.placeholder}
-              className={baseClasses}
-              {...requiredProps}
-            />
-          </div>
-        );
+        return null;
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-gray-50 min-h-screen flex flex-col items-center justify-center">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-        Dynamic Form Renderer
-      </h2>
-      {loading && (
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+      {!selectedTemplate ? (
+        renderTemplateList()
+      ) : (
+        <div className="flex flex-col items-center space-y-4">
+          {renderForm(selectedTemplate.forms[0])}
         </div>
-      )}
-      {!loading && !selectedTemplate && renderTemplateList()}
-      {selectedTemplate && (
-        <div className="space-y-8">
-          {selectedTemplate.forms.map((form) => (
-            <div key={form._id.$oid}>{renderForm(form)}</div>
-          ))}
-        </div>
-      )}
-      {!selectedTemplate && !loading && (
-        <p className="text-red-500 text-center mt-4 text-sm">
-          Select a template to view forms
-        </p>
       )}
     </div>
   );
 };
 
-export default DynamicFormRenderer;
+const FormComponent: React.FC = () => (
+  <Elements stripe={stripePromise}>
+    <DynamicFormRenderer />
+  </Elements>
+);
+
+export default FormComponent;

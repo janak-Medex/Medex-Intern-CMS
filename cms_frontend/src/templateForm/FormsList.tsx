@@ -49,6 +49,10 @@ const ScrollableDiv = styled.div`
   }
 `;
 
+const CardContent = styled.div`
+  cursor: pointer;
+`;
+
 interface FormsListProps {
   forms: FormType[];
   onSelectForm: (form: FormType) => void;
@@ -67,6 +71,10 @@ const FormsList: React.FC<FormsListProps> = ({
   const [previewForm, setPreviewForm] = useState<FormType | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
 
+  const handleCardClick = (form: FormType) => {
+    onSelectForm(form);
+  };
+
   return (
     <>
       <ScrollableDiv>
@@ -82,13 +90,17 @@ const FormsList: React.FC<FormsListProps> = ({
                   <Tooltip title="Edit">
                     <EditOutlined
                       key="edit"
-                      onClick={() => onSelectForm(item)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectForm(item);
+                      }}
                     />
                   </Tooltip>,
                   <Tooltip title="Preview">
                     <EyeOutlined
                       key="preview"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setPreviewForm(item);
                         setPreviewVisible(true);
                       }}
@@ -102,7 +114,8 @@ const FormsList: React.FC<FormsListProps> = ({
                       style={{
                         color: userRole === "user" ? "#d9d9d9" : undefined,
                       }}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (userRole !== "user") {
                           const newForm = {
                             ...item,
@@ -119,7 +132,10 @@ const FormsList: React.FC<FormsListProps> = ({
                   >
                     <Popconfirm
                       title="Delete this form?"
-                      onConfirm={() => onDeleteForm(item.name)}
+                      onConfirm={(e) => {
+                        e?.stopPropagation();
+                        onDeleteForm(item.name);
+                      }}
                       okText="Yes"
                       cancelText="No"
                       disabled={userRole === "user"}
@@ -129,45 +145,49 @@ const FormsList: React.FC<FormsListProps> = ({
                         style={{
                           color: userRole === "user" ? "#d9d9d9" : undefined,
                         }}
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </Popconfirm>
                   </Tooltip>,
                 ]}
+                onClick={() => handleCardClick(item)}
               >
-                <div className="flex items-center mb-2">
-                  <Avatar
-                    style={{ backgroundColor: "#1890ff", marginRight: "8px" }}
-                  >
-                    {item.name[0].toUpperCase()}
-                  </Avatar>
-                  <Typography.Text strong className="text-sm truncate flex-1">
-                    {item.name}
-                  </Typography.Text>
-                </div>
-                <div className="flex justify-between items-center">
-                  <Typography.Text type="secondary" className="text-xs">
-                    Fields: {item.fields.length}
-                  </Typography.Text>
-                  <div className="flex flex-wrap justify-end">
-                    {item.fields.slice(0, 2).map(
-                      (field, index) =>
-                        field && ( // Add this check
-                          <Tag
-                            key={index}
-                            color="blue"
-                            className="text-xs mr-1 mb-1"
-                          >
-                            {field.type}
-                          </Tag>
-                        )
-                    )}
-                    {item.fields.length > 2 && (
-                      <Tag color="blue" className="text-xs mb-1">
-                        +{item.fields.length - 2}
-                      </Tag>
-                    )}
+                <CardContent>
+                  <div className="flex items-center mb-2">
+                    <Avatar
+                      style={{ backgroundColor: "#1890ff", marginRight: "8px" }}
+                    >
+                      {item.name[0].toUpperCase()}
+                    </Avatar>
+                    <Typography.Text strong className="text-sm truncate flex-1">
+                      {item.name}
+                    </Typography.Text>
                   </div>
-                </div>
+                  <div className="flex justify-between items-center">
+                    <Typography.Text type="secondary" className="text-xs">
+                      Fields: {item.fields.length}
+                    </Typography.Text>
+                    <div className="flex flex-wrap justify-end">
+                      {item.fields.slice(0, 2).map(
+                        (field, index) =>
+                          field && (
+                            <Tag
+                              key={index}
+                              color="blue"
+                              className="text-xs mr-1 mb-1"
+                            >
+                              {field.type}
+                            </Tag>
+                          )
+                      )}
+                      {item.fields.length > 2 && (
+                        <Tag color="blue" className="text-xs mb-1">
+                          +{item.fields.length - 2}
+                        </Tag>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
               </StyledCard>
             ))
           ) : (

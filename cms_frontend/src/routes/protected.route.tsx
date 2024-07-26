@@ -1,14 +1,19 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-import Cookies from "js-cookie";
 
 interface ProtectedRouteProps {
-  element: React.ReactNode;
+  isAuthenticated: boolean;
+  element: React.ReactElement;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element }) => {
-  const isAuthenticated = !!Cookies.get("access_token");
-  return isAuthenticated ? <>{element}</> : <Navigate to="/" replace />;
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  isAuthenticated,
+  element,
+}) => {
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  return element;
 };
 
 export default ProtectedRoute;

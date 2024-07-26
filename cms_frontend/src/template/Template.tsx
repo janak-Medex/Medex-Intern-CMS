@@ -1,16 +1,16 @@
+// Template.tsx
+
 import React, { useState, useEffect } from "react";
 import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
 import Modal from "../utils/Modal";
 import Cookies from "js-cookie";
-import { Switch, Input, Menu, Dropdown, message, Avatar } from "antd";
+import { Switch, Input, Menu, Dropdown, message } from "antd";
 import {
-  LogoutOutlined,
   MoreOutlined,
   DeleteOutlined,
   EditOutlined,
   DownOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
 import { logout } from "../api/auth.api";
@@ -23,6 +23,8 @@ import {
 import CreateUser from "../login/createUserForm";
 import { TiUserAddOutline } from "react-icons/ti";
 import { decodeToken } from "../utils/JwtUtils";
+import UserInfo from "./UserInfo";
+import FormSubmissionsModal from "./FormSubmissionsModal";
 
 const { Search } = Input;
 
@@ -66,6 +68,9 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [userRole, setUserRole] = useState<"admin" | "user" | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [showFormSubmissionsModal, setShowFormSubmissionsModal] =
+    useState(false);
+  const [formType, setFormType] = useState<"booking" | "generic" | null>(null);
 
   useEffect(() => {
     const token = Cookies.get("access_token");
@@ -257,6 +262,11 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     }
   };
 
+  const handleFormSubmissionsClick = (type: "booking" | "generic") => {
+    setFormType(type);
+    setShowFormSubmissionsModal(true);
+  };
+
   const menu = (templateId: string) => (
     <Menu>
       <Menu.Item
@@ -290,46 +300,6 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     </Menu>
   );
 
-  const userMenu = (
-    <Menu className="bg-gradient-to-br from-white to-blue-50 shadow-xl rounded-xl p-6 w-72">
-      <div className="flex flex-col items-center mb-6 pt-4">
-        <Avatar
-          src={""}
-          size={80}
-          icon={<UserOutlined className="text-blue-500" />}
-          className="border-4 border-blue-200 shadow-md bg-gray-100"
-        />
-        <h3 className="text-2xl font-bold mt-3 text-gray-800">
-          {userInfo?.user_name}
-        </h3>
-        <p className="text-sm text-blue-500 font-medium">Welcome Back</p>
-        {/* <p className="text-sm text-blue-500 font-medium">{userInfo?.email}</p> */}
-      </div>
-      <Menu.Item
-        key="1"
-        className="hover:bg-blue-100 rounded-lg transition-colors duration-200"
-      >
-        <button className="w-full text-left py-3 px-4 font-semibold text-gray-700 flex items-center">
-          <UserOutlined className="mr-3 text-blue-500" />
-          Role: {userInfo?.role}
-        </button>
-      </Menu.Item>
-      <Menu.Divider className="my-3 border-blue-100" />
-      <Menu.Item
-        key="2"
-        className="hover:bg-red-100 rounded-lg transition-colors duration-200"
-      >
-        <button
-          onClick={handleLogout}
-          className="w-full text-left py-3 px-4 font-semibold text-red-600 flex items-center"
-        >
-          <LogoutOutlined className="mr-3" />
-          Logout
-        </button>
-      </Menu.Item>
-    </Menu>
-  );
-
   if (!isLoggedIn) {
     return null;
   }
@@ -341,13 +311,38 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
           <h1 className="text-gray-800 text-3xl font-bold">Templates</h1>
           <div className="flex items-center space-x-6">
             {userRole === "admin" && (
-              <button
-                onClick={() => setShowCreateUser(true)}
-                className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 transition duration-300"
-              >
-                <TiUserAddOutline style={{ marginRight: "8px" }} />
-                Create User
-              </button>
+              <>
+                <Dropdown
+                  overlay={
+                    <Menu>
+                      <Menu.Item
+                        key="booking"
+                        onClick={() => handleFormSubmissionsClick("booking")}
+                      >
+                        Booking Form Submissions
+                      </Menu.Item>
+                      <Menu.Item
+                        key="generic"
+                        onClick={() => handleFormSubmissionsClick("generic")}
+                      >
+                        Generic Form Submissions
+                      </Menu.Item>
+                    </Menu>
+                  }
+                  placement="bottomRight"
+                >
+                  <button className="flex items-center rounded-lg bg-green-600 hover:bg-green-700 text-white py-2 px-4 transition duration-300">
+                    View Form Submissions
+                  </button>
+                </Dropdown>
+                <button
+                  onClick={() => setShowCreateUser(true)}
+                  className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 transition duration-300"
+                >
+                  <TiUserAddOutline style={{ marginRight: "8px" }} />
+                  Create User
+                </button>
+              </>
             )}
             <Search
               placeholder="Search templates"
@@ -355,26 +350,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               style={{ width: 300 }}
               className="border-2 border-gray-200 rounded-lg"
             />
-            {userInfo && (
-              <Dropdown
-                overlay={userMenu}
-                trigger={["click"]}
-                placement="bottomRight"
-              >
-                <div className="cursor-pointer flex items-center space-x-2 bg-gray-100 rounded-full py-1 px-3 hover:bg-gray-200 transition-colors duration-300">
-                  <Avatar
-                    src="https://example.com/default-avatar.png"
-                    size={32}
-                    className="border-4 border-blue-200 shadow-md bg-gray-100"
-                    icon={<UserOutlined className="text-blue-500" />}
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    {userInfo.user_name}
-                  </span>
-                  <DownOutlined style={{ fontSize: "12px" }} />
-                </div>
-              </Dropdown>
-            )}
+            {userInfo && <UserInfo user={userInfo} onLogout={handleLogout} />}
           </div>
         </div>
       </div>
@@ -439,7 +415,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
               <div
                 key={template._id}
                 className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out 
-                              ${view === "grid" ? "p-6" : "p-5"}`}
+                      ${view === "grid" ? "p-6" : "p-5"}`}
               >
                 <div className="flex justify-between items-start mb-4">
                   <Link
@@ -511,6 +487,12 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
       <Modal show={showCreateUser} onClose={() => setShowCreateUser(false)}>
         <CreateUser onClose={() => setShowCreateUser(false)} />
       </Modal>
+
+      <FormSubmissionsModal
+        show={showFormSubmissionsModal}
+        onClose={() => setShowFormSubmissionsModal(false)}
+        formType={formType}
+      />
     </div>
   );
 };
