@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { message } from "antd";
 import axiosInstance from "../http/axiosInstance";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -45,6 +46,9 @@ const DynamicFormRenderer: React.FC = () => {
   const [formData, setFormData] = useState<{ [key: string]: any }>({});
   const [showStripeElement, setShowStripeElement] = useState<boolean>(false);
 
+  const stripe = useStripe();
+  const elements = useElements();
+
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
@@ -53,6 +57,7 @@ const DynamicFormRenderer: React.FC = () => {
         setTemplates(response.data);
       } catch (error) {
         console.error("Error fetching templates:", error);
+        message.error("Failed to fetch templates. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -64,6 +69,7 @@ const DynamicFormRenderer: React.FC = () => {
   const handleTemplateClick = (template: TemplateType) => {
     setSelectedTemplate(template);
     setFormData({});
+    setShowStripeElement(false);
   };
 
   const handleInputChange = (
@@ -78,27 +84,67 @@ const DynamicFormRenderer: React.FC = () => {
         type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     }));
 
-    if (name === "payment method" && value === "stripe") {
-      setShowStripeElement(true);
-    } else {
-      setShowStripeElement(false);
+    if (name === "payment method") {
+      setShowStripeElement(value === "stripe");
     }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!stripe || !elements) {
+      message.error("Stripe.js hasn't loaded yet.");
+      return;
+    }
+
     try {
       setLoading(true);
+      const paymentMethod = formData["payment method"];
+      let gateway = "cash on counter";
+      let stripeToken;
+      let cardInfo;
+
+      if (paymentMethod === "stripe") {
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+          throw new Error("Card Element not found");
+        }
+
+        const { error, paymentMethod: stripePaymentMethod } =
+          await stripe.createPaymentMethod({
+            type: "card",
+            card: cardElement,
+          });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (stripePaymentMethod.card) {
+          stripeToken = stripePaymentMethod.id;
+          gateway = `stripe_${stripePaymentMethod.card.brand}`;
+          cardInfo = {
+            last4: stripePaymentMethod.card.last4,
+            expMonth: stripePaymentMethod.card.exp_month,
+            expYear: stripePaymentMethod.card.exp_year,
+            brand: stripePaymentMethod.card.brand,
+          };
+        }
+      } else if (paymentMethod === "khalti") {
+        gateway = "khalti";
+      }
+
       const response = await axiosInstance.post("/formData/submit", {
         template_name: selectedTemplate?.template_name,
         form_name: selectedTemplate?.forms[0].name,
-        formData: formData,
+        formData: { ...formData, gateway, stripeToken, cardInfo },
       });
+
+      message.success("Form submitted successfully!");
       console.log("Form submitted successfully:", response.data);
-      // Handle successful submission (e.g., show a success message, reset form)
+      // Reset form or redirect user as needed
     } catch (error) {
       console.error("Error submitting form:", error);
-      // Handle error (e.g., show error message)
+      message.error("Failed to submit form. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -147,31 +193,49 @@ const DynamicFormRenderer: React.FC = () => {
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         {form.fields.map((field) => getFieldComponent(field))}
         {showStripeElement && (
-          <Elements stripe={stripePromise}>
-            <StripePaymentElement />
-          </Elements>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Card Details
+            </label>
+            <CardElement
+              className="w-full p-3 border border-gray-300 rounded-md"
+              options={{
+                style: {
+                  base: {
+                    fontSize: "16px",
+                    color: "#32325d",
+                    "::placeholder": {
+                      color: "#a0aec0",
+                    },
+                  },
+                },
+              }}
+            />
+          </div>
         )}
-        <div className="pt-4">
-          <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-3 px-4 rounded-md hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
-          >
-            Submit
-          </button>
-        </div>
+        <button
+          type="submit"
+          className={`${
+            loading ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"
+          } text-white font-semibold py-2 px-4 rounded-md transition duration-300 ease-in-out`}
+          disabled={loading}
+        >
+          {loading ? "Submitting..." : "Submit"}
+        </button>
       </form>
     </div>
   );
 
   const getFieldComponent = (field: FieldType) => {
-    const baseClasses =
-      "w-full px-4 py-2 border-2 border-gray-300 rounded-md focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition duration-300 ease-in-out bg-white text-gray-700";
-    const labelClasses = "block text-sm font-medium text-gray-700 mb-1";
     const requiredProps = field.required ? { required: true } : {};
+    const labelClasses = "block text-sm font-medium text-gray-700 mb-1";
+    const inputClasses = "w-full p-3 border border-gray-300 rounded-md";
 
     switch (field.type) {
       case "text":
       case "number":
+      case "email":
+      case "tel":
       case "date":
         return (
           <div key={field.fieldName} className="mb-4">
@@ -184,9 +248,9 @@ const DynamicFormRenderer: React.FC = () => {
               id={field.fieldName}
               name={field.fieldName}
               placeholder={field.placeholder}
-              className={baseClasses}
               onChange={handleInputChange}
               value={formData[field.fieldName] || ""}
+              className={inputClasses}
               {...requiredProps}
             />
           </div>
@@ -202,9 +266,9 @@ const DynamicFormRenderer: React.FC = () => {
               id={field.fieldName}
               name={field.fieldName}
               placeholder={field.placeholder}
-              className={`${baseClasses} h-24 resize-none`}
               onChange={handleInputChange}
               value={formData[field.fieldName] || ""}
+              className={`${inputClasses} h-24`}
               {...requiredProps}
             />
           </div>
@@ -219,12 +283,12 @@ const DynamicFormRenderer: React.FC = () => {
             <select
               id={field.fieldName}
               name={field.fieldName}
-              className={baseClasses}
               onChange={handleInputChange}
               value={formData[field.fieldName] || ""}
+              className={inputClasses}
               {...requiredProps}
             >
-              <option value="">Select an option</option>
+              <option value="">{field.placeholder}</option>
               {field.options?.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -261,10 +325,9 @@ const DynamicFormRenderer: React.FC = () => {
       case "checkbox":
         return (
           <div key={field.fieldName} className="mb-4">
-            <label htmlFor={field.fieldName} className={labelClasses}>
+            <label className="inline-flex items-center">
               <input
                 type="checkbox"
-                id={field.fieldName}
                 name={field.fieldName}
                 onChange={handleInputChange}
                 checked={formData[field.fieldName] || false}
@@ -281,60 +344,22 @@ const DynamicFormRenderer: React.FC = () => {
   };
 
   return (
-    <div className="flex justify-center items-start min-h-screen py-12 bg-gradient-to-r from-gray-100 via-blue-100 to-purple-100">
-      {loading ? (
-        <div>Loading...</div>
-      ) : selectedTemplate ? (
-        renderForm(selectedTemplate.forms[0])
-      ) : (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+      {!selectedTemplate ? (
         renderTemplateList()
+      ) : (
+        <div className="flex flex-col items-center space-y-4">
+          {renderForm(selectedTemplate.forms[0])}
+        </div>
       )}
     </div>
   );
 };
 
-const StripePaymentElement: React.FC = () => {
-  const stripe = useStripe();
-  const elements = useElements();
+const FormComponent: React.FC = () => (
+  <Elements stripe={stripePromise}>
+    <DynamicFormRenderer />
+  </Elements>
+);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    const cardElement = elements.getElement(CardElement);
-
-    if (cardElement) {
-      const { error, paymentMethod } = await stripe.createPaymentMethod({
-        type: "card",
-        card: cardElement,
-      });
-
-      if (error) {
-        console.error("Stripe Payment Error:", error);
-      } else {
-        console.log("Stripe Payment Method:", paymentMethod);
-        // Handle the payment method ID and send to your server
-      }
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="mt-4">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Card Details
-      </label>
-      <CardElement className="p-4 border border-gray-300 rounded-md" />
-      <button
-        type="submit"
-        className="mt-4 w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-2 px-4 rounded-md hover:from-green-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
-      >
-        Pay
-      </button>
-    </form>
-  );
-};
-
-export default DynamicFormRenderer;
+export default FormComponent;
