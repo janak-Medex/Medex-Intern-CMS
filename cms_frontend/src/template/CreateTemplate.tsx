@@ -274,20 +274,22 @@ const CreateTemplate: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               const match = name.match(/_(\d+)$/);
               return match ? parseInt(match[1], 10) : 0;
             })
-            .sort((a, b) => a - b); // Sort in ascending order
+            .sort((a, b) => a - b);
 
           let newSuffix = 1;
-          for (const suffix of suffixes) {
-            if (suffix === 0) continue; // Skip the base name
-            if (suffix > newSuffix) break; // We found a gap
-            newSuffix = suffix + 1;
+          for (let i = 0; i <= suffixes.length; i++) {
+            if (i === suffixes.length || suffixes[i] > newSuffix) {
+              // We've found a gap or reached the end
+              break;
+            }
+            if (suffixes[i] === newSuffix) {
+              newSuffix++;
+            }
           }
 
           if (matchingComponents.includes(baseComponentName)) {
-            // If the base name exists, use the first available number
             componentToImport.component_name = `${baseComponentName}_${newSuffix}`;
           } else {
-            // If only suffixed versions exist, use the base name
             componentToImport.component_name = baseComponentName;
           }
         }
@@ -296,13 +298,17 @@ const CreateTemplate: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           componentToImport,
           template_name!
         );
+
+        const finalComponentName =
+          importedComponent.component_name || componentToImport.component_name;
+
         setComponents((prevComponents) => [
           ...prevComponents,
           importedComponent,
         ]);
         await fetchData();
         message.success(
-          `Component "${importedComponent.component_name}" imported successfully`
+          `Component "${finalComponentName}" imported successfully`
         );
       } catch (error) {
         console.error("Error importing component:", error);
