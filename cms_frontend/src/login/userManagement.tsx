@@ -33,7 +33,6 @@ import {
   deleteUser,
 } from "../api/auth.api";
 import styled from "styled-components";
-import { ColumnGroupType, ColumnType } from "antd/es/table";
 
 const { Title } = Typography;
 const { Content } = Layout;
@@ -52,29 +51,39 @@ interface UserManagementProps {
 }
 
 const StyledCard = styled(Card)`
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+  overflow: hidden;
 `;
 
-const StyledTable = styled(Table<User>)`
+const TableContainer = styled.div`
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+`;
+
+const CenteredTable = styled(Table)`
   .ant-table-thead > tr > th {
+    text-align: center;
     background-color: #f0f2f5;
+    color: #1890ff;
     font-weight: 600;
   }
+
+  .ant-table-tbody > tr > td {
+    text-align: center;
+  }
+
   .ant-table-tbody > tr:hover > td {
     background-color: #e6f7ff;
-  }
-  .ant-table-body {
-    max-height: 400px;
-    overflow-y: auto;
   }
 `;
 
 const StyledButton = styled(Button)`
   transition: all 0.3s;
+  border-radius: 6px;
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -83,11 +92,23 @@ const StyledButton = styled(Button)`
 
 const StyledModal = styled(Modal)`
   .ant-modal-content {
-    border-radius: 12px;
+    border-radius: 16px;
+    overflow: hidden;
   }
+
+  .ant-modal-header {
+    background-color: #f0f2f5;
+    border-bottom: none;
+    padding: 16px 24px;
+  }
+
   .ant-modal-body {
-    max-height: 70vh;
-    overflow-y: auto;
+    padding: 24px;
+  }
+
+  .ant-modal-footer {
+    border-top: none;
+    padding: 16px 24px;
   }
 `;
 
@@ -95,7 +116,24 @@ const SearchContainer = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+  background-color: #f0f2f5;
+  padding: 16px;
+  border-radius: 8px;
+`;
+
+const StyledInput = styled(Input)`
+  border-radius: 6px;
+  &:hover,
+  &:focus {
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  }
+`;
+
+const StyledTag = styled(Tag)`
+  border-radius: 12px;
+  padding: 4px 8px;
+  font-weight: 600;
 `;
 
 const UserManagement: React.FC<UserManagementProps> = ({ onClose }) => {
@@ -211,14 +249,17 @@ const UserManagement: React.FC<UserManagementProps> = ({ onClose }) => {
     }
   };
 
-  const columns: (ColumnType<User> | ColumnGroupType<User>)[] = [
+  const columns = [
     {
       title: "Username",
       dataIndex: "user_name",
       key: "user_name",
       render: (text: string) => (
         <Space>
-          <Avatar icon={<UserOutlined />} />
+          <Avatar
+            icon={<UserOutlined />}
+            style={{ backgroundColor: "#1890ff" }}
+          />
           <Typography.Text strong>{text}</Typography.Text>
         </Space>
       ),
@@ -228,16 +269,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ onClose }) => {
       dataIndex: "is_active",
       key: "is_active",
       render: (isActive: boolean) => (
-        <Tag color={isActive ? "green" : "red"}>
+        <StyledTag color={isActive ? "success" : "error"}>
           {isActive ? "Active" : "Inactive"}
-        </Tag>
+        </StyledTag>
       ),
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_: any, record: User) => (
-        <Space>
+      render: (record: User) => (
+        <Space size="middle">
           <Tooltip title="Edit User">
             <StyledButton
               icon={<EditOutlined />}
@@ -276,7 +317,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ onClose }) => {
               align="center"
               style={{ width: "100%", justifyContent: "space-between" }}
             >
-              <Title level={2}>User Management</Title>
+              <Title level={2} style={{ margin: 0 }}>
+                User Management
+              </Title>
               <Space>
                 <StyledButton
                   type="primary"
@@ -292,19 +335,19 @@ const UserManagement: React.FC<UserManagementProps> = ({ onClose }) => {
             </Space>
 
             <SearchContainer>
-              <Input
+              <StyledInput
                 placeholder="Search users"
                 prefix={<SearchOutlined />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: 200 }}
+                style={{ width: 250 }}
               />
               <Select
                 defaultValue="all"
-                style={{ width: 120 }}
                 onChange={(value: "all" | "active" | "inactive") =>
                   setStatusFilter(value)
                 }
+                style={{ width: 140 }}
               >
                 <Option value="all">All Status</Option>
                 <Option value="active">Active</Option>
@@ -312,20 +355,24 @@ const UserManagement: React.FC<UserManagementProps> = ({ onClose }) => {
               </Select>
             </SearchContainer>
 
-            <StyledTable
-              columns={columns}
-              dataSource={filteredUsers}
-              rowKey="_id"
-              loading={isLoading}
-              pagination={{ pageSize: 10 }}
-              style={{ width: "100%" }}
-            />
+            <TableContainer className="custom-scrollbar">
+              <CenteredTable
+                columns={columns}
+                dataSource={filteredUsers}
+                rowKey="_id"
+                loading={isLoading}
+                pagination={{ pageSize: 10, position: ["bottomCenter"] }}
+                style={{ width: "100%" }}
+              />
+            </TableContainer>
+
             <StyledModal
               title={modalMode === "create" ? "Create New User" : "Edit User"}
               visible={isModalVisible}
               onOk={handleOk}
               onCancel={() => setIsModalVisible(false)}
-              width={800}
+              width={600}
+              centered
             >
               <Form form={form} layout="vertical">
                 <Form.Item
@@ -335,7 +382,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ onClose }) => {
                     { required: true, message: "Please input the username!" },
                   ]}
                 >
-                  <Input prefix={<UserOutlined />} placeholder="Username" />
+                  <StyledInput
+                    prefix={<UserOutlined />}
+                    placeholder="Username"
+                  />
                 </Form.Item>
                 <Form.Item
                   name="password"
