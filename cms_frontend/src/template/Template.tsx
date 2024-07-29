@@ -20,11 +20,11 @@ import {
   fetchTemplatesData,
   updateTemplateStatus,
 } from "../api/template.api";
-import CreateUser from "../login/createUserForm";
 import { TiUserAddOutline } from "react-icons/ti";
 import { decodeToken } from "../utils/JwtUtils";
 import UserInfo from "./UserInfo";
 import FormSubmissionsModal from "./FormSubmissionsModal";
+import UserManagement from "../login/userManagement";
 
 const { Search } = Input;
 
@@ -65,7 +65,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     key: "updatedAt",
     direction: "desc",
   });
-  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [showUserManagement, setShowUserManagement] = useState(false);
   const [userRole, setUserRole] = useState<"admin" | "user" | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [showFormSubmissionsModal, setShowFormSubmissionsModal] =
@@ -336,7 +336,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
                   </button>
                 </Dropdown>
                 <button
-                  onClick={() => setShowCreateUser(true)}
+                  onClick={() => setShowUserManagement(true)}
                   className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 transition duration-300"
                 >
                   <TiUserAddOutline style={{ marginRight: "8px" }} />
@@ -484,8 +484,11 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
         </div>
       </Modal>
 
-      <Modal show={showCreateUser} onClose={() => setShowCreateUser(false)}>
-        <CreateUser onClose={() => setShowCreateUser(false)} />
+      <Modal
+        show={showUserManagement}
+        onClose={() => setShowUserManagement(false)}
+      >
+        <UserManagement onClose={() => setShowUserManagement(false)} />
       </Modal>
 
       <FormSubmissionsModal
