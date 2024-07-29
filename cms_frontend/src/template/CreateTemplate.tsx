@@ -259,8 +259,41 @@ const CreateTemplate: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const handleImportComponent = useCallback(
     async (component: any) => {
       try {
+        const existingNames = components.map((comp) => comp.component_name);
+        let componentToImport = { ...component };
+
+        const baseComponentName = component.component_name;
+        const regex = new RegExp(`^${baseComponentName}(_\\d+)?$`);
+        const matchingComponents = existingNames.filter((name) =>
+          regex.test(name)
+        );
+
+        if (matchingComponents.length > 0) {
+          const suffixes = matchingComponents
+            .map((name) => {
+              const match = name.match(/_(\d+)$/);
+              return match ? parseInt(match[1], 10) : 0;
+            })
+            .sort((a, b) => a - b); // Sort in ascending order
+
+          let newSuffix = 1;
+          for (const suffix of suffixes) {
+            if (suffix === 0) continue; // Skip the base name
+            if (suffix > newSuffix) break; // We found a gap
+            newSuffix = suffix + 1;
+          }
+
+          if (matchingComponents.includes(baseComponentName)) {
+            // If the base name exists, use the first available number
+            componentToImport.component_name = `${baseComponentName}_${newSuffix}`;
+          } else {
+            // If only suffixed versions exist, use the base name
+            componentToImport.component_name = baseComponentName;
+          }
+        }
+
         const importedComponent = await templateApi.importComponent(
-          component,
+          componentToImport,
           template_name!
         );
         setComponents((prevComponents) => [
@@ -268,13 +301,15 @@ const CreateTemplate: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           importedComponent,
         ]);
         await fetchData();
-        message.success("Component imported successfully");
+        message.success(
+          `Component "${importedComponent.component_name}" imported successfully`
+        );
       } catch (error) {
-        console.error("Error posting component:", error);
+        console.error("Error importing component:", error);
         message.error("Failed to import component");
       }
     },
-    [template_name, fetchData]
+    [components, template_name, fetchData]
   );
 
   const showModal = useCallback(() => setIsModalOpen(true), []);
@@ -590,6 +625,9 @@ const CreateTemplate: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         activeTemplateKey={activeTemplateKey}
         handleTemplateChange={handleTemplateChange}
         handleImportComponent={handleImportComponent}
+        existingTemplateComponentNames={components.map(
+          (comp) => comp.component_name
+        )}
       />
     </Layout>
   );
