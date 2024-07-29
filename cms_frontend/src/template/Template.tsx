@@ -1,17 +1,13 @@
-// Template.tsx
-
 import React, { useState, useEffect } from "react";
-import { BiAddToQueue } from "react-icons/bi";
 import { Link, useNavigate } from "react-router-dom";
-import Modal from "../utils/Modal";
-import Cookies from "js-cookie";
-import { Switch, Input, Menu, Dropdown, message } from "antd";
+import { Layout, Input, Dropdown, message, Modal, Switch, Menu } from "antd";
 import {
   MoreOutlined,
-  DeleteOutlined,
+  SearchOutlined,
   EditOutlined,
-  DownOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
+import Cookies from "js-cookie";
 import axios from "axios";
 import { logout } from "../api/auth.api";
 import {
@@ -20,13 +16,125 @@ import {
   fetchTemplatesData,
   updateTemplateStatus,
 } from "../api/template.api";
-import CreateUser from "../login/createUserForm";
-import { TiUserAddOutline } from "react-icons/ti";
 import { decodeToken } from "../utils/JwtUtils";
-import UserInfo from "./UserInfo";
+import UserManagement from "../login/userManagement";
 import FormSubmissionsModal from "./FormSubmissionsModal";
+import UserInfo from "./UserInfo";
+import Sidebar from "./sider";
+import { motion, AnimatePresence } from "framer-motion";
+import styled from "styled-components";
 
-const { Search } = Input;
+const { Header, Content } = Layout;
+
+const colors = {
+  primary: "#3498DB",
+  secondary: "#2ECC71",
+  background: "#ECF0F1",
+  text: "#000000",
+  accent: "#E74C3C",
+  cardBg: "#FFFFFF",
+  sidebarBg: "#34495E",
+  sidebarContentBg: "#2C3E50",
+  sidebarText: "#FFFFFF",
+  sidebarItemSelectedBg: "#3498DB",
+  sidebarTextSelected: "#FFFFFF",
+};
+
+const StyledLayout = styled(Layout)`
+  min-height: 100vh;
+  background: ${colors.background};
+`;
+
+const StyledHeader = styled(Header)`
+  background: ${colors.cardBg};
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 64px;
+`;
+
+const StyledContent = styled(Content)`
+  margin: 24px;
+  padding: 24px;
+  background: ${colors.cardBg};
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+`;
+
+const SearchInput = styled(Input)`
+  width: 300px;
+  border-radius: 20px;
+  .ant-input-prefix {
+    color: ${colors.text};
+  }
+`;
+
+const TemplateGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 24px;
+`;
+
+const TemplateList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const TemplateCard = styled(motion.div)<{ active: boolean }>`
+  background: ${colors.cardBg};
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border-left: 5px solid
+    ${(props) => (props.active ? colors.secondary : colors.accent)};
+  &:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+`;
+
+const TemplateListItem = styled(motion.div)<{ active: boolean }>`
+  background: ${colors.cardBg};
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+  border-left: 5px solid
+    ${(props) => (props.active ? colors.secondary : colors.accent)};
+  &:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const TemplateTitle = styled(Link)`
+  font-size: 18px;
+  font-weight: 600;
+  color: ${colors.primary};
+  margin-bottom: 12px;
+  display: block;
+`;
+
+const LastEdited = styled.p`
+  font-size: 14px;
+  color: ${colors.text};
+  margin-bottom: 0;
+`;
+
+const StatusIndicator = styled.div<{ active: boolean }>`
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: ${(props) =>
+    props.active ? colors.secondary : colors.accent};
+  margin-right: 8px;
+`;
 
 interface TemplateProps {
   onLogout: () => void;
@@ -54,6 +162,7 @@ type SortConfig = {
 
 const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [template_name, settemplate_name] = useState<string>("");
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -65,7 +174,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     key: "updatedAt",
     direction: "desc",
   });
-  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [showUserManagement, setShowUserManagement] = useState(false);
   const [userRole, setUserRole] = useState<"admin" | "user" | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [showFormSubmissionsModal, setShowFormSubmissionsModal] =
@@ -286,18 +395,94 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
     </Menu>
   );
 
-  const sortMenu = (
-    <Menu>
-      <Menu.Item key="1" onClick={() => requestSort("template name")}>
-        Sort by Name
-      </Menu.Item>
-      <Menu.Item key="2" onClick={() => requestSort("updatedAt")}>
-        Sort by Last Edited
-      </Menu.Item>
-      <Menu.Item key="3" onClick={() => requestSort("is_active")}>
-        Sort by Status
-      </Menu.Item>
-    </Menu>
+  const GridView = () => (
+    <TemplateGrid>
+      {filteredTemplates.map((template) => (
+        <TemplateCard
+          key={template._id}
+          active={template.is_active}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
+            }}
+          >
+            <TemplateTitle to={`/template/${template.template_name}`}>
+              {template.template_name}
+            </TemplateTitle>
+            <div>
+              <Switch
+                checked={template.is_active}
+                onChange={(checked) =>
+                  handleSwitchChange(checked, template._id)
+                }
+                style={{ marginRight: "8px" }}
+              />
+              <Dropdown overlay={menu(template._id)} trigger={["click"]}>
+                <MoreOutlined
+                  style={{
+                    fontSize: "18px",
+                    color: colors.text,
+                    cursor: "pointer",
+                  }}
+                />
+              </Dropdown>
+            </div>
+          </div>
+          <LastEdited>
+            Last edited: {new Date(template.updatedAt).toLocaleString()}
+          </LastEdited>
+        </TemplateCard>
+      ))}
+    </TemplateGrid>
+  );
+
+  const ListView = () => (
+    <TemplateList>
+      {filteredTemplates.map((template) => (
+        <TemplateListItem
+          key={template._id}
+          active={template.is_active}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <StatusIndicator active={template.is_active} />
+            <TemplateTitle to={`/template/${template.template_name}`}>
+              {template.template_name}
+            </TemplateTitle>
+          </div>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <LastEdited style={{ marginRight: "16px" }}>
+              Last edited: {new Date(template.updatedAt).toLocaleString()}
+            </LastEdited>
+            <Switch
+              checked={template.is_active}
+              onChange={(checked) => handleSwitchChange(checked, template._id)}
+              style={{ marginRight: "8px" }}
+            />
+            <Dropdown overlay={menu(template._id)} trigger={["click"]}>
+              <MoreOutlined
+                style={{
+                  fontSize: "18px",
+                  color: colors.text,
+                  cursor: "pointer",
+                }}
+              />
+            </Dropdown>
+          </div>
+        </TemplateListItem>
+      ))}
+    </TemplateList>
   );
 
   if (!isLoggedIn) {
@@ -305,187 +490,86 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white py-6 px-8 shadow-sm">
-        <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-gray-800 text-3xl font-bold">Templates</h1>
-          <div className="flex items-center space-x-6">
-            {userRole === "admin" && (
-              <>
-                <Dropdown
-                  overlay={
-                    <Menu>
-                      <Menu.Item
-                        key="booking"
-                        onClick={() => handleFormSubmissionsClick("booking")}
-                      >
-                        Booking Form Submissions
-                      </Menu.Item>
-                      <Menu.Item
-                        key="generic"
-                        onClick={() => handleFormSubmissionsClick("generic")}
-                      >
-                        Generic Form Submissions
-                      </Menu.Item>
-                    </Menu>
-                  }
-                  placement="bottomRight"
-                >
-                  <button className="flex items-center rounded-lg bg-green-600 hover:bg-green-700 text-white py-2 px-4 transition duration-300">
-                    View Form Submissions
-                  </button>
-                </Dropdown>
-                <button
-                  onClick={() => setShowCreateUser(true)}
-                  className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 transition duration-300"
-                >
-                  <TiUserAddOutline style={{ marginRight: "8px" }} />
-                  Create User
-                </button>
-              </>
-            )}
-            <Search
+    <StyledLayout>
+      <Sidebar
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        handleCreateTemplate={handleCreateTemplate}
+        handleViewChange={handleViewChange}
+        requestSort={requestSort}
+        handleFormSubmissionsClick={handleFormSubmissionsClick}
+        setShowUserManagement={setShowUserManagement}
+        userRole={userRole}
+      />
+      <Layout>
+        <StyledHeader>
+          <h1 style={{ color: colors.primary, margin: 0, fontSize: "24px" }}>
+            Templates
+          </h1>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <SearchInput
+              prefix={<SearchOutlined />}
               placeholder="Search templates"
               onChange={(e) => handleSearch(e.target.value)}
-              style={{ width: 300 }}
-              className="border-2 border-gray-200 rounded-lg"
+              style={{ marginRight: "16px" }}
             />
             {userInfo && <UserInfo user={userInfo} onLogout={handleLogout} />}
           </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto mt-12 px-8">
-        <div className="flex justify-between items-center mb-10">
-          <button
-            onClick={handleCreateTemplate}
-            className="flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 focus:outline-none transition duration-300 ease-in-out shadow-lg hover:shadow-xl"
-          >
-            <BiAddToQueue size={24} className="mr-3" />
-            <span className="text-lg font-semibold">New Template</span>
-          </button>
-          <div className="flex space-x-3">
-            <button
-              onClick={() => handleViewChange("grid")}
-              className={`px-4 py-2 rounded-lg ${
-                view === "grid"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-white text-gray-600"
-              } transition-colors duration-300`}
-            >
-              Grid
-            </button>
-            <button
-              onClick={() => handleViewChange("list")}
-              className={`px-4 py-2 rounded-lg ${
-                view === "list"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-white text-gray-600"
-              } transition-colors duration-300`}
-            >
-              List
-            </button>
-            <Dropdown overlay={sortMenu} trigger={["click"]}>
-              <button className="px-4 py-2 rounded-lg bg-white text-gray-600 transition-colors duration-300">
-                Sort by {sortConfig.key}{" "}
-                {sortConfig.direction === "asc" ? "↑" : "↓"} <DownOutlined />
-              </button>
-            </Dropdown>
-          </div>
-        </div>
-
-        {filteredTemplates.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="text-gray-500 text-2xl font-light">
-              No templates found.
-            </p>
-            <p className="text-gray-400 mt-3 text-lg">
-              Try adjusting your search or create a new template.
-            </p>
-          </div>
-        ) : (
-          <div
-            className={`grid ${
-              view === "grid"
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
-                : "grid-cols-1 gap-6"
-            }`}
-          >
-            {filteredTemplates.map((template) => (
-              <div
-                key={template._id}
-                className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out 
-                      ${view === "grid" ? "p-6" : "p-5"}`}
+        </StyledHeader>
+        <StyledContent>
+          <AnimatePresence>
+            {filteredTemplates.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{ textAlign: "center", padding: "48px 0" }}
               >
-                <div className="flex justify-between items-start mb-4">
-                  <Link
-                    to={`/template/${template.template_name}`}
-                    className="block w-full"
-                  >
-                    <h3 className="text-xl font-semibold text-gray-800 hover:text-blue-600 transition-colors duration-300">
-                      {template.template_name}
-                    </h3>
-                  </Link>
-                  <div className="flex items-center space-x-3">
-                    <Switch
-                      size="small"
-                      checked={template.is_active}
-                      onChange={(checked) =>
-                        handleSwitchChange(checked, template._id)
-                      }
-                    />
-                    <Dropdown overlay={menu(template._id)} trigger={["click"]}>
-                      <button className="text-gray-400 hover:text-gray-600 transition-colors duration-300">
-                        <MoreOutlined style={{ fontSize: "20px" }} />
-                      </button>
-                    </Dropdown>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-500">
-                  Last edited:{" "}
-                  {new Date(template.updatedAt).toLocaleString(undefined, {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                <p style={{ fontSize: "24px", color: colors.primary }}>
+                  No templates found.
                 </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                <p
+                  style={{
+                    fontSize: "16px",
+                    color: colors.text,
+                    marginTop: "12px",
+                  }}
+                >
+                  Try adjusting your search or create a new template.
+                </p>
+              </motion.div>
+            ) : view === "grid" ? (
+              <GridView />
+            ) : (
+              <ListView />
+            )}
+          </AnimatePresence>
+        </StyledContent>
+      </Layout>
 
-      <Modal show={isModalOpen} onClose={handleCloseModal}>
-        <div className="bg-white p-8 rounded-lg shadow-xl">
-          <h2 className="text-2xl font-semibold mb-6">Create New Template</h2>
-          <input
-            type="text"
-            className="border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full mb-6"
-            placeholder="Template Name"
-            value={template_name}
-            onChange={handletemplate_nameChange}
-          />
-          <div className="flex justify-end space-x-4">
-            <button
-              onClick={handleCloseModal}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors duration-300"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveTemplate}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg focus:outline-none transition-all duration-300 ease-in-out shadow-md hover:shadow-lg"
-            >
-              Create
-            </button>
-          </div>
-        </div>
+      <Modal
+        title="Create New Template"
+        visible={isModalOpen}
+        onOk={handleSaveTemplate}
+        onCancel={handleCloseModal}
+      >
+        <Input
+          placeholder="Template Name"
+          value={template_name}
+          onChange={handletemplate_nameChange}
+        />
       </Modal>
 
-      <Modal show={showCreateUser} onClose={() => setShowCreateUser(false)}>
-        <CreateUser onClose={() => setShowCreateUser(false)} />
+      <Modal
+        visible={showUserManagement}
+        onCancel={() => setShowUserManagement(false)}
+        footer={null}
+        width="80%"
+        closable={false}
+        bodyStyle={{ maxHeight: "77vh", overflow: "auto" }}
+        className="custom-scrollbar"
+      >
+        <UserManagement onClose={() => setShowUserManagement(false)} />
       </Modal>
 
       <FormSubmissionsModal
@@ -493,7 +577,7 @@ const Template: React.FC<TemplateProps> = ({ onLogout }) => {
         onClose={() => setShowFormSubmissionsModal(false)}
         formType={formType}
       />
-    </div>
+    </StyledLayout>
   );
 };
 

@@ -17,7 +17,6 @@ import {
   EyeOutlined,
   CalendarOutlined,
   FileTextOutlined,
-  CloseCircleOutlined,
 } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { getFormSubmissions, FormSubmission } from "../api/forSubmission.api";
@@ -211,7 +210,6 @@ const FormSubmissionsModal: React.FC<FormSubmissionsModalProps> = ({
               Submission Details - {selectedSubmission?.template_name}
             </Title>
             <Button
-              icon={<CloseCircleOutlined />}
               onClick={handleCloseDetails}
               className="border-none text-gray-500 hover:text-red-500 transition-colors duration-300"
             />

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Modal, Input, Collapse, List, Button, Tooltip, Tag } from "antd";
 import { IoSearchOutline } from "react-icons/io5";
 import { BiChevronRight } from "react-icons/bi";
@@ -25,6 +25,7 @@ interface ImportModalProps {
   activeTemplateKey: string | string[];
   handleTemplateChange: (key: string | string[]) => void;
   handleImportComponent: (component: any) => Promise<void>;
+  existingTemplateComponentNames: string[];
 }
 
 const ImportModal: React.FC<ImportModalProps> = ({
@@ -36,7 +37,10 @@ const ImportModal: React.FC<ImportModalProps> = ({
   activeTemplateKey,
   handleTemplateChange,
   handleImportComponent,
+  existingTemplateComponentNames,
 }) => {
+  const [importedComponents, setImportedComponents] = useState<string[]>([]);
+
   const getComponentIcon = (componentName: string) => {
     if (componentName.includes("Video"))
       return <FaVideo className="text-red-500" />;
@@ -72,6 +76,26 @@ const ImportModal: React.FC<ImportModalProps> = ({
       minute: "2-digit",
     });
   }
+
+  const generateUniqueName = (baseName: string) => {
+    let newName = baseName;
+    let counter = 1;
+    while (
+      existingTemplateComponentNames.includes(newName) ||
+      importedComponents.includes(newName)
+    ) {
+      newName = `${baseName}_${counter}`;
+      counter++;
+    }
+    return newName;
+  };
+
+  const handleImport = async (component: any) => {
+    const uniqueName = generateUniqueName(component.component_name);
+    const modifiedComponent = { ...component, component_name: uniqueName };
+    await handleImportComponent(modifiedComponent);
+    setImportedComponents([...importedComponents, uniqueName]);
+  };
 
   return (
     <Modal
@@ -177,7 +201,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
                         <Button
                           type="primary"
                           icon={<DownloadOutlined />}
-                          onClick={() => handleImportComponent(component)}
+                          onClick={() => handleImport(component)}
                           className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 border-none shadow-md transition duration-300 text-sm px-6 py-2 rounded-full"
                         >
                           Import

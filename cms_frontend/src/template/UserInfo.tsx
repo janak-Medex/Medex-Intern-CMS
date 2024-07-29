@@ -1,15 +1,25 @@
-// UserInfo.tsx
 import React, { useState, useEffect } from "react";
-import { Menu, Dropdown, Avatar, Tooltip } from "antd";
+import {
+  Menu,
+  Dropdown,
+  Avatar,
+  Tooltip,
+  Modal,
+  Form,
+  Input,
+  message,
+  Button,
+} from "antd";
 import {
   UserOutlined,
   SettingOutlined,
   BellOutlined,
   QuestionCircleOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import Cookies from "js-cookie";
 import { decodeToken } from "../utils/JwtUtils";
-import { logout } from "../api/auth.api";
+import { logout, updateOwnPassword } from "../api/auth.api";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaUserCircle, FaSignOutAlt, FaMoon, FaSun } from "react-icons/fa";
@@ -48,10 +58,13 @@ const UserAvatar = styled(Avatar)`
   }
 `;
 
-const UserInfo: React.FC<UserInfoProps> = ({ onLogout }) => {
+const UserInfo: React.FC<UserInfoProps> = ({ user, onLogout }) => {
   const [userInfo, setUserInfo] = useState<UserData | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  const [isChangePasswordModalVisible, setIsChangePasswordModalVisible] =
+    useState(false);
+  const [form] = Form.useForm();
 
   useEffect(() => {
     const token = Cookies.get("access_token");
@@ -82,6 +95,26 @@ const UserInfo: React.FC<UserInfoProps> = ({ onLogout }) => {
 
   const toggleNotification = () => {
     setShowNotification(!showNotification);
+  };
+
+  const showChangePasswordModal = () => {
+    setIsChangePasswordModalVisible(true);
+  };
+
+  const handleChangePasswordCancel = () => {
+    setIsChangePasswordModalVisible(false);
+    form.resetFields();
+  };
+
+  const handleChangePasswordSubmit = async (values: any) => {
+    try {
+      await updateOwnPassword(values.oldPassword, values.newPassword);
+      message.success("Password updated successfully");
+      setIsChangePasswordModalVisible(false);
+      form.resetFields();
+    } catch (error) {
+      message.error("Failed to update password. Please try again.");
+    }
   };
 
   if (!userInfo) {
@@ -146,8 +179,24 @@ const UserInfo: React.FC<UserInfoProps> = ({ onLogout }) => {
           Role: {userInfo.role}
         </motion.button>
       </Menu.Item>
+      {userInfo.role === "admin" && (
+        <Menu.Item
+          key="2"
+          className="hover:bg-indigo-50 rounded-lg transition-colors duration-200"
+        >
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="w-full text-left py-3 px-4 font-semibold text-gray-700 flex items-center"
+            onClick={showChangePasswordModal}
+          >
+            <LockOutlined className="mr-3 text-indigo-500" />
+            Change Password
+          </motion.button>
+        </Menu.Item>
+      )}
       <Menu.Item
-        key="2"
+        key="3"
         className="hover:bg-indigo-50 rounded-lg transition-colors duration-200"
       >
         <motion.button
@@ -161,7 +210,7 @@ const UserInfo: React.FC<UserInfoProps> = ({ onLogout }) => {
       </Menu.Item>
       <Menu.Divider className="my-3 border-indigo-100" />
       <Menu.Item
-        key="3"
+        key="4"
         className="hover:bg-red-50 rounded-lg transition-colors duration-200"
       >
         <motion.button
@@ -194,7 +243,7 @@ const UserInfo: React.FC<UserInfoProps> = ({ onLogout }) => {
             icon={<FaUserCircle className="text-white" />}
           />
           <span className="text-xs font-medium text-gray-700">
-            {userInfo.user_name}
+            {user.user_name}{" "}
           </span>
           <motion.svg
             width="12"
@@ -223,6 +272,58 @@ const UserInfo: React.FC<UserInfoProps> = ({ onLogout }) => {
           </motion.div>
         )}
       </AnimatePresence>
+      <Modal
+        title="Change Password"
+        visible={isChangePasswordModalVisible}
+        onCancel={handleChangePasswordCancel}
+        footer={null}
+      >
+        <Form
+          form={form}
+          name="changePassword"
+          onFinish={handleChangePasswordSubmit}
+          layout="vertical"
+        >
+          <Form.Item
+            name="oldPassword"
+            label="Old Password"
+            rules={[
+              {
+                required: true,
+                message: "Please input your old password!",
+              },
+            ]}
+          >
+            <Input.Password />
+          </Form.Item>
+          <Form.Item
+            name="newPassword"
+            label="New Password"
+            rules={[
+              {
+                required: true,
+                message: "Please input your new password!",
+              },
+            ]}
+          >
+            <Input.Password />
+          </Form.Item>
+          <Form.Item>
+            <div className="flex justify-end">
+              <Button
+                key="cancel"
+                onClick={handleChangePasswordCancel}
+                className="mr-2"
+              >
+                Cancel
+              </Button>
+              <Button key="submit" type="primary" htmlType="submit">
+                Change Password
+              </Button>
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
