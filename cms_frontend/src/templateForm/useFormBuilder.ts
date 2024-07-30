@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, RefObject } from 'react';
 import { FormInstance, message } from 'antd';
 import { FormType, FieldType } from './types';
 import { createForm } from '../api/formComponent.api';
-import { FormData as CustomFormData } from 'd:/intern/frontend_cms_template/Medex-Intern-CMS/cms_frontend/src/templateForm/types';
+import { FormData as CustomFormData } from './types';
 const useFormBuilder = (
     form: FormInstance,
     initialForm: FormType | null,

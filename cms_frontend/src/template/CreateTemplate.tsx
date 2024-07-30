@@ -23,7 +23,7 @@ import {
 import { HiHome } from "react-icons/hi2";
 import { IoIosAdd } from "react-icons/io";
 import Cookies from "js-cookie";
-import { DecodedToken, decodeToken } from "../utils/JwtUtils";
+import { decodeToken } from "../utils/JwtUtils";
 import * as templateApi from "../api/createTemplate.api";
 import { createTableData } from "../utils/CreateTableData";
 import ComponentSection from "./ComponentSection";
@@ -32,7 +32,10 @@ import TemplateForm from "../templateForm/TemplateForm";
 import UserInfo from "./UserInfo";
 
 const { Header, Sider, Content } = Layout;
-
+interface UserInfo {
+  user_name: string;
+  role: "admin" | "user";
+}
 const CreateTemplate: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { template_name } = useParams<{ template_name: string }>();
   const navigate = useNavigate();
@@ -65,31 +68,31 @@ const CreateTemplate: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [userRole, setUserRole] = useState<string>("user");
-  const [_userInfo, setUserInfo] = useState<DecodedToken | null>(null);
-  const [isLoggedOut, setIsLoggedOut] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [isLoggedOut, _setIsLoggedOut] = useState(false);
 
   useEffect(() => {
     if (isLoggedOut) {
       navigate("/", { replace: true });
     }
   }, [isLoggedOut, navigate]);
+
   useEffect(() => {
     const token = Cookies.get("access_token");
     if (token) {
-      try {
-        const decodedToken = decodeToken(token);
-        if (decodedToken) {
-          setUserInfo(decodedToken);
-          setUserRole(decodedToken.role || "user");
-        } else {
-          setIsLoggedOut(true);
-        }
-      } catch (error) {
-        console.error("Error decoding token:", error);
-        setIsLoggedOut(true);
+      const decodedToken = decodeToken(token);
+      if (decodedToken) {
+        setUserRole(decodedToken?.role ?? "user");
+        setUserInfo({
+          user_name: decodedToken.user_name!,
+          role: decodedToken.role!,
+        });
+        console.log(decodedToken.user_name);
+      } else {
+        handleLogout();
       }
     } else {
-      setIsLoggedOut(true);
+      handleLogout();
     }
   }, []);
 
@@ -555,13 +558,7 @@ const CreateTemplate: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               <span className="text-indigo-600">{addButtonText}</span>
             </Button>
           </Dropdown>
-          <UserInfo
-            onLogout={handleLogout}
-            user={{
-              user_name: "",
-              role: "admin",
-            }}
-          />
+          {userInfo && <UserInfo user={userInfo} onLogout={handleLogout} />}
         </div>
       </Header>
       <TemplateForm

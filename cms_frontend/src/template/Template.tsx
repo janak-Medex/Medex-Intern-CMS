@@ -148,7 +148,7 @@ export interface Template {
   status: number;
 }
 
-interface UserInfo {
+export interface UserInfo {
   user_name: string;
   role: "admin" | "user";
 }
