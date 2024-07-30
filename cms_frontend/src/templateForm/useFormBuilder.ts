@@ -69,6 +69,7 @@ const useFormBuilder = (
                 template_name: templateName,
                 formDataFields: JSON.stringify(processedFields),
                 formDataTemplateName: templateName,
+                fields: []
             });
 
 
@@ -297,7 +298,10 @@ const useFormBuilder = (
     }, []);
 
     const handleKeyValuePairChange = useCallback(
-        (fieldIndex: number, pairIndex: number, key: 'key' | 'value', value: string | File) => {
+        (fieldIndex: number,
+            pairIndex: number,
+            key: "key" | "value",
+            value: string | File | File[]) => {
             setFields((prevFields) => {
                 const newFields = [...prevFields];
                 const field = newFields[fieldIndex];
