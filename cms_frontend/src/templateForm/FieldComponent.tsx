@@ -1,11 +1,21 @@
 import React from "react";
-import { Form, Input, Select, Switch, Button, Radio, Checkbox } from "antd";
+import {
+  Form,
+  Input,
+  Select,
+  Switch,
+  Button,
+  Radio,
+  Checkbox,
+  Upload,
+} from "antd";
 import {
   DragOutlined,
   UpOutlined,
   DownOutlined,
   MinusCircleOutlined,
   PlusOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import { FieldType } from "./types";
 import NestedOption from "./NestedOption";
@@ -40,6 +50,14 @@ interface FieldComponentProps {
     index: number
   ) => void;
   handleDrop: (e: React.DragEvent<HTMLDivElement>, targetIndex: number) => void;
+  handleKeyValuePairAdd: (fieldIndex: number) => void;
+  handleKeyValuePairChange: (
+    fieldIndex: number,
+    pairIndex: number,
+    key: "key" | "value",
+    value: string | File | File[]
+  ) => void;
+  handleKeyValuePairRemove: (fieldIndex: number, pairIndex: number) => void;
 }
 
 const FieldComponent: React.FC<FieldComponentProps> = ({
@@ -57,6 +75,9 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
   removeField,
   handleDragStart,
   handleDrop,
+  handleKeyValuePairAdd,
+  handleKeyValuePairChange,
+  handleKeyValuePairRemove,
 }) => {
   const renderOptions = () => {
     if (["select", "radio", "checkbox"].includes(field.type)) {
@@ -134,6 +155,108 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
     return null;
   };
 
+  const renderKeyValuePairs = () => {
+    if (field.type === "keyValuePair") {
+      return (
+        <Form.Item
+          label={<span className="font-semibold">Key-Value Pairs</span>}
+        >
+          <div className="border p-4 rounded-lg bg-gray-50">
+            {field.keyValuePairs?.map((pair, pairIndex) => (
+              <div key={pairIndex} className="flex items-center space-x-2 mb-2">
+                <Input
+                  value={pair.key}
+                  onChange={(e) =>
+                    handleKeyValuePairChange(
+                      index,
+                      pairIndex,
+                      "key",
+                      e.target.value
+                    )
+                  }
+                  placeholder="Key"
+                />
+                {[
+                  "image",
+                  "images",
+                  "video",
+                  "videos",
+                  "file",
+                  "files",
+                ].includes(pair.key.toLowerCase()) ? (
+                  <Upload
+                    beforeUpload={(file) => {
+                      const newValue = pair.key.toLowerCase().endsWith("s")
+                        ? [
+                            ...(Array.isArray(pair.value) ? pair.value : []),
+                            file,
+                          ]
+                        : file;
+                      handleKeyValuePairChange(
+                        index,
+                        pairIndex,
+                        "value",
+                        newValue
+                      );
+                      return false;
+                    }}
+                    accept={getAcceptType(pair.key)}
+                    multiple={pair.key.toLowerCase().endsWith("s")}
+                  >
+                    <Button icon={<UploadOutlined />}>
+                      {Array.isArray(pair.value)
+                        ? `${pair.value.length} file(s) selected`
+                        : pair.value instanceof File
+                        ? pair.value.name
+                        : "Upload"}
+                    </Button>
+                  </Upload>
+                ) : (
+                  <Input
+                    value={
+                      typeof pair.value === "string" ? pair.value : undefined
+                    }
+                    onChange={(e) =>
+                      handleKeyValuePairChange(
+                        index,
+                        pairIndex,
+                        "value",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Value"
+                  />
+                )}
+                <Button
+                  type="text"
+                  danger
+                  icon={<MinusCircleOutlined />}
+                  onClick={() => handleKeyValuePairRemove(index, pairIndex)}
+                />
+              </div>
+            ))}
+            <Button
+              type="dashed"
+              onClick={() => handleKeyValuePairAdd(index)}
+              className="w-full mt-2"
+              icon={<PlusOutlined />}
+            >
+              Add Key-Value Pair
+            </Button>
+          </div>
+        </Form.Item>
+      );
+    }
+    return null;
+  };
+
+  const getAcceptType = (key: string) => {
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.includes("image")) return "image/*";
+    if (lowerKey.includes("video")) return "video/*";
+    return "*/*";
+  };
+
   return (
     <div
       draggable
@@ -195,11 +318,13 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
               <Option value="boolean">Boolean</Option>
               <Option value="date">Date</Option>
               <Option value="file">File</Option>
+              <Option value="keyValuePair">Key-Value Pair</Option>
               <Option value="other">Other</Option>
             </Select>
           </Form.Item>
           {renderNestedOptions()}
           {renderOptions()}
+          {renderKeyValuePairs()}
           <Form.Item label={<span className="font-semibold">Placeholder</span>}>
             <Input
               value={field.placeholder}

@@ -3,13 +3,18 @@ import axiosInstance from "../http/axiosInstance";
 import { FormData, FormType } from "../templateForm/types";
 
 export const createForm = async (formData: FormData): Promise<void> => {
-    const { name, fields, template_name } = formData;
-
-    const cleanFields = fields.filter(Boolean); // Filter out null fields
-
     try {
-        await axiosInstance.post("/form", { name, fields: cleanFields, template_name });
-    } catch (error) {
+        const response = await axiosInstance.post("/form", formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        console.log("Server response:", response.data);
+    } catch (error: any) {
+        console.error("Error in createForm:", error);
+        if (error.response) {
+            console.error("Server error response:", error.response.data);
+        }
         throw new Error("Failed to save form");
     }
 };

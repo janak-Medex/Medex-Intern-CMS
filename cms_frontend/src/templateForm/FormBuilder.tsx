@@ -33,6 +33,9 @@ const FormBuilder: React.FC<{
     toggleFieldExpansion,
     onFinish,
     handleScroll,
+    handleKeyValuePairAdd,
+    handleKeyValuePairChange,
+    handleKeyValuePairRemove,
   } = useFormBuilder(
     form,
     initialForm,
@@ -86,6 +89,9 @@ const FormBuilder: React.FC<{
                   removeField={removeField}
                   handleDragStart={handleDragStart}
                   handleDrop={handleDrop}
+                  handleKeyValuePairAdd={handleKeyValuePairAdd}
+                  handleKeyValuePairChange={handleKeyValuePairChange}
+                  handleKeyValuePairRemove={handleKeyValuePairRemove}
                 />
               ))}
 

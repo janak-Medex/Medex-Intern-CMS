@@ -146,7 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               transition={{ duration: 0.2 }}
               style={{ width: 40, height: 40 }}
             >
-              <img src="../../public/logo.ico" />
+              <img src="./logo.ico" />
             </motion.div>
           ) : (
             <motion.div

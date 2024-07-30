@@ -1,8 +1,11 @@
-// types.ts
-
 export interface NestedOption {
     label: string;
     options: (string | NestedOption)[];
+}
+
+export interface KeyValuePair {
+    key: string;
+    value: string | File;
 }
 
 export interface FieldType {
@@ -13,6 +16,7 @@ export interface FieldType {
     options?: (string | NestedOption)[];
     switch?: boolean;
     description?: string;
+    keyValuePairs?: KeyValuePair[];
 }
 
 export interface FormType {
@@ -32,4 +36,6 @@ export interface FormData {
     name: string;
     fields: FieldType[];
     template_name: string;
+    formDataFields?: string;
+    formDataTemplateName?: string;
 }

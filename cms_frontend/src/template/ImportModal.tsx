@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Modal, Input, Collapse, List, Button, Tooltip, Tag } from "antd";
-import { IoSearchOutline } from "react-icons/io5";
+import { IoSearchOutline, IoCloseOutline } from "react-icons/io5";
 import { BiChevronRight } from "react-icons/bi";
 import { DownloadOutlined } from "@ant-design/icons";
 import { TableData } from "./types";
@@ -105,6 +105,9 @@ const ImportModal: React.FC<ImportModalProps> = ({
       onCancel={handleCancel}
       width={1000}
       footer={null}
+      closeIcon={
+        <IoCloseOutline className="text-black text-3xl bg-white rounded-full border border-gray-300" />
+      }
       className="rounded-2xl overflow-hidden shadow-2xl"
       bodyStyle={{ padding: 0 }}
     >

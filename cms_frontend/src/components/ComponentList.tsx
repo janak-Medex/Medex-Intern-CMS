@@ -182,6 +182,12 @@ const ComponentList: React.FC<ComponentListProps> = ({
     }
   };
 
+  const truncateText = (text: string, maxLength: number) => {
+    return text.length > maxLength
+      ? text.substring(0, maxLength) + "..."
+      : text;
+  };
+
   return (
     <div className="space-y-4 flex-1 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-lg min-h-full overflow-hidden">
       <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center">
@@ -222,30 +228,36 @@ const ComponentList: React.FC<ComponentListProps> = ({
                       : "text-gray-500"
                   }`}
                 />
-                <Tooltip title={component.component_name}>
-                  <span
-                    className={`font-medium truncate ${
-                      isFormComponent(component.component_name)
-                        ? "text-white"
-                        : component.is_active
-                        ? "text-gray-700"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {component.component_name}
-                  </span>
-                </Tooltip>
-                {isFormComponent(component.component_name) && (
-                  <Badge
-                    count="Form"
-                    style={{
-                      backgroundColor: component.is_active
-                        ? "#10B981"
-                        : "#6B7280",
-                    }}
-                  />
-                )}
+                <div className="flex-grow min-w-0">
+                  <Tooltip title={component.component_name}>
+                    <span
+                      className={`font-medium truncate block ${
+                        isFormComponent(component.component_name)
+                          ? "text-white"
+                          : component.is_active
+                          ? "text-gray-700"
+                          : "text-gray-500"
+                      }`}
+                      style={{ maxWidth: "200px" }}
+                    >
+                      {truncateText(component.component_name, 20)}
+                    </span>
+                  </Tooltip>
+                </div>
+                <div className="flex-shrink-0 pl-3 pr-3">
+                  {isFormComponent(component.component_name) && (
+                    <Badge
+                      count="Form"
+                      style={{
+                        backgroundColor: component.is_active
+                          ? "#10B981"
+                          : "#6B7280",
+                      }}
+                    />
+                  )}
+                </div>
               </div>
+
               <div className="flex items-center space-x-3 flex-shrink-0">
                 {isFormComponent(component.component_name) ? (
                   <>
