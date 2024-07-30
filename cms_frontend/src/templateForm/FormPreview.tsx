@@ -12,15 +12,14 @@ import {
   Button,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
-import { FieldType, NestedOption } from "./types";
+import { FieldType, FormPreviewProps, NestedOption } from "./types";
 
 const { TextArea } = Input;
-
-const FormPreview: React.FC<{
-  fields: FieldType[];
-  templateName: string;
-  formName: string;
-}> = ({ fields, templateName, formName }) => {
+const FormPreview: React.FC<FormPreviewProps> = ({
+  fields,
+  templateName,
+  formName,
+}) => {
   const [form] = Form.useForm();
 
   const transformOptions = (options: (string | NestedOption)[]): any[] => {
@@ -105,6 +104,42 @@ const FormPreview: React.FC<{
             <Button icon={<UploadOutlined />}>Click to Upload</Button>
           </Upload>
         );
+      case "keyValuePair":
+        return (
+          <div>
+            {field.keyValuePairs?.map((pair, index) => (
+              <div key={index} className="flex items-center space-x-2 mb-2">
+                <Input value={pair.key} disabled />
+                {[
+                  "image",
+                  "images",
+                  "video",
+                  "videos",
+                  "file",
+                  "files",
+                ].includes(pair.key.toLowerCase()) ? (
+                  pair.value instanceof File ? (
+                    <div>
+                      <p>{pair.value.name}</p>
+                      {pair.key.toLowerCase().includes("image") && (
+                        <img
+                          src={URL.createObjectURL(pair.value)}
+                          alt="Preview"
+                          style={{ maxWidth: "100px", maxHeight: "100px" }}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <p>No file uploaded</p>
+                  )
+                ) : (
+                  <Input value={pair.value as string} disabled />
+                )}
+              </div>
+            ))}
+          </div>
+        );
+
       default:
         return <Input placeholder={placeholder} />;
     }

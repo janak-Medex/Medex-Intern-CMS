@@ -38,15 +38,32 @@ const useFormBuilder = (
 
     const onFinish = async (values: any) => {
         try {
-            const formData = {
-                _id: initialForm?._id,
-                name: values.formName,
-                fields: fields.map((field) => ({
+            const formData = new FormData();
+            formData.append('_id', initialForm?._id || '');
+            formData.append('name', values.formName);
+            formData.append('template_name', templateName);
+
+            const processedFields = fields.map((field) => {
+                if (field.type === 'keyValuePair') {
+                    return {
+                        ...field,
+                        required: !!field.required,
+                        keyValuePairs: field.keyValuePairs?.map((pair) => {
+                            if (pair.value instanceof File) {
+                                formData.append(pair.key, pair.value, pair.value.name);
+                                return { key: pair.key, value: pair.value.name };
+                            }
+                            return pair;
+                        }),
+                    };
+                }
+                return {
                     ...field,
                     required: !!field.required,
-                })),
-                template_name: templateName,
-            };
+                };
+            });
+
+            formData.append('fields', JSON.stringify(processedFields));
 
             await createForm(formData);
 
@@ -261,6 +278,50 @@ const useFormBuilder = (
         }
     }, [formBuilderRef]);
 
+    const handleKeyValuePairAdd = useCallback((fieldIndex: number) => {
+        setFields((prevFields) => {
+            const newFields = [...prevFields];
+            if (newFields[fieldIndex].type === 'keyValuePair') {
+                if (!newFields[fieldIndex].keyValuePairs) {
+                    newFields[fieldIndex].keyValuePairs = [];
+                }
+                newFields[fieldIndex].keyValuePairs?.push({ key: '', value: '' });
+            }
+            return newFields;
+        });
+    }, []);
+
+    const handleKeyValuePairChange = useCallback(
+        (fieldIndex: number, pairIndex: number, key: 'key' | 'value', value: string | File) => {
+            setFields((prevFields) => {
+                const newFields = [...prevFields];
+                const field = newFields[fieldIndex];
+                if (field && field.keyValuePairs) {
+                    field.keyValuePairs[pairIndex] = {
+                        ...field.keyValuePairs[pairIndex],
+                        [key]: value,
+                    };
+                }
+                return newFields;
+            });
+        },
+        []
+    );
+
+    const handleKeyValuePairRemove = useCallback(
+        (fieldIndex: number, pairIndex: number) => {
+            setFields((prevFields) => {
+                const newFields = [...prevFields];
+                const field = newFields[fieldIndex];
+                if (field && field.keyValuePairs) {
+                    field.keyValuePairs.splice(pairIndex, 1);
+                }
+                return newFields;
+            });
+        },
+        []
+    );
+
     return {
         fields,
         expandedFields,
@@ -279,6 +340,9 @@ const useFormBuilder = (
         toggleFieldExpansion,
         onFinish,
         handleScroll,
+        handleKeyValuePairAdd,
+        handleKeyValuePairChange,
+        handleKeyValuePairRemove,
     };
 };
 
