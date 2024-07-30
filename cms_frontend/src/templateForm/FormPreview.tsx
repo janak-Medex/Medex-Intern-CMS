@@ -10,11 +10,52 @@ import {
   DatePicker,
   Upload,
   Button,
+  Image,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
-import { FieldType, FormPreviewProps, NestedOption } from "./types";
+import {
+  FieldType,
+  FormPreviewProps,
+  NestedOption,
+  KeyValuePair,
+} from "./types";
 
 const { TextArea } = Input;
+
+const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
+
+const renderImagePreview = (key: string, value: string | File) => {
+  if (typeof value === "string") {
+    return (
+      <div>
+        <p>{value.split("/").pop()}</p>
+        {key.toLowerCase().includes("image") && (
+          <Image
+            src={`${baseImageUrl}${value.split("uploads/")[1]}`}
+            alt="Preview"
+            style={{ maxWidth: "100px", maxHeight: "100px" }}
+          />
+        )}
+      </div>
+    );
+  } else if (value instanceof File) {
+    return (
+      <div>
+        <p>{value.name}</p>
+        {key.toLowerCase().includes("image") && (
+          <Image
+            src={URL.createObjectURL(value)}
+            alt="Preview"
+            style={{ maxWidth: "100px", maxHeight: "100px" }}
+          />
+        )}
+      </div>
+    );
+  } else {
+    return <p>No file uploaded</p>;
+  }
+};
+
 const FormPreview: React.FC<FormPreviewProps> = ({
   fields,
   templateName,
@@ -40,7 +81,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({
   };
 
   const renderField = (field: FieldType) => {
-    const { type, placeholder, options } = field;
+    const { type, placeholder, options, keyValuePairs } = field;
 
     switch (type) {
       case "text":
@@ -107,7 +148,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({
       case "keyValuePair":
         return (
           <div>
-            {field.keyValuePairs?.map((pair, index) => (
+            {keyValuePairs?.map((pair: KeyValuePair, index: number) => (
               <div key={index} className="flex items-center space-x-2 mb-2">
                 <Input value={pair.key} disabled />
                 {[
@@ -118,20 +159,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({
                   "file",
                   "files",
                 ].includes(pair.key.toLowerCase()) ? (
-                  pair.value instanceof File ? (
-                    <div>
-                      <p>{pair.value.name}</p>
-                      {pair.key.toLowerCase().includes("image") && (
-                        <img
-                          src={URL.createObjectURL(pair.value)}
-                          alt="Preview"
-                          style={{ maxWidth: "100px", maxHeight: "100px" }}
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <p>No file uploaded</p>
-                  )
+                  renderImagePreview(pair.key, pair.value)
                 ) : (
                   <Input value={pair.value as string} disabled />
                 )}
