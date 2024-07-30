@@ -36,4 +36,6 @@ export interface FormData {
     name: string;
     fields: FieldType[];
     template_name: string;
+    formDataFields?: string;
+    formDataTemplateName?: string;
 }

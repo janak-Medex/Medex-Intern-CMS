@@ -63,9 +63,14 @@ const useFormBuilder = (
                 };
             });
 
-            formData.append('fields', JSON.stringify(processedFields));
+            await createForm({
+                _id: initialForm?._id || '',
+                name: values.formName,
+                template_name: templateName,
+                formDataFields: JSON.stringify(processedFields),
+                formDataTemplateName: templateName,
+            });
 
-            await createForm(formData);
 
             message.success(
                 initialForm ? "Form updated successfully" : "Form created successfully"

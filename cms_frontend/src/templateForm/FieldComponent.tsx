@@ -55,7 +55,7 @@ interface FieldComponentProps {
     fieldIndex: number,
     pairIndex: number,
     key: "key" | "value",
-    value: string | File
+    value: string | File | File[]
   ) => void;
   handleKeyValuePairRemove: (fieldIndex: number, pairIndex: number) => void;
 }
@@ -186,11 +186,30 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
                 ].includes(pair.key.toLowerCase()) ? (
                   <Upload
                     beforeUpload={(file) => {
-                      handleKeyValuePairChange(index, pairIndex, "value", file);
+                      const newValue = pair.key.toLowerCase().endsWith("s")
+                        ? [
+                            ...(Array.isArray(pair.value) ? pair.value : []),
+                            file,
+                          ]
+                        : file;
+                      handleKeyValuePairChange(
+                        index,
+                        pairIndex,
+                        "value",
+                        newValue
+                      );
                       return false;
                     }}
+                    accept={getAcceptType(pair.key)}
+                    multiple={pair.key.toLowerCase().endsWith("s")}
                   >
-                    <Button icon={<UploadOutlined />}>Upload</Button>
+                    <Button icon={<UploadOutlined />}>
+                      {Array.isArray(pair.value)
+                        ? `${pair.value.length} file(s) selected`
+                        : pair.value instanceof File
+                        ? pair.value.name
+                        : "Upload"}
+                    </Button>
                   </Upload>
                 ) : (
                   <Input
@@ -229,6 +248,13 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
       );
     }
     return null;
+  };
+
+  const getAcceptType = (key: string) => {
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.includes("image")) return "image/*";
+    if (lowerKey.includes("video")) return "video/*";
+    return "*/*";
   };
 
   return (
