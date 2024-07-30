@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, RefObject } from 'react';
 import { FormInstance, message } from 'antd';
 import { FormType, FieldType } from './types';
 import { createForm } from '../api/formComponent.api';
-
+import { FormData as CustomFormData } from 'd:/intern/frontend_cms_template/Medex-Intern-CMS/cms_frontend/src/templateForm/types';
 const useFormBuilder = (
     form: FormInstance,
     initialForm: FormType | null,
@@ -65,7 +65,7 @@ const useFormBuilder = (
 
             formData.append('fields', JSON.stringify(processedFields));
 
-            await createForm(formData);
+            await createForm(formData as unknown as CustomFormData);
 
             message.success(
                 initialForm ? "Form updated successfully" : "Form created successfully"
@@ -78,6 +78,7 @@ const useFormBuilder = (
             message.error("Failed to save form");
         }
     };
+
     const addField = useCallback(() => {
         const newField: FieldType = {
             type: "text",
