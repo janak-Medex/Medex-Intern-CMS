@@ -122,26 +122,6 @@ const useFormBuilder = (
         },
         []
     );
-
-    const handleNestedOptionChange = useCallback(
-        (fieldIndex: number, path: number[], value: string, isGroup: boolean) => {
-            setFields((prevFields) => {
-                const newFields = [...prevFields];
-                let current: any = newFields[fieldIndex].options;
-                for (let i = 0; i < path.length - 1; i++) {
-                    current = current[path[i]].options;
-                }
-                if (isGroup) {
-                    current[path[path.length - 1]].label = value;
-                } else {
-                    current[path[path.length - 1]] = value;
-                }
-                return newFields;
-            });
-        },
-        []
-    );
-
     const handleNestedOptionAdd = useCallback(
         (fieldIndex: number, path: number[]) => {
             setFields((prevFields) => {
@@ -149,13 +129,10 @@ const useFormBuilder = (
                 let current: any = newFields[fieldIndex].options;
                 for (let i = 0; i < path.length; i++) {
                     if (i === path.length - 1) {
-                        if (typeof current[path[i]] === "string") {
-                            current[path[i]] = {
-                                label: current[path[i]],
-                                options: [""],
-                            };
-                        } else {
-                            current[path[i]].options.push("");
+                        if (Array.isArray(current)) {
+                            current.push({ label: "", isPackage: false, options: [] });
+                        } else if (current.options) {
+                            current.options.push({ label: "", isPackage: false, options: [] });
                         }
                     } else {
                         current = current[path[i]].options;
@@ -182,22 +159,97 @@ const useFormBuilder = (
         []
     );
 
-    const handleOptionAdd = useCallback((fieldIndex: number) => {
-        setFields((prevFields) => {
-            const newFields = [...prevFields];
-            if (
-                ["select", "Nested select", "radio", "checkbox"].includes(
-                    newFields[fieldIndex].type
-                )
-            ) {
-                if (!newFields[fieldIndex].options) {
-                    newFields[fieldIndex].options = [];
+    const handleNestedOptionChange = useCallback(
+        (fieldIndex: number, path: number[], value: string) => {
+            setFields((prevFields) => {
+                const newFields = [...prevFields];
+                let current: any = newFields[fieldIndex].options;
+                for (let i = 0; i < path.length; i++) {
+                    if (i === path.length - 1) {
+                        if (typeof current[path[i]] === 'string') {
+                            current[path[i]] = value;
+                        } else {
+                            current[path[i]].label = value;
+                        }
+                    } else {
+                        current = current[path[i]].options;
+                    }
                 }
-                newFields[fieldIndex].options?.push("");
-            }
-            return newFields;
-        });
-    }, []);
+                return newFields;
+            });
+        },
+        []
+    );
+
+    const handleNestedOptionPackageToggle = useCallback(
+        (fieldIndex: number, path: number[], isPackage: boolean) => {
+            setFields((prevFields) => {
+                const newFields = [...prevFields];
+                let current: any = newFields[fieldIndex].options;
+                for (let i = 0; i < path.length; i++) {
+                    if (i === path.length - 1) {
+                        current[path[i]].isPackage = isPackage;
+                        if (isPackage && !current[path[i]].keyValuePairs) {
+                            current[path[i]].keyValuePairs = [];
+                        }
+                    } else {
+                        current = current[path[i]].options;
+                    }
+                }
+                return newFields;
+            });
+        },
+        []
+    );
+
+    const handleNestedOptionKeyValuePairAdd = useCallback(
+        (fieldIndex: number, path: number[]) => {
+            setFields((prevFields) => {
+                const newFields = [...prevFields];
+                let current: any = newFields[fieldIndex].options;
+                for (let i = 0; i < path.length; i++) {
+                    current = current[path[i]];
+                }
+                if (!current.keyValuePairs) {
+                    current.keyValuePairs = [];
+                }
+                current.keyValuePairs.push({ key: '', value: '' });
+                return newFields;
+            });
+        },
+        []
+    );
+
+    const handleNestedOptionKeyValuePairChange = useCallback(
+        (fieldIndex: number, path: number[], pairIndex: number, key: "key" | "value", value: string) => {
+            setFields((prevFields) => {
+                const newFields = [...prevFields];
+                let current: any = newFields[fieldIndex].options;
+                for (let i = 0; i < path.length; i++) {
+                    current = current[path[i]];
+                }
+                current.keyValuePairs[pairIndex][key] = value;
+                return newFields;
+            });
+        },
+        []
+    );
+
+    const handleNestedOptionKeyValuePairRemove = useCallback(
+        (fieldIndex: number, path: number[], pairIndex: number) => {
+            setFields((prevFields) => {
+                const newFields = [...prevFields];
+                let current: any = newFields[fieldIndex].options;
+                for (let i = 0; i < path.length; i++) {
+                    current = current[path[i]];
+                }
+                current.keyValuePairs.splice(pairIndex, 1);
+                return newFields;
+            });
+        },
+        []
+    );
+
 
     const handleOptionChange = useCallback(
         (fieldIndex: number, optionIndex: number, value: string) => {
@@ -324,7 +376,22 @@ const useFormBuilder = (
         },
         []
     );
-
+    const handleOptionAdd = useCallback((fieldIndex: number) => {
+        setFields((prevFields) => {
+            const newFields = [...prevFields];
+            if (
+                ["select", "Nested select", "radio", "checkbox"].includes(
+                    newFields[fieldIndex].type
+                )
+            ) {
+                if (!newFields[fieldIndex].options) {
+                    newFields[fieldIndex].options = [];
+                }
+                newFields[fieldIndex].options?.push("");
+            }
+            return newFields;
+        });
+    }, []);
     return {
         fields,
         expandedFields,
@@ -336,7 +403,11 @@ const useFormBuilder = (
         handleNestedOptionAdd,
         handleNestedOptionRemove,
         handleOptionAdd,
+        handleNestedOptionPackageToggle,
+        handleNestedOptionKeyValuePairAdd,
         handleOptionChange,
+        handleNestedOptionKeyValuePairRemove,
+        handleNestedOptionKeyValuePairChange,
         handleOptionRemove,
         handleDragStart,
         handleDrop,

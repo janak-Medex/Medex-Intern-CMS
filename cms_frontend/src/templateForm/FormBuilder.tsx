@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { Form, Button, Input } from "antd";
 import { PlusOutlined, SaveOutlined } from "@ant-design/icons";
 import FormPreview from "./FormPreview";
-import { FormType } from "./types";
+import { FieldType, FormType } from "./types";
 import "./scrollbar.css";
 import FieldComponent from "./FieldComponent";
 import useFormBuilder from "./useFormBuilder";
@@ -25,6 +25,10 @@ const FormBuilder: React.FC<{
     handleNestedOptionChange,
     handleNestedOptionAdd,
     handleNestedOptionRemove,
+    handleNestedOptionPackageToggle,
+    handleNestedOptionKeyValuePairAdd,
+    handleNestedOptionKeyValuePairChange,
+    handleNestedOptionKeyValuePairRemove,
     handleOptionAdd,
     handleOptionChange,
     handleOptionRemove,
@@ -71,8 +75,7 @@ const FormBuilder: React.FC<{
               </Form.Item>
 
               <div className="border-t border-gray-200 my-4"></div>
-
-              {fields.map((field, index) => (
+              {fields.map((field: FieldType, index: number) => (
                 <FieldComponent
                   key={index}
                   field={field}
@@ -85,6 +88,18 @@ const FormBuilder: React.FC<{
                   handleNestedOptionAdd={handleNestedOptionAdd}
                   handleNestedOptionRemove={handleNestedOptionRemove}
                   handleNestedOptionChange={handleNestedOptionChange}
+                  handleNestedOptionPackageToggle={
+                    handleNestedOptionPackageToggle
+                  }
+                  handleNestedOptionKeyValuePairAdd={
+                    handleNestedOptionKeyValuePairAdd
+                  }
+                  handleNestedOptionKeyValuePairChange={
+                    handleNestedOptionKeyValuePairChange
+                  }
+                  handleNestedOptionKeyValuePairRemove={
+                    handleNestedOptionKeyValuePairRemove
+                  }
                   toggleFieldExpansion={toggleFieldExpansion}
                   removeField={removeField}
                   handleDragStart={handleDragStart}
