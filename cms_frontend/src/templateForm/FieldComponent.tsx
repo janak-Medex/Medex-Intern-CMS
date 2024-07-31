@@ -152,41 +152,39 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
           label={<span className="font-semibold">Nested Options</span>}
         >
           <div className="border p-4 rounded-lg bg-gray-50">
-            {(field.options as NestedOptionType[])?.map(
-              (option, optionIndex) => (
-                <NestedOption
-                  key={optionIndex}
-                  option={option}
-                  path={[optionIndex]}
-                  onAdd={(path) => handleNestedOptionAdd(index, path)}
-                  onRemove={(path) => handleNestedOptionRemove(index, path)}
-                  onChange={(path, value) =>
-                    handleNestedOptionChange(index, path, value)
-                  }
-                  onPackageToggle={(path, isPackage) =>
-                    handleNestedOptionPackageToggle(index, path, isPackage)
-                  }
-                  onKeyValuePairAdd={(path) =>
-                    handleNestedOptionKeyValuePairAdd(index, path)
-                  }
-                  onKeyValuePairChange={(path, pairIndex, key, value) =>
-                    handleNestedOptionKeyValuePairChange(
-                      index,
-                      path,
-                      pairIndex,
-                      key,
-                      value
-                    )
-                  }
-                  onKeyValuePairRemove={(path, pairIndex) =>
-                    handleNestedOptionKeyValuePairRemove(index, path, pairIndex)
-                  }
-                />
-              )
-            )}
+            {field.options?.map((option, optionIndex) => (
+              <NestedOption
+                key={optionIndex}
+                option={option as NestedOptionType}
+                path={[optionIndex]}
+                onAdd={(path) => handleNestedOptionAdd(index, path)}
+                onRemove={(path) => handleNestedOptionRemove(index, path)}
+                onChange={(path, value: any) =>
+                  handleNestedOptionChange(index, path, value)
+                }
+                onPackageToggle={(path, isPackage) =>
+                  handleNestedOptionPackageToggle(index, path, isPackage)
+                }
+                onKeyValuePairAdd={(path) =>
+                  handleNestedOptionKeyValuePairAdd(index, path)
+                }
+                onKeyValuePairChange={(path, pairIndex, key, value: any) =>
+                  handleNestedOptionKeyValuePairChange(
+                    index,
+                    path,
+                    pairIndex,
+                    key,
+                    value
+                  )
+                }
+                onKeyValuePairRemove={(path, pairIndex) =>
+                  handleNestedOptionKeyValuePairRemove(index, path, pairIndex)
+                }
+              />
+            ))}
             <Button
               type="dashed"
-              onClick={() => handleNestedOptionAdd(index, [])}
+              onClick={() => handleOptionAdd(index)}
               className="w-full mt-4"
               icon={<PlusOutlined />}
             >
@@ -198,7 +196,6 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
     }
     return null;
   };
-
   const renderKeyValuePairs = () => {
     if (field.type === "keyValuePair") {
       return (

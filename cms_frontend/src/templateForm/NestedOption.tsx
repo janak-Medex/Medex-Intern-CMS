@@ -15,8 +15,9 @@ interface NestedOptionProps {
   path: number[];
   onAdd: (path: number[]) => void;
   onRemove: (path: number[]) => void;
-  onChange: (path: number[], value: string) => void;
+  onChange: (path: number[], value: string | File | File[]) => void;
   onPackageToggle: (path: number[], isPackage: boolean) => void;
+
   onKeyValuePairAdd: (path: number[]) => void;
   onKeyValuePairChange: (
     path: number[],

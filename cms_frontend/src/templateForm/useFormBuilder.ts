@@ -177,17 +177,19 @@ const useFormBuilder = (
         },
         []
     );
-
     const handleNestedOptionChange = useCallback(
-        (fieldIndex: number, path: number[], value: string) => {
+        (fieldIndex: number, path: number[], value: string | File | File[]) => {
             updateNestedOptions(fieldIndex, path, (option) => ({
                 ...option,
-                label: value
+                label: typeof value === 'string'
+                    ? value
+                    : Array.isArray(value)
+                        ? value.map(file => file.name).join(', ')
+                        : value.name
             }));
         },
         [updateNestedOptions]
     );
-
     const handleNestedOptionPackageToggle = useCallback(
         (fieldIndex: number, path: number[], isPackage: boolean) => {
             updateNestedOptions(fieldIndex, path, (option) => ({
@@ -360,20 +362,28 @@ const useFormBuilder = (
     const handleOptionAdd = useCallback((fieldIndex: number) => {
         setFields((prevFields) => {
             const newFields = [...prevFields];
-            if (
-                ["select", "Nested select", "radio", "checkbox"].includes(
-                    newFields[fieldIndex].type
-                )
-            ) {
-                if (!newFields[fieldIndex].options) {
-                    newFields[fieldIndex].options = [];
+            const field = newFields[fieldIndex];
+
+            if (["select", "radio", "checkbox"].includes(field.type)) {
+                if (!field.options) {
+                    field.options = [];
                 }
-                newFields[fieldIndex].options?.push("");
+                field.options.push("");
+            } else if (field.type === "Nested select") {
+                if (!field.options) {
+                    field.options = [];
+                }
+                const newNestedOption: NestedOptionType = {
+                    label: "",
+                    isPackage: false,
+                    options: []
+                };
+                field.options.push(newNestedOption);
             }
+
             return newFields;
         });
     }, []);
-
 
 
 
