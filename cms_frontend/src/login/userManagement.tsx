@@ -8,12 +8,10 @@ import {
   Switch,
   message,
   Popconfirm,
-  Card,
   Typography,
   Space,
   Tooltip,
   Avatar,
-  Layout,
   Tag,
   Select,
 } from "antd";
@@ -35,7 +33,6 @@ import {
 import styled from "styled-components";
 
 const { Title } = Typography;
-const { Content } = Layout;
 const { Option } = Select;
 
 interface User {
@@ -50,13 +47,14 @@ interface UserManagementProps {
   onClose: () => void;
 }
 
-const StyledCard = styled(Card)`
+const StyledCard = styled.div`
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   border-radius: 16px;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   overflow: hidden;
+  padding: 20px;
 `;
 
 const TableContainer = styled.div`
@@ -309,116 +307,108 @@ const UserManagement: React.FC<UserManagementProps> = ({ onClose }) => {
   ];
 
   return (
-    <Layout>
-      <Content style={{ padding: "24px" }}>
-        <StyledCard>
-          <Space direction="vertical" size="large" style={{ width: "100%" }}>
-            <Space
-              align="center"
-              style={{ width: "100%", justifyContent: "space-between" }}
+    <StyledCard className="custom-scrollbar">
+      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <Space
+          align="center"
+          style={{ width: "100%", justifyContent: "space-between" }}
+        >
+          <Title level={2} style={{ margin: 0 }}>
+            User Management
+          </Title>
+          <Space>
+            <StyledButton
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => showModal("create")}
             >
-              <Title level={2} style={{ margin: 0 }}>
-                User Management
-              </Title>
-              <Space>
-                <StyledButton
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => showModal("create")}
-                >
-                  Create New User
-                </StyledButton>
-                <StyledButton icon={<CloseCircleOutlined />} onClick={onClose}>
-                  Close
-                </StyledButton>
-              </Space>
-            </Space>
-
-            <SearchContainer>
-              <StyledInput
-                placeholder="Search users"
-                prefix={<SearchOutlined />}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: 250 }}
-              />
-              <Select
-                defaultValue="all"
-                onChange={(value: "all" | "active" | "inactive") =>
-                  setStatusFilter(value)
-                }
-                style={{ width: 140 }}
-              >
-                <Option value="all">All Status</Option>
-                <Option value="active">Active</Option>
-                <Option value="inactive">Inactive</Option>
-              </Select>
-            </SearchContainer>
-
-            <TableContainer className="custom-scrollbar">
-              <CenteredTable
-                columns={columns}
-                dataSource={filteredUsers}
-                rowKey="_id"
-                loading={isLoading}
-                pagination={{ pageSize: 10, position: ["bottomCenter"] }}
-                style={{ width: "100%" }}
-              />
-            </TableContainer>
-
-            <StyledModal
-              title={modalMode === "create" ? "Create New User" : "Edit User"}
-              visible={isModalVisible}
-              onOk={handleOk}
-              onCancel={() => setIsModalVisible(false)}
-              width={600}
-              centered
-            >
-              <Form form={form} layout="vertical">
-                <Form.Item
-                  name="user_name"
-                  label="Username"
-                  rules={[
-                    { required: true, message: "Please input the username!" },
-                  ]}
-                >
-                  <StyledInput
-                    prefix={<UserOutlined />}
-                    placeholder="Username"
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="password"
-                  label={
-                    modalMode === "create"
-                      ? "Password"
-                      : "New Password (optional)"
-                  }
-                  rules={[
-                    {
-                      required: modalMode === "create",
-                      message: "Please input the password!",
-                    },
-                  ]}
-                >
-                  <Input.Password
-                    prefix={<LockOutlined />}
-                    placeholder="Password"
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="is_active"
-                  valuePropName="checked"
-                  label="User Status"
-                >
-                  <Switch />
-                </Form.Item>
-              </Form>
-            </StyledModal>
+              Create New User
+            </StyledButton>
+            <StyledButton icon={<CloseCircleOutlined />} onClick={onClose}>
+              Close
+            </StyledButton>
           </Space>
-        </StyledCard>
-      </Content>
-    </Layout>
+        </Space>
+
+        <SearchContainer>
+          <StyledInput
+            placeholder="Search users"
+            prefix={<SearchOutlined />}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: 250 }}
+          />
+          <Select
+            defaultValue="all"
+            onChange={(value: "all" | "active" | "inactive") =>
+              setStatusFilter(value)
+            }
+            style={{ width: 140 }}
+          >
+            <Option value="all">All Status</Option>
+            <Option value="active">Active</Option>
+            <Option value="inactive">Inactive</Option>
+          </Select>
+        </SearchContainer>
+
+        <TableContainer className="custom-scrollbar">
+          <CenteredTable
+            columns={columns}
+            dataSource={filteredUsers}
+            rowKey="_id"
+            loading={isLoading}
+            pagination={{ pageSize: 10, position: ["bottomCenter"] }}
+            style={{ width: "100%" }}
+          />
+        </TableContainer>
+
+        <StyledModal
+          className="custom-scrollbar"
+          title={modalMode === "create" ? "Create New User" : "Edit User"}
+          visible={isModalVisible}
+          onOk={handleOk}
+          onCancel={() => setIsModalVisible(false)}
+          width={600}
+          centered
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item
+              name="user_name"
+              label="Username"
+              rules={[
+                { required: true, message: "Please input the username!" },
+              ]}
+            >
+              <StyledInput prefix={<UserOutlined />} placeholder="Username" />
+            </Form.Item>
+            <Form.Item
+              name="password"
+              label={
+                modalMode === "create" ? "Password" : "New Password (optional)"
+              }
+              rules={[
+                {
+                  required: modalMode === "create",
+                  message: "Please input the password!",
+                },
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="Password"
+              />
+            </Form.Item>
+            <Form.Item
+              name="is_active"
+              valuePropName="checked"
+              label="User Status"
+            >
+              <Switch />
+            </Form.Item>
+          </Form>
+        </StyledModal>
+      </Space>
+    </StyledCard>
   );
 };
 
