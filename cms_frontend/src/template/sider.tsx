@@ -18,20 +18,19 @@ const { Sider } = Layout;
 const { SubMenu } = Menu;
 
 const colors = {
-  primary: "#6366F1",
-  secondary: "#8B5CF6",
-  background: "#F3F4F6",
-  text: "#111827",
+  primary: "#3D7BF4",
+  secondary: "#2C5ED9",
+  background: "#F0F4F8",
+  text: "#2D3748",
   sidebarBg: "#FFFFFF",
-  sidebarText: "#4B5563",
-  sidebarHover: "#E0E7FF",
-  sidebarActive: "#818CF8",
+  sidebarText: "#718096",
+  sidebarHover: "#EBF4FF",
+  sidebarActive: "#3D7BF4",
 };
 
 const StyledSider = styled(Sider)`
   background: ${colors.sidebarBg};
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   .ant-layout-sider-children {
     display: flex;
     flex-direction: column;
@@ -40,27 +39,33 @@ const StyledSider = styled(Sider)`
 `;
 
 const Logo = styled(motion.div)<{ collapsed: boolean }>`
-  height: 64px;
+  height: 65px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: #fff;
+  background: ${colors.sidebarBg};
+  border-bottom: 1px solid #e2e8f0;
 `;
 
 const StyledMenu = styled(Menu)`
   flex: 1;
   border-right: none;
-  background: transparent;
+  background: ${colors.sidebarBg};
 
   .ant-menu-item,
   .ant-menu-submenu-title {
-    margin: 8px 0;
-    height: 50px;
+    margin: 4px 8px;
+    height: 44px;
     display: flex;
     align-items: center;
     color: ${colors.sidebarText};
     transition: all 0.3s ease;
+    border-radius: 6px;
+
+    .anticon {
+      font-size: 18px;
+    }
 
     &:hover {
       color: ${colors.primary};
@@ -71,9 +76,11 @@ const StyledMenu = styled(Menu)`
   .ant-menu-item-selected {
     background-color: ${colors.sidebarActive};
     color: white;
+    font-weight: 500;
 
     &:hover {
       color: white;
+      background-color: ${colors.sidebarActive};
     }
 
     &::after {
@@ -91,7 +98,7 @@ const StyledMenu = styled(Menu)`
 `;
 
 const CollapseButton = styled.div`
-  height: 50px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,6 +106,7 @@ const CollapseButton = styled.div`
   cursor: pointer;
   color: ${colors.sidebarText};
   transition: all 0.3s ease;
+  border-top: 1px solid #e2e8f0;
 
   &:hover {
     color: ${colors.primary};
@@ -134,15 +142,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <StyledSider width={250} collapsible collapsed={collapsed} trigger={null}>
+    <StyledSider width={240} collapsible collapsed={collapsed} trigger={null}>
       <Logo collapsed={collapsed}>
         <AnimatePresence>
           {collapsed ? (
             <motion.div
               key="collapsed"
-              initial={{ opacity: 0, scale: 0 }}
+              initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0 }}
+              exit={{ opacity: 0, scale: 0.5 }}
               transition={{ duration: 0.2 }}
               style={{ width: 40, height: 40 }}
             >
@@ -151,11 +159,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             <motion.div
               key="expanded"
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0 }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
-              style={{ width: 200, height: 40 }}
+              style={{ width: 180, height: 40 }}
             >
               <LottieLogo />
             </motion.div>
