@@ -36,6 +36,31 @@ const useFormBuilder = (
         form.resetFields();
     }, [form]);
 
+    const processFields = (fields: any[], formData: FormData, parentPath: string = ''): any[] => {
+        return fields.map((field, index) => {
+            const currentPath = parentPath ? `${parentPath}.${index}` : `${index}`;
+
+            if (field.type === 'Nested select') {
+                return {
+                    ...field,
+                    options: processFields(field.options || [], formData, `${currentPath}.options`),
+                };
+            } else if (field.type === 'keyValuePair' || (field.isPackage && field.keyValuePairs)) {
+                return {
+                    ...field,
+                    keyValuePairs: (field.keyValuePairs || []).map((pair: any, pairIndex: number) => {
+                        const pairPath = `${currentPath}.keyValuePairs.${pairIndex}`;
+                        if (pair.value instanceof File) {
+                            formData.append(`${pairPath}.${pair.key}`, pair.value, pair.value.name);
+                            return { key: pair.key, value: pair.value.name };
+                        }
+                        return pair;
+                    }),
+                };
+            }
+            return field;
+        });
+    };
     const onFinish = async (values: any) => {
         try {
             const formData = new FormData();
@@ -43,25 +68,7 @@ const useFormBuilder = (
             formData.append('name', values.formName);
             formData.append('template_name', templateName);
 
-            const processedFields = fields.map((field) => {
-                if (field.type === 'keyValuePair') {
-                    return {
-                        ...field,
-                        required: !!field.required,
-                        keyValuePairs: field.keyValuePairs?.map((pair) => {
-                            if (pair.value instanceof File) {
-                                formData.append(pair.key, pair.value, pair.value.name);
-                                return { key: pair.key, value: pair.value.name };
-                            }
-                            return pair;
-                        }),
-                    };
-                }
-                return {
-                    ...field,
-                    required: !!field.required,
-                };
-            });
+            const processedFields = processFields(fields, formData);
 
             formData.append('fields', JSON.stringify(processedFields));
 
@@ -78,6 +85,7 @@ const useFormBuilder = (
             message.error("Failed to save form");
         }
     };
+
 
     const addField = useCallback(() => {
         const newField: FieldType = {
@@ -199,7 +207,7 @@ const useFormBuilder = (
     );
 
     const handleNestedOptionKeyValuePairChange = useCallback(
-        (fieldIndex: number, path: number[], pairIndex: number, key: "key" | "value", value: string) => {
+        (fieldIndex: number, path: number[], pairIndex: number, key: "key" | "value", value: string | File | File[]) => {
             updateNestedOptions(fieldIndex, path, (option) => {
                 const newKeyValuePairs = [...(option.keyValuePairs || [])];
                 newKeyValuePairs[pairIndex] = { ...newKeyValuePairs[pairIndex], [key]: value };

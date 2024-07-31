@@ -1,11 +1,12 @@
 // NestedOption.tsx
 
 import React from "react";
-import { Input, Button, Switch, Space } from "antd";
+import { Input, Button, Switch, Space, Upload } from "antd";
 import {
   PlusOutlined,
   MinusCircleOutlined,
   FolderOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import { NestedOptionType } from "./types";
 
@@ -21,7 +22,7 @@ interface NestedOptionProps {
     path: number[],
     pairIndex: number,
     key: "key" | "value",
-    value: string
+    value: string | File | File[]
   ) => void;
   onKeyValuePairRemove: (path: number[], pairIndex: number) => void;
 }
@@ -37,6 +38,20 @@ const NestedOption: React.FC<NestedOptionProps> = ({
   onKeyValuePairChange,
   onKeyValuePairRemove,
 }) => {
+  const getAcceptType = (key: string) => {
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.includes("image")) return "image/*";
+    if (lowerKey.includes("video")) return "video/*";
+    return "*/*";
+  };
+
+  const isUploadField = (key: string) => {
+    const lowerKey = key.toLowerCase();
+    return ["image", "images", "video", "videos", "file", "files"].some(
+      (type) => lowerKey.includes(type)
+    );
+  };
+
   return (
     <div className="mb-3 ml-6">
       <div className="flex items-center space-x-2 p-2 rounded-lg bg-white shadow-sm">
@@ -82,14 +97,38 @@ const NestedOption: React.FC<NestedOptionProps> = ({
                 placeholder="Key"
                 className="flex-1"
               />
-              <Input
-                value={pair.value}
-                onChange={(e) =>
-                  onKeyValuePairChange(path, index, "value", e.target.value)
-                }
-                placeholder="Value"
-                className="flex-1"
-              />
+              {isUploadField(pair.key) ? (
+                <Upload
+                  beforeUpload={(file) => {
+                    const newValue = pair.key.toLowerCase().endsWith("s")
+                      ? [...(Array.isArray(pair.value) ? pair.value : []), file]
+                      : file;
+                    onKeyValuePairChange(path, index, "value", newValue);
+                    return false;
+                  }}
+                  accept={getAcceptType(pair.key)}
+                  multiple={pair.key.toLowerCase().endsWith("s")}
+                >
+                  <Button icon={<UploadOutlined />}>
+                    {Array.isArray(pair.value)
+                      ? `${pair.value.length} file(s) selected`
+                      : pair.value instanceof File
+                      ? pair.value.name
+                      : "Upload"}
+                  </Button>
+                </Upload>
+              ) : (
+                <Input
+                  value={
+                    typeof pair.value === "string" ? pair.value : undefined
+                  }
+                  onChange={(e) =>
+                    onKeyValuePairChange(path, index, "value", e.target.value)
+                  }
+                  placeholder="Value"
+                  className="flex-1"
+                />
+              )}
               <Button
                 type="text"
                 danger
