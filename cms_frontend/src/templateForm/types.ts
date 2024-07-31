@@ -4,12 +4,15 @@ export interface NestedOption {
     options?: (string | NestedOption)[];
     keyValuePairs?: KeyValuePair[];
 }
+// types.ts
+
 export interface NestedOptionType {
     label: string;
     isPackage: boolean;
-    options?: (string | NestedOptionType)[];
-    keyValuePairs?: KeyValuePair[];
+    options?: NestedOptionType[];
+    keyValuePairs?: { key: string; value: string }[];
 }
+
 export interface KeyValuePair {
     key: string;
     value: string | File;
