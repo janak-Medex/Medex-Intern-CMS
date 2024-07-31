@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, RefObject } from 'react';
 import { FormInstance, message } from 'antd';
-import { FormType, FieldType, NestedOptionType } from './types';
+import { FormType, FieldType, NestedOptionType, CustomFormData } from './types';
 import { createForm } from '../api/formComponent.api';
-import { FormData as CustomFormData } from './types';
 const useFormBuilder = (
     form: FormInstance,
     initialForm: FormType | null,
@@ -36,55 +35,72 @@ const useFormBuilder = (
         form.resetFields();
     }, [form]);
 
-    const processFields = (fields: any[], formData: FormData, parentPath: string = ''): any[] => {
+    const processFields = (fields: FieldType[] | undefined, formData: CustomFormData, parentPath: string = ''): FieldType[] => {
+        if (!fields || !Array.isArray(fields)) {
+            console.warn('Fields is undefined or not an array');
+            return [];
+        }
+
         return fields.map((field, index) => {
             const currentPath = parentPath ? `${parentPath}.${index}` : `${index}`;
 
-            if (field.type === 'Nested select') {
-                return {
-                    ...field,
-                    options: processFields(field.options || [], formData, `${currentPath}.options`),
-                };
-            } else if (field.type === 'keyValuePair' || (field.isPackage && field.keyValuePairs)) {
-                return {
-                    ...field,
-                    keyValuePairs: (field.keyValuePairs || []).map((pair: any, pairIndex: number) => {
-                        const pairPath = `${currentPath}.keyValuePairs.${pairIndex}`;
-                        if (pair.value instanceof File) {
-                            formData.append(`${pairPath}.${pair.key}`, pair.value, pair.value.name);
-                            return { key: pair.key, value: pair.value.name };
-                        }
-                        return pair;
-                    }),
-                };
+            const processValue = (value: any, valuePath: string): any => {
+                if (value instanceof File) {
+                    formData.append(valuePath, value, value.name);
+                    return value.name;
+                } else if (Array.isArray(value)) {
+                    return value.map((item, itemIndex) => processValue(item, `${valuePath}.${itemIndex}`));
+                } else if (typeof value === 'object' && value !== null) {
+                    const processedObj: any = {};
+                    for (const key in value) {
+                        processedObj[key] = processValue(value[key], `${valuePath}.${key}`);
+                    }
+                    return processedObj;
+                }
+                return value;
+            };
+
+            const processedField: FieldType = { ...field };
+
+            for (const key in processedField) {
+                if (Object.prototype.hasOwnProperty.call(processedField, key)) {
+                    (processedField as any)[key] = processValue((processedField as any)[key], `${currentPath}.${key}`);
+                }
             }
-            return field;
+
+            return processedField;
         });
     };
-    const onFinish = async (values: any) => {
+
+    const onFinish = async (values: { formName: string }) => {
         try {
-            const formData = new FormData();
+            const formData = new FormData() as CustomFormData;
             formData.append('_id', initialForm?._id || '');
             formData.append('name', values.formName);
             formData.append('template_name', templateName);
 
+            // Process fields and append to FormData
             const processedFields = processFields(fields, formData);
 
             formData.append('fields', JSON.stringify(processedFields));
 
-            await createForm(formData as unknown as CustomFormData);
+            await createForm(formData);
 
             message.success(
                 initialForm ? "Form updated successfully" : "Form created successfully"
             );
-
             onFormSaved();
             resetForm();
         } catch (error) {
             console.error("Error saving form:", error);
-            message.error("Failed to save form");
+            if (error instanceof Error) {
+                message.error(error.message || "Failed to save form");
+            } else {
+                message.error("An unknown error occurred");
+            }
         }
     };
+
 
 
     const addField = useCallback(() => {

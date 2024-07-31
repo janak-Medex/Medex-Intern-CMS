@@ -1,10 +1,4 @@
-// export interface NestedOption {
-//     label: string;
-//     isPackage: boolean;
-//     options?: NestedOption[];
-//     keyValuePairs?: { key: string; value: string | File | File[] }[];
-// }
-// // types.ts
+
 
 export interface NestedOptionType {
     label: string;
@@ -50,3 +44,4 @@ export interface FormData {
     formDataFields?: string;
     formDataTemplateName?: string;
 }
+export interface CustomFormData extends Omit<FormData, keyof globalThis.FormData>, globalThis.FormData { }
