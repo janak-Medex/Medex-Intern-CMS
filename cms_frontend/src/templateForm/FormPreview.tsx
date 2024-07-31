@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Form,
   Input,
@@ -16,38 +16,56 @@ import { UploadOutlined } from "@ant-design/icons";
 import {
   FieldType,
   FormPreviewProps,
-  NestedOption,
+  NestedOptionType,
   KeyValuePair,
 } from "./types";
+import axiosInstance from "../http/axiosInstance"; // Make sure to adjust the import path accordingly
 
 const { TextArea } = Input;
 
 const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
-const renderImagePreview = (key: string, value: string | File) => {
+const renderFilePreview = (key: string, value: string | File) => {
   if (typeof value === "string") {
+    const filePath = value.split("uploads/")[1];
+    const fileUrl = `${baseImageUrl}${filePath}`;
+    const isImage = key.toLowerCase().includes("image");
+    const isVideo = key.toLowerCase().includes("video");
     return (
       <div>
-        <p>{value.split("/").pop()}</p>
-        {key.toLowerCase().includes("image") && (
+        {isImage && (
           <Image
-            src={`${baseImageUrl}${value.split("uploads/")[1]}`}
+            src={fileUrl}
             alt="Preview"
             style={{ maxWidth: "100px", maxHeight: "100px" }}
           />
         )}
+        {isVideo && (
+          <video controls style={{ maxWidth: "200px", maxHeight: "200px" }}>
+            <source src={fileUrl} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        )}
       </div>
     );
   } else if (value instanceof File) {
+    const fileUrl = URL.createObjectURL(value);
+    const isImage = key.toLowerCase().includes("image");
+    const isVideo = key.toLowerCase().includes("video");
     return (
       <div>
-        <p>{value.name}</p>
-        {key.toLowerCase().includes("image") && (
+        {isImage && (
           <Image
-            src={URL.createObjectURL(value)}
+            src={fileUrl}
             alt="Preview"
             style={{ maxWidth: "100px", maxHeight: "100px" }}
           />
+        )}
+        {isVideo && (
+          <video controls style={{ maxWidth: "200px", maxHeight: "200px" }}>
+            <source src={fileUrl} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
         )}
       </div>
     );
@@ -56,29 +74,73 @@ const renderImagePreview = (key: string, value: string | File) => {
   }
 };
 
+const transformNestedOptions = (options: NestedOptionType[]): any[] => {
+  return options.map((option) => ({
+    value: option.label,
+    label: option.label,
+    children: option.options
+      ? transformNestedOptions(option.options)
+      : undefined,
+    isPackage: option.isPackage,
+    keyValuePairs: option.keyValuePairs,
+  }));
+};
+
+const renderNestedOption = (option: any) => {
+  if (option.isPackage) {
+    return (
+      <div key={option.value} className="border p-2 rounded mb-2">
+        <h4 className="font-bold">{option.label}</h4>
+        {option.keyValuePairs?.map((pair: KeyValuePair, index: number) => (
+          <div key={index} className="flex items-center space-x-2 mb-2">
+            <Input value={pair.key} disabled className="w-1/3" />
+            {["image", "images", "video", "videos", "file", "files"].includes(
+              pair.key.toLowerCase()
+            ) ? (
+              renderFilePreview(pair.key, pair.value as string | File)
+            ) : (
+              <Input value={pair.value as string} disabled className="w-2/3" />
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  } else if (option.children) {
+    return (
+      <div key={option.value} className="ml-4">
+        <h4 className="font-semibold">{option.label}</h4>
+        {option.children.map((child: any) => renderNestedOption(child))}
+      </div>
+    );
+  } else {
+    return <div key={option.value}>{option.label}</div>;
+  }
+};
+
+const fetchForms = async (templateName: string) => {
+  const response = await axiosInstance.get(`/form/${templateName}`);
+  return response.data.data;
+};
+
 const FormPreview: React.FC<FormPreviewProps> = ({
   fields,
   templateName,
   formName,
 }) => {
   const [form] = Form.useForm();
+  const [_existingForms, setExistingForms] = useState([]);
 
-  const transformOptions = (options: (string | NestedOption)[]): any[] => {
-    return options.map((option, _index) => {
-      if (typeof option === "string") {
-        return { value: option, label: option };
-      } else {
-        return {
-          value: option.label,
-          label: option.label,
-          children:
-            option.options.length > 0
-              ? transformOptions(option.options)
-              : undefined,
-        };
+  useEffect(() => {
+    const getForms = async () => {
+      try {
+        const forms = await fetchForms(templateName);
+        setExistingForms(forms);
+      } catch (error) {
+        console.error("Error fetching forms:", error);
       }
-    });
-  };
+    };
+    getForms();
+  }, [templateName]);
 
   const renderField = (field: FieldType) => {
     const { type, placeholder, options, keyValuePairs } = field;
@@ -95,18 +157,27 @@ const FormPreview: React.FC<FormPreviewProps> = ({
           <Select
             style={{ width: "100%" }}
             placeholder={placeholder}
-            options={transformOptions(options || [])}
+            options={options?.map((opt) =>
+              typeof opt === "string" ? { value: opt, label: opt } : opt
+            )}
           />
         );
       case "Nested select":
+        const treeData = transformNestedOptions(options as NestedOptionType[]);
         return (
-          <TreeSelect
-            style={{ width: "100%" }}
-            dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
-            treeData={transformOptions(options || [])}
-            placeholder={placeholder}
-            treeDefaultExpandAll
-          />
+          <div>
+            <TreeSelect
+              style={{ width: "100%" }}
+              dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
+              treeData={treeData}
+              placeholder={placeholder}
+              treeDefaultExpandAll
+            />
+            <div className="mt-4">
+              <h4 className="font-bold mb-2">Preview:</h4>
+              {treeData.map((option) => renderNestedOption(option))}
+            </div>
+          </div>
         );
       case "radio":
         return (
@@ -150,7 +221,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({
           <div>
             {keyValuePairs?.map((pair: KeyValuePair, index: number) => (
               <div key={index} className="flex items-center space-x-2 mb-2">
-                <Input value={pair.key} disabled />
+                <Input value={pair.key} disabled className="w-1/3" />
                 {[
                   "image",
                   "images",
@@ -159,15 +230,18 @@ const FormPreview: React.FC<FormPreviewProps> = ({
                   "file",
                   "files",
                 ].includes(pair.key.toLowerCase()) ? (
-                  renderImagePreview(pair.key, pair.value)
+                  renderFilePreview(pair.key, pair.value as string | File)
                 ) : (
-                  <Input value={pair.value as string} disabled />
+                  <Input
+                    value={pair.value as string}
+                    disabled
+                    className="w-2/3"
+                  />
                 )}
               </div>
             ))}
           </div>
         );
-
       default:
         return <Input placeholder={placeholder} />;
     }

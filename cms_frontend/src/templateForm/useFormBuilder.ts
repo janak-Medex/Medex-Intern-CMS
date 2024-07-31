@@ -95,6 +95,9 @@ const useFormBuilder = (
             placeholder: "",
             options: [],
         };
+        if (newField.type === "Nested select") {
+            newField.options = [{ label: "", isPackage: false, options: [] }];
+        }
         setFields((prevFields) => [...prevFields, newField]);
         setExpandedFields((prev) => ({ ...prev, [fields.length]: true }));
     }, [fields.length]);
@@ -137,12 +140,12 @@ const useFormBuilder = (
     ) => {
         setFields((prevFields) => {
             const newFields = [...prevFields];
-            let current: any = newFields[fieldIndex].options;
+            let current: any = newFields[fieldIndex].options || [];
             for (let i = 0; i < path.length - 1; i++) {
-                current = current[path[i]].options;
+                current = current[path[i]]?.options || [];
             }
             const lastIndex = path[path.length - 1];
-            current[lastIndex] = updateFn(current[lastIndex]);
+            current[lastIndex] = updateFn(current[lastIndex] || {});
             return newFields;
         });
     }, []);
