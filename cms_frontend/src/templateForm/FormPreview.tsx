@@ -19,7 +19,7 @@ import {
   NestedOptionType,
   KeyValuePair,
 } from "./types";
-import axiosInstance from "../http/axiosInstance"; // Make sure to adjust the import path accordingly
+import axiosInstance from "../http/axiosInstance";
 
 const { TextArea } = Input;
 
@@ -27,8 +27,14 @@ const baseImageUrl = import.meta.env.VITE_APP_BASE_IMAGE_URL || "";
 
 const renderFilePreview = (key: string, value: string | File) => {
   if (typeof value === "string") {
-    const filePath = value.split("uploads/")[1];
+    const filePath = value.split("uploads\\")[1] || value;
     const fileUrl = `${baseImageUrl}${filePath}`;
+    console.log("String Value Detected:");
+    console.log("Key:", key);
+    console.log("Value:", value);
+    console.log("File Path:", filePath);
+    console.log("File URL:", fileUrl);
+
     const isImage = key.toLowerCase().includes("image");
     const isVideo = key.toLowerCase().includes("video");
     return (
@@ -50,6 +56,11 @@ const renderFilePreview = (key: string, value: string | File) => {
     );
   } else if (value instanceof File) {
     const fileUrl = URL.createObjectURL(value);
+    console.log("File Instance Detected:");
+    console.log("Key:", key);
+    console.log("File Name:", value.name);
+    console.log("File URL:", fileUrl);
+
     const isImage = key.toLowerCase().includes("image");
     const isVideo = key.toLowerCase().includes("video");
     return (
@@ -70,6 +81,7 @@ const renderFilePreview = (key: string, value: string | File) => {
       </div>
     );
   } else {
+    console.log("No File Uploaded");
     return <p>No file uploaded</p>;
   }
 };
@@ -129,6 +141,10 @@ const FormPreview: React.FC<FormPreviewProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [_existingForms, setExistingForms] = useState([]);
+  const [_selectedFilePreviews, setSelectedFilePreviews] = useState<{
+    [key: string]: any[][];
+  }>({});
+  const [formData, _setFormData] = useState<any[]>([]);
 
   useEffect(() => {
     const getForms = async () => {
@@ -141,6 +157,61 @@ const FormPreview: React.FC<FormPreviewProps> = ({
     };
     getForms();
   }, [templateName]);
+
+  useEffect(() => {
+    if (!Array.isArray(formData) || formData.length === 0) {
+      setSelectedFilePreviews({});
+      return;
+    }
+
+    const initialPreviews: { [key: string]: any[][] } = {};
+
+    formData.forEach((item, index) => {
+      Object.entries(item).forEach(([key, value]) => {
+        if (Array.isArray(value) && value.length > 0) {
+          if (!initialPreviews[key]) {
+            initialPreviews[key] = [];
+          }
+          initialPreviews[key][index] = value
+            .map((item) => {
+              if (item === null) {
+                return null;
+              }
+              if (typeof item === "string") {
+                const filePath = item.split("uploads\\")[1] || item;
+                const src = item.startsWith("http")
+                  ? item
+                  : `${baseImageUrl}${filePath}`;
+                const type = src.match(/\.(mp4|webm|ogg)$/i)
+                  ? "video"
+                  : src.match(/\.(jpg|jpeg|png|gif)$/i)
+                  ? "image"
+                  : src.match(/\.svg$/i)
+                  ? "svg"
+                  : "file";
+                return { src, type, name: item.split("\\").pop() || "" };
+              } else if (item instanceof File) {
+                return {
+                  src: URL.createObjectURL(item),
+                  type: item.type.startsWith("video/")
+                    ? "video"
+                    : item.type.startsWith("image/")
+                    ? "image"
+                    : item.type === "image/svg+xml"
+                    ? "svg"
+                    : "file",
+                  name: item.name,
+                };
+              }
+              return null;
+            })
+            .filter(Boolean);
+        }
+      });
+    });
+
+    setSelectedFilePreviews(initialPreviews);
+  }, [formData, baseImageUrl]);
 
   const renderField = (field: FieldType) => {
     const { type, placeholder, options, keyValuePairs } = field;
