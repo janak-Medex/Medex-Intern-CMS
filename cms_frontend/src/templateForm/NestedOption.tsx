@@ -88,56 +88,56 @@ const NestedOption: React.FC<NestedOptionProps> = ({
       </div>
       {option.isPackage ? (
         <div className="mt-2 pl-4">
-          {option.keyValuePairs?.map((pair, index) => (
-            <div key={index} className="flex items-center space-x-2 mb-2">
-              <Input
-                value={pair.key}
-                onChange={(e) =>
-                  onKeyValuePairChange(path, index, "key", e.target.value)
-                }
-                placeholder="Key"
-                className="flex-1"
-              />
-              {isUploadField(pair.key) ? (
-                <Upload
-                  beforeUpload={(file) => {
-                    const newValue = pair.key.toLowerCase().endsWith("s")
-                      ? [...(Array.isArray(pair.value) ? pair.value : []), file]
-                      : file;
-                    onKeyValuePairChange(path, index, "value", newValue);
-                    return false;
-                  }}
-                  accept={getAcceptType(pair.key)}
-                  multiple={pair.key.toLowerCase().endsWith("s")}
-                >
-                  <Button icon={<UploadOutlined />}>
-                    {Array.isArray(pair.value)
-                      ? `${pair.value.length} file(s) selected`
-                      : pair.value instanceof File
-                      ? pair.value.name
-                      : "Upload"}
-                  </Button>
-                </Upload>
-              ) : (
+          {Object.entries(option.keyValuePairs || {}).map(
+            ([key, value], index) => (
+              <div key={index} className="flex items-center space-x-2 mb-2">
                 <Input
-                  value={
-                    typeof pair.value === "string" ? pair.value : undefined
-                  }
+                  value={key}
                   onChange={(e) =>
-                    onKeyValuePairChange(path, index, "value", e.target.value)
+                    onKeyValuePairChange(path, index, "key", e.target.value)
                   }
-                  placeholder="Value"
+                  placeholder="Key"
                   className="flex-1"
                 />
-              )}
-              <Button
-                type="text"
-                danger
-                icon={<MinusCircleOutlined />}
-                onClick={() => onKeyValuePairRemove(path, index)}
-              />
-            </div>
-          ))}
+                {isUploadField(key) ? (
+                  <Upload
+                    beforeUpload={(file) => {
+                      const newValue = key.toLowerCase().endsWith("s")
+                        ? [...(Array.isArray(value) ? value : []), file]
+                        : file;
+                      onKeyValuePairChange(path, index, "value", newValue);
+                      return false;
+                    }}
+                    accept={getAcceptType(key)}
+                    multiple={key.toLowerCase().endsWith("s")}
+                  >
+                    <Button icon={<UploadOutlined />}>
+                      {Array.isArray(value)
+                        ? `${value.length} file(s) selected`
+                        : value instanceof File
+                        ? value.name
+                        : "Upload"}
+                    </Button>
+                  </Upload>
+                ) : (
+                  <Input
+                    value={typeof value === "string" ? value : undefined}
+                    onChange={(e) =>
+                      onKeyValuePairChange(path, index, "value", e.target.value)
+                    }
+                    placeholder="Value"
+                    className="flex-1"
+                  />
+                )}
+                <Button
+                  type="text"
+                  danger
+                  icon={<MinusCircleOutlined />}
+                  onClick={() => onKeyValuePairRemove(path, index)}
+                />
+              </div>
+            )
+          )}
           <Button
             type="dashed"
             onClick={() => onKeyValuePairAdd(path)}
