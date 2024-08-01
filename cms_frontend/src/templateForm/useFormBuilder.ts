@@ -34,6 +34,8 @@ const useFormBuilder = (
         setExpandedFields({});
         form.resetFields();
     }, [form]);
+
+
     const processFields = (fields: FieldType[] | undefined, formData: CustomFormData, parentPath: string = ''): FieldType[] => {
         if (!fields || !Array.isArray(fields)) {
             console.warn('Fields is undefined or not an array');
