@@ -17,12 +17,12 @@ import {
   PlusOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import { FieldType } from "./types";
+import { FieldType, NestedOptionType } from "./types";
 import NestedOption from "./NestedOption";
 
 const { Option } = Select;
 
-interface FieldComponentProps {
+export interface FieldComponentProps {
   field: FieldType;
   index: number;
   expandedFields: { [key: number]: boolean };
@@ -39,8 +39,28 @@ interface FieldComponentProps {
   handleNestedOptionChange: (
     fieldIndex: number,
     path: number[],
-    value: string,
-    isGroup: boolean
+    value: string
+  ) => void;
+  handleNestedOptionPackageToggle: (
+    fieldIndex: number,
+    path: number[],
+    isPackage: boolean
+  ) => void;
+  handleNestedOptionKeyValuePairAdd: (
+    fieldIndex: number,
+    path: number[]
+  ) => void;
+  handleNestedOptionKeyValuePairChange: (
+    fieldIndex: number,
+    path: number[],
+    pairIndex: number,
+    key: "key" | "value",
+    value: string
+  ) => void;
+  handleNestedOptionKeyValuePairRemove: (
+    fieldIndex: number,
+    path: number[],
+    pairIndex: number
   ) => void;
   toggleFieldExpansion: (index: number) => void;
   removeField: (index: number) => void;
@@ -71,6 +91,10 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
   handleNestedOptionAdd,
   handleNestedOptionRemove,
   handleNestedOptionChange,
+  handleNestedOptionPackageToggle,
+  handleNestedOptionKeyValuePairAdd,
+  handleNestedOptionKeyValuePairChange,
+  handleNestedOptionKeyValuePairRemove,
   toggleFieldExpansion,
   removeField,
   handleDragStart,
@@ -131,12 +155,30 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
             {field.options?.map((option, optionIndex) => (
               <NestedOption
                 key={optionIndex}
-                option={option}
+                option={option as NestedOptionType}
                 path={[optionIndex]}
                 onAdd={(path) => handleNestedOptionAdd(index, path)}
                 onRemove={(path) => handleNestedOptionRemove(index, path)}
-                onChange={(path, value, isGroup) =>
-                  handleNestedOptionChange(index, path, value, isGroup)
+                onChange={(path, value: any) =>
+                  handleNestedOptionChange(index, path, value)
+                }
+                onPackageToggle={(path, isPackage) =>
+                  handleNestedOptionPackageToggle(index, path, isPackage)
+                }
+                onKeyValuePairAdd={(path) =>
+                  handleNestedOptionKeyValuePairAdd(index, path)
+                }
+                onKeyValuePairChange={(path, pairIndex, key, value: any) =>
+                  handleNestedOptionKeyValuePairChange(
+                    index,
+                    path,
+                    pairIndex,
+                    key,
+                    value
+                  )
+                }
+                onKeyValuePairRemove={(path, pairIndex) =>
+                  handleNestedOptionKeyValuePairRemove(index, path, pairIndex)
                 }
               />
             ))}
@@ -154,7 +196,6 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
     }
     return null;
   };
-
   const renderKeyValuePairs = () => {
     if (field.type === "keyValuePair") {
       return (

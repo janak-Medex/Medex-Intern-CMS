@@ -1,21 +1,31 @@
-import React, { useState } from "react";
-import { Input, Button, Tooltip } from "antd";
+// NestedOption.tsx
+
+import React from "react";
+import { Input, Button, Switch, Space, Upload } from "antd";
 import {
   PlusOutlined,
   MinusCircleOutlined,
   FolderOutlined,
-  FileOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
-import { motion, AnimatePresence } from "framer-motion";
-import { NestedOption as NestedOptionType } from "./types";
+import { NestedOptionType } from "./types";
 
 interface NestedOptionProps {
-  option: string | NestedOptionType;
+  option: NestedOptionType;
   path: number[];
   onAdd: (path: number[]) => void;
   onRemove: (path: number[]) => void;
-  onChange: (path: number[], value: string, isGroup: boolean) => void;
-  depth?: number;
+  onChange: (path: number[], value: string | File | File[]) => void;
+  onPackageToggle: (path: number[], isPackage: boolean) => void;
+
+  onKeyValuePairAdd: (path: number[]) => void;
+  onKeyValuePairChange: (
+    path: number[],
+    pairIndex: number,
+    key: "key" | "value",
+    value: string | File | File[]
+  ) => void;
+  onKeyValuePairRemove: (path: number[], pairIndex: number) => void;
 }
 
 const NestedOption: React.FC<NestedOptionProps> = ({
@@ -24,106 +34,146 @@ const NestedOption: React.FC<NestedOptionProps> = ({
   onAdd,
   onRemove,
   onChange,
-  depth = 0,
+  onPackageToggle,
+  onKeyValuePairAdd,
+  onKeyValuePairChange,
+  onKeyValuePairRemove,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [isHovered, setIsHovered] = useState(false);
-  const handleToggle = () => setIsExpanded(!isExpanded);
-  const isGroup = typeof option !== "string";
+  const getAcceptType = (key: string) => {
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.includes("image")) return "image/*";
+    if (lowerKey.includes("video")) return "video/*";
+    return "*/*";
+  };
 
-  const iconVariants = {
-    expanded: { rotate: 90 },
-    collapsed: { rotate: 0 },
+  const isUploadField = (key: string) => {
+    const lowerKey = key.toLowerCase();
+    return ["image", "images", "video", "videos", "file", "files"].some(
+      (type) => lowerKey.includes(type)
+    );
   };
 
   return (
-    <motion.div
-      className={`mb-3 ${depth > 0 ? "ml-6" : ""}`}
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.3 }}
-    >
-      <motion.div
-        className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-300 ease-in-out
-                    ${
-                      isGroup
-                        ? "bg-gradient-to-r from-blue-50 to-indigo-50"
-                        : "bg-white"
-                    }
-                    ${isHovered ? "shadow-md" : "shadow-sm"}`}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        whileHover={{ scale: 1.02 }}
-      >
-        {isGroup && (
-          <Tooltip title={isExpanded ? "Collapse" : "Expand"}>
-            <motion.div
-              variants={iconVariants}
-              animate={isExpanded ? "expanded" : "collapsed"}
-              onClick={handleToggle}
-              className="cursor-pointer text-blue-500 hover:text-blue-700"
-            >
-              <FolderOutlined style={{ fontSize: "1.2em" }} />
-            </motion.div>
-          </Tooltip>
-        )}
-        {!isGroup && (
-          <FileOutlined style={{ fontSize: "1.2em", color: "#718096" }} />
-        )}
+    <div className="mb-3 ml-6">
+      <div className="flex items-center space-x-2 p-2 rounded-lg bg-white shadow-sm">
+        <FolderOutlined className="text-blue-500" />
         <Input
-          value={isGroup ? option.label : option}
-          onChange={(e) => onChange(path, e.target.value, isGroup)}
-          placeholder={`${isGroup ? "Group" : "Option"} ${path.join(".")}`}
-          className={`flex-grow ${
-            isGroup ? "font-semibold text-indigo-700" : "text-gray-700"
-          } 
-                      border-none bg-transparent focus:ring-2 focus:ring-blue-300`}
+          value={option.label}
+          onChange={(e) => onChange(path, e.target.value)}
+          placeholder={`Group ${path.join(".")}`}
+          className="flex-grow"
         />
-        <Tooltip title="Add">
+        <Space>
+          <Switch
+            checked={option.isPackage}
+            onChange={(checked) => onPackageToggle(path, checked)}
+            checkedChildren="Package"
+            unCheckedChildren="Option"
+          />
           <Button
             type="text"
             size="small"
             icon={<PlusOutlined />}
             onClick={() => onAdd(path)}
-            className="text-green-500 hover:text-green-700 hover:bg-green-100 rounded-full"
+            className="text-green-500"
           />
-        </Tooltip>
-        <Tooltip title="Remove">
           <Button
             type="text"
             size="small"
             danger
             icon={<MinusCircleOutlined />}
             onClick={() => onRemove(path)}
-            className="hover:bg-red-100 rounded-full"
           />
-        </Tooltip>
-      </motion.div>
-      <AnimatePresence>
-        {isGroup && isExpanded && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="mt-2 pl-4 border-l-2 border-indigo-200"
-          >
-            {option.options.map((subOption, index) => (
-              <NestedOption
-                key={index}
-                option={subOption}
-                path={[...path, index]}
-                onAdd={onAdd}
-                onRemove={onRemove}
-                onChange={onChange}
-                depth={depth + 1}
+        </Space>
+      </div>
+      {option.isPackage ? (
+        <div className="mt-2 pl-4">
+          {option.keyValuePairs?.map((pair, index) => (
+            <div key={index} className="flex items-center space-x-2 mb-2">
+              <Input
+                value={pair.key}
+                onChange={(e) =>
+                  onKeyValuePairChange(path, index, "key", e.target.value)
+                }
+                placeholder="Key"
+                className="flex-1"
               />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+              {isUploadField(pair.key) ? (
+                <Upload
+                  beforeUpload={(file) => {
+                    const newValue = pair.key.toLowerCase().endsWith("s")
+                      ? [...(Array.isArray(pair.value) ? pair.value : []), file]
+                      : file;
+                    onKeyValuePairChange(path, index, "value", newValue);
+                    return false;
+                  }}
+                  accept={getAcceptType(pair.key)}
+                  multiple={pair.key.toLowerCase().endsWith("s")}
+                >
+                  <Button icon={<UploadOutlined />}>
+                    {Array.isArray(pair.value)
+                      ? `${pair.value.length} file(s) selected`
+                      : pair.value instanceof File
+                      ? pair.value.name
+                      : "Upload"}
+                  </Button>
+                </Upload>
+              ) : (
+                <Input
+                  value={
+                    typeof pair.value === "string" ? pair.value : undefined
+                  }
+                  onChange={(e) =>
+                    onKeyValuePairChange(path, index, "value", e.target.value)
+                  }
+                  placeholder="Value"
+                  className="flex-1"
+                />
+              )}
+              <Button
+                type="text"
+                danger
+                icon={<MinusCircleOutlined />}
+                onClick={() => onKeyValuePairRemove(path, index)}
+              />
+            </div>
+          ))}
+          <Button
+            type="dashed"
+            onClick={() => onKeyValuePairAdd(path)}
+            className="w-full mt-2"
+            icon={<PlusOutlined />}
+          >
+            Add Key-Value Pair
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-2 pl-4">
+          {option.options?.map((subOption, index) => (
+            <NestedOption
+              key={index}
+              option={subOption}
+              path={[...path, index]}
+              onAdd={onAdd}
+              onRemove={onRemove}
+              onChange={onChange}
+              onPackageToggle={onPackageToggle}
+              onKeyValuePairAdd={onKeyValuePairAdd}
+              onKeyValuePairChange={onKeyValuePairChange}
+              onKeyValuePairRemove={onKeyValuePairRemove}
+            />
+          ))}
+          <Button
+            type="dashed"
+            onClick={() => onAdd(path)}
+            className="w-full mt-2"
+            icon={<PlusOutlined />}
+          >
+            Add Option
+          </Button>
+        </div>
+      )}
+    </div>
   );
 };
 

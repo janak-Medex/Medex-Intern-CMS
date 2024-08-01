@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, RefObject } from 'react';
 import { FormInstance, message } from 'antd';
-import { FormType, FieldType } from './types';
+import { FormType, FieldType, NestedOptionType, CustomFormData } from './types';
 import { createForm } from '../api/formComponent.api';
-import { FormData as CustomFormData } from './types';
 const useFormBuilder = (
     form: FormInstance,
     initialForm: FormType | null,
@@ -36,48 +35,73 @@ const useFormBuilder = (
         form.resetFields();
     }, [form]);
 
-    const onFinish = async (values: any) => {
+    const processFields = (fields: FieldType[] | undefined, formData: CustomFormData, parentPath: string = ''): FieldType[] => {
+        if (!fields || !Array.isArray(fields)) {
+            console.warn('Fields is undefined or not an array');
+            return [];
+        }
+
+        return fields.map((field, index) => {
+            const currentPath = parentPath ? `${parentPath}.${index}` : `${index}`;
+
+            const processValue = (value: any, valuePath: string): any => {
+                if (value instanceof File) {
+                    formData.append(valuePath, value, value.name);
+                    return value.name;
+                } else if (Array.isArray(value)) {
+                    return value.map((item, itemIndex) => processValue(item, `${valuePath}.${itemIndex}`));
+                } else if (typeof value === 'object' && value !== null) {
+                    const processedObj: any = {};
+                    for (const key in value) {
+                        processedObj[key] = processValue(value[key], `${valuePath}.${key}`);
+                    }
+                    return processedObj;
+                }
+                return value;
+            };
+
+            const processedField: FieldType = { ...field };
+
+            for (const key in processedField) {
+                if (Object.prototype.hasOwnProperty.call(processedField, key)) {
+                    (processedField as any)[key] = processValue((processedField as any)[key], `${currentPath}.${key}`);
+                }
+            }
+
+            return processedField;
+        });
+    };
+
+    const onFinish = async (values: { formName: string }) => {
         try {
-            const formData = new FormData();
+            const formData = new FormData() as CustomFormData;
             formData.append('_id', initialForm?._id || '');
             formData.append('name', values.formName);
             formData.append('template_name', templateName);
 
-            const processedFields = fields.map((field) => {
-                if (field.type === 'keyValuePair') {
-                    return {
-                        ...field,
-                        required: !!field.required,
-                        keyValuePairs: field.keyValuePairs?.map((pair) => {
-                            if (pair.value instanceof File) {
-                                formData.append(pair.key, pair.value, pair.value.name);
-                                return { key: pair.key, value: pair.value.name };
-                            }
-                            return pair;
-                        }),
-                    };
-                }
-                return {
-                    ...field,
-                    required: !!field.required,
-                };
-            });
+            // Process fields and append to FormData
+            const processedFields = processFields(fields, formData);
 
             formData.append('fields', JSON.stringify(processedFields));
 
-            await createForm(formData as unknown as CustomFormData);
+            await createForm(formData);
 
             message.success(
                 initialForm ? "Form updated successfully" : "Form created successfully"
             );
-
             onFormSaved();
             resetForm();
         } catch (error) {
             console.error("Error saving form:", error);
-            message.error("Failed to save form");
+            if (error instanceof Error) {
+                message.error(error.message || "Failed to save form");
+            } else {
+                message.error("An unknown error occurred");
+            }
         }
     };
+
+
 
     const addField = useCallback(() => {
         const newField: FieldType = {
@@ -87,6 +111,9 @@ const useFormBuilder = (
             placeholder: "",
             options: [],
         };
+        if (newField.type === "Nested select") {
+            newField.options = [{ label: "", isPackage: false, options: [] }];
+        }
         setFields((prevFields) => [...prevFields, newField]);
         setExpandedFields((prev) => ({ ...prev, [fields.length]: true }));
     }, [fields.length]);
@@ -122,49 +149,34 @@ const useFormBuilder = (
         },
         []
     );
-
-    const handleNestedOptionChange = useCallback(
-        (fieldIndex: number, path: number[], value: string, isGroup: boolean) => {
-            setFields((prevFields) => {
-                const newFields = [...prevFields];
-                let current: any = newFields[fieldIndex].options;
-                for (let i = 0; i < path.length - 1; i++) {
-                    current = current[path[i]].options;
-                }
-                if (isGroup) {
-                    current[path[path.length - 1]].label = value;
-                } else {
-                    current[path[path.length - 1]] = value;
-                }
-                return newFields;
-            });
-        },
-        []
-    );
+    const updateNestedOptions = useCallback((
+        fieldIndex: number,
+        path: number[],
+        updateFn: (option: NestedOptionType) => NestedOptionType
+    ) => {
+        setFields((prevFields) => {
+            const newFields = [...prevFields];
+            let current: any = newFields[fieldIndex].options || [];
+            for (let i = 0; i < path.length - 1; i++) {
+                current = current[path[i]]?.options || [];
+            }
+            const lastIndex = path[path.length - 1];
+            current[lastIndex] = updateFn(current[lastIndex] || {});
+            return newFields;
+        });
+    }, []);
 
     const handleNestedOptionAdd = useCallback(
         (fieldIndex: number, path: number[]) => {
-            setFields((prevFields) => {
-                const newFields = [...prevFields];
-                let current: any = newFields[fieldIndex].options;
-                for (let i = 0; i < path.length; i++) {
-                    if (i === path.length - 1) {
-                        if (typeof current[path[i]] === "string") {
-                            current[path[i]] = {
-                                label: current[path[i]],
-                                options: [""],
-                            };
-                        } else {
-                            current[path[i]].options.push("");
-                        }
-                    } else {
-                        current = current[path[i]].options;
-                    }
+            updateNestedOptions(fieldIndex, path, (option) => {
+                const newOption: NestedOptionType = { label: "", isPackage: false, options: [] };
+                if (option.options) {
+                    return { ...option, options: [...option.options, newOption] };
                 }
-                return newFields;
+                return { ...option, options: [newOption] };
             });
         },
-        []
+        [updateNestedOptions]
     );
 
     const handleNestedOptionRemove = useCallback(
@@ -181,23 +193,62 @@ const useFormBuilder = (
         },
         []
     );
+    const handleNestedOptionChange = useCallback(
+        (fieldIndex: number, path: number[], value: string | File | File[]) => {
+            updateNestedOptions(fieldIndex, path, (option) => ({
+                ...option,
+                label: typeof value === 'string'
+                    ? value
+                    : Array.isArray(value)
+                        ? value.map(file => file.name).join(', ')
+                        : value.name
+            }));
+        },
+        [updateNestedOptions]
+    );
+    const handleNestedOptionPackageToggle = useCallback(
+        (fieldIndex: number, path: number[], isPackage: boolean) => {
+            updateNestedOptions(fieldIndex, path, (option) => ({
+                ...option,
+                isPackage,
+                keyValuePairs: isPackage ? (option.keyValuePairs || []) : undefined
+            }));
+        },
+        [updateNestedOptions]
+    );
 
-    const handleOptionAdd = useCallback((fieldIndex: number) => {
-        setFields((prevFields) => {
-            const newFields = [...prevFields];
-            if (
-                ["select", "Nested select", "radio", "checkbox"].includes(
-                    newFields[fieldIndex].type
-                )
-            ) {
-                if (!newFields[fieldIndex].options) {
-                    newFields[fieldIndex].options = [];
-                }
-                newFields[fieldIndex].options?.push("");
-            }
-            return newFields;
-        });
-    }, []);
+    const handleNestedOptionKeyValuePairAdd = useCallback(
+        (fieldIndex: number, path: number[]) => {
+            updateNestedOptions(fieldIndex, path, (option) => ({
+                ...option,
+                keyValuePairs: [...(option.keyValuePairs || []), { key: '', value: '' }]
+            }));
+        },
+        [updateNestedOptions]
+    );
+
+    const handleNestedOptionKeyValuePairChange = useCallback(
+        (fieldIndex: number, path: number[], pairIndex: number, key: "key" | "value", value: string | File | File[]) => {
+            updateNestedOptions(fieldIndex, path, (option) => {
+                const newKeyValuePairs = [...(option.keyValuePairs || [])];
+                newKeyValuePairs[pairIndex] = { ...newKeyValuePairs[pairIndex], [key]: value };
+                return { ...option, keyValuePairs: newKeyValuePairs };
+            });
+        },
+        [updateNestedOptions]
+    );
+
+    const handleNestedOptionKeyValuePairRemove = useCallback(
+        (fieldIndex: number, path: number[], pairIndex: number) => {
+            updateNestedOptions(fieldIndex, path, (option) => ({
+                ...option,
+                keyValuePairs: (option.keyValuePairs || []).filter((_, index) => index !== pairIndex)
+            }));
+        },
+        [updateNestedOptions]
+    );
+
+
 
     const handleOptionChange = useCallback(
         (fieldIndex: number, optionIndex: number, value: string) => {
@@ -324,6 +375,33 @@ const useFormBuilder = (
         },
         []
     );
+    const handleOptionAdd = useCallback((fieldIndex: number) => {
+        setFields((prevFields) => {
+            const newFields = [...prevFields];
+            const field = newFields[fieldIndex];
+
+            if (["select", "radio", "checkbox"].includes(field.type)) {
+                if (!field.options) {
+                    field.options = [];
+                }
+                field.options.push("");
+            } else if (field.type === "Nested select") {
+                if (!field.options) {
+                    field.options = [];
+                }
+                const newNestedOption: NestedOptionType = {
+                    label: "",
+                    isPackage: false,
+                    options: []
+                };
+                field.options.push(newNestedOption);
+            }
+
+            return newFields;
+        });
+    }, []);
+
+
 
     return {
         fields,
@@ -334,9 +412,14 @@ const useFormBuilder = (
         handleFieldChange,
         handleNestedOptionChange,
         handleNestedOptionAdd,
+        updateNestedOptions,
         handleNestedOptionRemove,
         handleOptionAdd,
+        handleNestedOptionPackageToggle,
+        handleNestedOptionKeyValuePairAdd,
         handleOptionChange,
+        handleNestedOptionKeyValuePairRemove,
+        handleNestedOptionKeyValuePairChange,
         handleOptionRemove,
         handleDragStart,
         handleDrop,
