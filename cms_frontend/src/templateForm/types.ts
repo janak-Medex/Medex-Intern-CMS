@@ -1,10 +1,9 @@
 
-
 export interface NestedOptionType {
     label: string;
     isPackage: boolean;
     options?: NestedOptionType[];
-    keyValuePairs?: { key: string; value: string | File | File[] }[];
+    keyValuePairs?: { [key: string]: string | File | File[] };
 }
 
 export type KeyValuePair = { key: string; value: string | File | File[]; };

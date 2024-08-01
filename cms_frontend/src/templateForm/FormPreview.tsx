@@ -13,12 +13,7 @@ import {
   Image,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
-import {
-  FieldType,
-  FormPreviewProps,
-  NestedOptionType,
-  KeyValuePair,
-} from "./types";
+import { FieldType, FormPreviewProps, NestedOptionType } from "./types";
 import axiosInstance from "../http/axiosInstance";
 
 const { TextArea } = Input;
@@ -103,18 +98,20 @@ const renderNestedOption = (option: any) => {
     return (
       <div key={option.value} className="border p-2 rounded mb-2">
         <h4 className="font-bold">{option.label}</h4>
-        {option.keyValuePairs?.map((pair: KeyValuePair, index: number) => (
-          <div key={index} className="flex items-center space-x-2 mb-2">
-            <Input value={pair.key} disabled className="w-1/3" />
-            {["image", "images", "video", "videos", "file", "files"].includes(
-              pair.key.toLowerCase()
-            ) ? (
-              renderFilePreview(pair.key, pair.value as string | File)
-            ) : (
-              <Input value={pair.value as string} disabled className="w-2/3" />
-            )}
-          </div>
-        ))}
+        {Object.entries(option.keyValuePairs || {}).map(
+          ([key, value], index) => (
+            <div key={index} className="flex items-center space-x-2 mb-2">
+              <Input value={key} disabled className="w-1/3" />
+              {["image", "images", "video", "videos", "file", "files"].includes(
+                key.toLowerCase()
+              ) ? (
+                renderFilePreview(key, value as string | File)
+              ) : (
+                <Input value={value as string} disabled className="w-2/3" />
+              )}
+            </div>
+          )
+        )}
       </div>
     );
   } else if (option.children) {
@@ -290,9 +287,9 @@ const FormPreview: React.FC<FormPreviewProps> = ({
       case "keyValuePair":
         return (
           <div>
-            {keyValuePairs?.map((pair: KeyValuePair, index: number) => (
+            {Object.entries(keyValuePairs || {}).map(([key, value], index) => (
               <div key={index} className="flex items-center space-x-2 mb-2">
-                <Input value={pair.key} disabled className="w-1/3" />
+                <Input value={key} disabled className="w-1/3" />
                 {[
                   "image",
                   "images",
@@ -300,11 +297,11 @@ const FormPreview: React.FC<FormPreviewProps> = ({
                   "videos",
                   "file",
                   "files",
-                ].includes(pair.key.toLowerCase()) ? (
-                  renderFilePreview(pair.key, pair.value as string | File)
+                ].includes(key.toLowerCase()) ? (
+                  renderFilePreview(key, value as unknown as string | File)
                 ) : (
                   <Input
-                    value={pair.value as string}
+                    value={value as unknown as string}
                     disabled
                     className="w-2/3"
                   />

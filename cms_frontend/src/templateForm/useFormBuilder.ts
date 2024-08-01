@@ -211,17 +211,16 @@ const useFormBuilder = (
             updateNestedOptions(fieldIndex, path, (option) => ({
                 ...option,
                 isPackage,
-                keyValuePairs: isPackage ? (option.keyValuePairs || []) : undefined
+                keyValuePairs: isPackage ? (option.keyValuePairs || {}) : undefined
             }));
         },
         [updateNestedOptions]
     );
-
     const handleNestedOptionKeyValuePairAdd = useCallback(
         (fieldIndex: number, path: number[]) => {
             updateNestedOptions(fieldIndex, path, (option) => ({
                 ...option,
-                keyValuePairs: [...(option.keyValuePairs || []), { key: '', value: '' }]
+                keyValuePairs: { ...option.keyValuePairs, "": "" }
             }));
         },
         [updateNestedOptions]
@@ -230,23 +229,32 @@ const useFormBuilder = (
     const handleNestedOptionKeyValuePairChange = useCallback(
         (fieldIndex: number, path: number[], pairIndex: number, key: "key" | "value", value: string | File | File[]) => {
             updateNestedOptions(fieldIndex, path, (option) => {
-                const newKeyValuePairs = [...(option.keyValuePairs || [])];
-                newKeyValuePairs[pairIndex] = { ...newKeyValuePairs[pairIndex], [key]: value };
-                return { ...option, keyValuePairs: newKeyValuePairs };
+                const keyValuePairs = { ...option.keyValuePairs };
+                const entries = Object.entries(keyValuePairs);
+                if (key === "key") {
+                    const [, oldValue] = entries[pairIndex];
+                    delete keyValuePairs[entries[pairIndex][0]];
+                    keyValuePairs[value as string] = oldValue;
+                } else {
+                    keyValuePairs[entries[pairIndex][0]] = value;
+                }
+                return { ...option, keyValuePairs };
             });
         },
         [updateNestedOptions]
     );
 
     const handleNestedOptionKeyValuePairRemove = useCallback(
-        (fieldIndex: number, path: number[], pairIndex: number) => {
-            updateNestedOptions(fieldIndex, path, (option) => ({
-                ...option,
-                keyValuePairs: (option.keyValuePairs || []).filter((_, index) => index !== pairIndex)
-            }));
+        (fieldIndex: number, path: number[], key: string) => {
+            updateNestedOptions(fieldIndex, path, (option) => {
+                const newKeyValuePairs = { ...option.keyValuePairs };
+                delete newKeyValuePairs[key];
+                return { ...option, keyValuePairs: newKeyValuePairs };
+            });
         },
         [updateNestedOptions]
     );
+
 
 
 
