@@ -248,10 +248,13 @@ const useFormBuilder = (
     );
 
     const handleNestedOptionKeyValuePairRemove = useCallback(
-        (fieldIndex: number, path: number[], key: string) => {
+        (fieldIndex: number, path: number[], pairIndex: number) => {
             updateNestedOptions(fieldIndex, path, (option) => {
                 const newKeyValuePairs = { ...option.keyValuePairs };
-                delete newKeyValuePairs[key];
+                const keys = Object.keys(newKeyValuePairs);
+                if (keys[pairIndex]) {
+                    delete newKeyValuePairs[keys[pairIndex]];
+                }
                 return { ...option, keyValuePairs: newKeyValuePairs };
             });
         },
