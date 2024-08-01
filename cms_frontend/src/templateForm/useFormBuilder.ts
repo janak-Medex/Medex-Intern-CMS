@@ -35,14 +35,15 @@ const useFormBuilder = (
         form.resetFields();
     }, [form]);
 
+
     const processFields = (fields: FieldType[] | undefined, formData: CustomFormData, parentPath: string = ''): FieldType[] => {
         if (!fields || !Array.isArray(fields)) {
             console.warn('Fields is undefined or not an array');
             return [];
         }
 
-        return fields.map((field, index) => {
-            const currentPath = parentPath ? `${parentPath}.${index}` : `${index}`;
+        const processField = (field: FieldType, currentPath: string): FieldType => {
+            const processedField: FieldType = { ...field };
 
             const processValue = (value: any, valuePath: string): any => {
                 if (value instanceof File) {
@@ -51,16 +52,15 @@ const useFormBuilder = (
                 } else if (Array.isArray(value)) {
                     return value.map((item, itemIndex) => processValue(item, `${valuePath}.${itemIndex}`));
                 } else if (typeof value === 'object' && value !== null) {
-                    const processedObj: any = {};
-                    for (const key in value) {
-                        processedObj[key] = processValue(value[key], `${valuePath}.${key}`);
-                    }
-                    return processedObj;
+                    return processField(value, valuePath);
                 }
                 return value;
             };
 
-            const processedField: FieldType = { ...field };
+            // Spread keyValuePairs into the main object while keeping the original
+            if (processedField.keyValuePairs && typeof processedField.keyValuePairs === 'object') {
+                Object.assign(processedField, processedField.keyValuePairs);
+            }
 
             for (const key in processedField) {
                 if (Object.prototype.hasOwnProperty.call(processedField, key)) {
@@ -69,6 +69,11 @@ const useFormBuilder = (
             }
 
             return processedField;
+        };
+
+        return fields.map((field, index) => {
+            const currentPath = parentPath ? `${parentPath}.${index}` : `${index}`;
+            return processField(field, currentPath);
         });
     };
 
@@ -245,10 +250,13 @@ const useFormBuilder = (
     );
 
     const handleNestedOptionKeyValuePairRemove = useCallback(
-        (fieldIndex: number, path: number[], key: string) => {
+        (fieldIndex: number, path: number[], pairIndex: number) => {
             updateNestedOptions(fieldIndex, path, (option) => {
                 const newKeyValuePairs = { ...option.keyValuePairs };
-                delete newKeyValuePairs[key];
+                const keys = Object.keys(newKeyValuePairs);
+                if (keys[pairIndex]) {
+                    delete newKeyValuePairs[keys[pairIndex]];
+                }
                 return { ...option, keyValuePairs: newKeyValuePairs };
             });
         },
