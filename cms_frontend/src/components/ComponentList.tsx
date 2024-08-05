@@ -182,7 +182,8 @@ const ComponentList: React.FC<ComponentListProps> = ({
     }
   };
 
-  const truncateText = (text: string, maxLength: number) => {
+  const truncateText = (text: string | undefined, maxLength: number) => {
+    if (text === undefined) return "";
     return text.length > maxLength
       ? text.substring(0, maxLength) + "..."
       : text;
