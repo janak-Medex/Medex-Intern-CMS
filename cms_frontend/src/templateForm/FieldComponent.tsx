@@ -1,4 +1,6 @@
-import React from "react";
+// FieldComponent.tsx
+
+import React, { useState } from "react";
 import {
   Form,
   Input,
@@ -8,6 +10,7 @@ import {
   Radio,
   Checkbox,
   Upload,
+  Modal,
 } from "antd";
 import {
   DragOutlined,
@@ -18,7 +21,7 @@ import {
   UploadOutlined,
 } from "@ant-design/icons";
 import { FieldType, NestedOptionType } from "./types";
-import NestedOption from "./NestedOption";
+import NestedOptionModal from "./NestedOptionModal";
 
 const { Option } = Select;
 
@@ -103,6 +106,20 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
   handleKeyValuePairChange,
   handleKeyValuePairRemove,
 }) => {
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const showModal = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleModalOk = () => {
+    setIsModalVisible(false);
+  };
+
+  const handleModalCancel = () => {
+    setIsModalVisible(false);
+  };
+
   const renderOptions = () => {
     if (["select", "radio", "checkbox"].includes(field.type)) {
       return (
@@ -152,50 +169,48 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
           label={<span className="font-semibold">Nested Options</span>}
         >
           <div className="border p-4 rounded-lg bg-gray-50">
-            {field.options?.map((option, optionIndex) => (
-              <NestedOption
-                key={optionIndex}
-                option={option as NestedOptionType}
-                path={[optionIndex]}
-                onAdd={(path) => handleNestedOptionAdd(index, path)}
-                onRemove={(path) => handleNestedOptionRemove(index, path)}
-                onChange={(path, value: any) =>
-                  handleNestedOptionChange(index, path, value)
+            <Button onClick={showModal} className="w-full mb-2">
+              Manage Nested Options
+            </Button>
+            <Modal
+              title="Manage Nested Options"
+              visible={isModalVisible}
+              onOk={handleModalOk}
+              onCancel={handleModalCancel}
+              width={1400}
+              footer={[
+                <Button key="back" onClick={handleModalCancel}>
+                  Close
+                </Button>,
+              ]}
+            >
+              <NestedOptionModal
+                options={field.options as NestedOptionType[]}
+                fieldIndex={index}
+                handleNestedOptionAdd={handleNestedOptionAdd}
+                handleNestedOptionRemove={handleNestedOptionRemove}
+                handleNestedOptionChange={handleNestedOptionChange}
+                handleNestedOptionPackageToggle={
+                  handleNestedOptionPackageToggle
                 }
-                onPackageToggle={(path, isPackage) =>
-                  handleNestedOptionPackageToggle(index, path, isPackage)
+                handleNestedOptionKeyValuePairAdd={
+                  handleNestedOptionKeyValuePairAdd
                 }
-                onKeyValuePairAdd={(path) =>
-                  handleNestedOptionKeyValuePairAdd(index, path)
+                handleNestedOptionKeyValuePairChange={
+                  handleNestedOptionKeyValuePairChange
                 }
-                onKeyValuePairChange={(path, pairIndex, key, value: any) =>
-                  handleNestedOptionKeyValuePairChange(
-                    index,
-                    path,
-                    pairIndex,
-                    key,
-                    value
-                  )
-                }
-                onKeyValuePairRemove={(path, pairIndex) =>
-                  handleNestedOptionKeyValuePairRemove(index, path, pairIndex)
+                handleNestedOptionKeyValuePairRemove={
+                  handleNestedOptionKeyValuePairRemove
                 }
               />
-            ))}
-            <Button
-              type="dashed"
-              onClick={() => handleOptionAdd(index)}
-              className="w-full mt-4"
-              icon={<PlusOutlined />}
-            >
-              Add Option
-            </Button>
+            </Modal>
           </div>
         </Form.Item>
       );
     }
     return null;
   };
+
   const renderKeyValuePairs = () => {
     if (field.type === "keyValuePair") {
       return (
