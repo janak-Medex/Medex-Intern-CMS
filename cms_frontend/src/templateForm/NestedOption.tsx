@@ -1,51 +1,70 @@
 // NestedOption.tsx
-
 import React from "react";
-import { Button } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+
 import { NestedOptionType } from "./types";
+import NestedOptionModal from "./NestedOptionModal";
 
 interface NestedOptionProps {
-  option: NestedOptionType;
-  path: number[];
-  onAdd: (path: number[]) => void;
+  options: NestedOptionType[];
+  fieldIndex: number;
+  handleNestedOptionAdd: (fieldIndex: number, path: number[]) => void;
+  handleNestedOptionRemove: (fieldIndex: number, path: number[]) => void;
+  handleNestedOptionChange: (
+    fieldIndex: number,
+    path: number[],
+    value: string
+  ) => void;
+  handleNestedOptionPackageToggle: (
+    fieldIndex: number,
+    path: number[],
+    isPackage: boolean
+  ) => void;
+  handleNestedOptionKeyValuePairAdd: (
+    fieldIndex: number,
+    path: number[]
+  ) => void;
+  handleNestedOptionKeyValuePairChange: (
+    fieldIndex: number,
+    path: number[],
+    pairIndex: number,
+    key: "key" | "value",
+    value: string
+  ) => void;
+  handleNestedOptionKeyValuePairRemove: (
+    fieldIndex: number,
+    path: number[],
+    pairIndex: number
+  ) => void;
 }
 
-const NestedOption: React.FC<NestedOptionProps> = ({ option, path, onAdd }) => {
-  if (!option) {
-    return null;
-  }
-
+const NestedOption: React.FC<NestedOptionProps> = ({
+  options,
+  fieldIndex,
+  handleNestedOptionAdd,
+  handleNestedOptionRemove,
+  handleNestedOptionChange,
+  handleNestedOptionPackageToggle,
+  handleNestedOptionKeyValuePairAdd,
+  handleNestedOptionKeyValuePairChange,
+  handleNestedOptionKeyValuePairRemove,
+}) => {
   return (
-    <div className="mb-3 ml-6">
-      <div className="flex items-center space-x-2 p-2 rounded-lg bg-white shadow-sm">
-        <span>{option.label}</span>
-        {option.isPackage ? (
-          <span className="text-blue-500">(Package)</span>
-        ) : (
-          <span className="text-green-500">(Option)</span>
-        )}
-      </div>
-      {!option.isPackage && (
-        <div className="mt-2 pl-4">
-          {option.options?.map((subOption, index) => (
-            <NestedOption
-              key={index}
-              option={subOption}
-              path={[...path, index]}
-              onAdd={onAdd}
-            />
-          ))}
-          <Button
-            type="dashed"
-            onClick={() => onAdd(path)}
-            className="w-full mt-2"
-            icon={<PlusOutlined />}
-          >
-            Add Option
-          </Button>
-        </div>
-      )}
+    <div>
+      <NestedOptionModal
+        options={options}
+        fieldIndex={fieldIndex}
+        handleNestedOptionAdd={handleNestedOptionAdd}
+        handleNestedOptionRemove={handleNestedOptionRemove}
+        handleNestedOptionChange={handleNestedOptionChange}
+        handleNestedOptionPackageToggle={handleNestedOptionPackageToggle}
+        handleNestedOptionKeyValuePairAdd={handleNestedOptionKeyValuePairAdd}
+        handleNestedOptionKeyValuePairChange={
+          handleNestedOptionKeyValuePairChange
+        }
+        handleNestedOptionKeyValuePairRemove={
+          handleNestedOptionKeyValuePairRemove
+        }
+      />
     </div>
   );
 };

@@ -1,13 +1,26 @@
-// NestedOptionModal.tsx
-
+// NestedOption.tsx
 import React from "react";
-import { Collapse, Input, Button, Switch, Space, Card } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import { NestedOptionType } from "./types";
+import {
+  Collapse,
+  Input,
+  Button,
+  Switch,
+  Space,
+  Card,
+  Typography,
+  Tooltip,
+} from "antd";
+import {
+  PlusOutlined,
+  MinusCircleOutlined,
+  DownOutlined,
+} from "@ant-design/icons";
 
 const { Panel } = Collapse;
+const { Title } = Typography;
 
-interface NestedOptionModalProps {
+interface NestedOptionProps {
   options: NestedOptionType[];
   fieldIndex: number;
   handleNestedOptionAdd: (fieldIndex: number, path: number[]) => void;
@@ -40,7 +53,7 @@ interface NestedOptionModalProps {
   ) => void;
 }
 
-const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
+const NestedOption: React.FC<NestedOptionProps> = ({
   options,
   fieldIndex,
   handleNestedOptionAdd,
@@ -63,25 +76,8 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
         <Card
           key={key}
           className="mb-4"
-          extra={
-            <Space>
-              <Button
-                type="text"
-                icon={<PlusOutlined />}
-                onClick={() => handleNestedOptionAdd(fieldIndex, currentPath)}
-              />
-              <Button
-                type="text"
-                danger
-                icon={<MinusCircleOutlined />}
-                onClick={() =>
-                  handleNestedOptionRemove(fieldIndex, currentPath)
-                }
-              />
-            </Space>
-          }
-        >
-          <Space direction="vertical" className="w-full">
+          style={{ width: "100%" }}
+          title={
             <Space>
               <Input
                 value={item.label}
@@ -93,30 +89,55 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
                   )
                 }
                 placeholder={`Option ${currentPath.join(".")}`}
-                style={{ width: 200 }}
+                style={{ width: 250 }}
               />
-              <Switch
-                checked={item.isPackage}
-                onChange={(checked) =>
-                  handleNestedOptionPackageToggle(
-                    fieldIndex,
-                    currentPath,
-                    checked
-                  )
-                }
-                checkedChildren="Package"
-                unCheckedChildren="Option"
-              />
+              <Tooltip title={item.isPackage ? "Package" : "Option"}>
+                <Switch
+                  checked={item.isPackage}
+                  onChange={(checked) =>
+                    handleNestedOptionPackageToggle(
+                      fieldIndex,
+                      currentPath,
+                      checked
+                    )
+                  }
+                  checkedChildren="Package"
+                  unCheckedChildren="Option"
+                />
+              </Tooltip>
             </Space>
-
+          }
+          extra={
+            <Space>
+              <Tooltip title="Add Sub-option">
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => handleNestedOptionAdd(fieldIndex, currentPath)}
+                />
+              </Tooltip>
+              <Tooltip title="Remove Option">
+                <Button
+                  type="primary"
+                  danger
+                  icon={<MinusCircleOutlined />}
+                  onClick={() =>
+                    handleNestedOptionRemove(fieldIndex, currentPath)
+                  }
+                />
+              </Tooltip>
+            </Space>
+          }
+        >
+          <Space direction="vertical" className="w-full" size="large">
             {item.isPackage && (
-              <Card className="mt-2">
-                <h4>Key-Value Pairs</h4>
-                {Object.entries(item.keyValuePairs || {}).map(
-                  ([key, value], pairIndex) => (
+              <Card className="mt-2" style={{ background: "#f0f2f5" }}>
+                <Title level={5}>Key-Value Pairs</Title>
+                {item.keyValuePairs && item.keyValuePairs.length > 0 ? (
+                  item.keyValuePairs.map((pair, pairIndex) => (
                     <Space key={pairIndex} className="mb-2">
                       <Input
-                        value={key}
+                        value={pair.key}
                         onChange={(e) =>
                           handleNestedOptionKeyValuePairChange(
                             fieldIndex,
@@ -127,10 +148,10 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
                           )
                         }
                         placeholder="Key"
-                        style={{ width: 150 }}
+                        style={{ width: 200 }}
                       />
                       <Input
-                        value={value as string}
+                        value={pair.value}
                         onChange={(e) =>
                           handleNestedOptionKeyValuePairChange(
                             fieldIndex,
@@ -141,22 +162,28 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
                           )
                         }
                         placeholder="Value"
-                        style={{ width: 150 }}
+                        style={{ width: 200 }}
                       />
-                      <Button
-                        type="text"
-                        danger
-                        icon={<MinusCircleOutlined />}
-                        onClick={() =>
-                          handleNestedOptionKeyValuePairRemove(
-                            fieldIndex,
-                            currentPath,
-                            pairIndex
-                          )
-                        }
-                      />
+                      <Tooltip title="Remove Key-Value Pair">
+                        <Button
+                          type="text"
+                          danger
+                          icon={<MinusCircleOutlined />}
+                          onClick={() =>
+                            handleNestedOptionKeyValuePairRemove(
+                              fieldIndex,
+                              currentPath,
+                              pairIndex
+                            )
+                          }
+                        />
+                      </Tooltip>
                     </Space>
-                  )
+                  ))
+                ) : (
+                  <Typography.Text type="secondary">
+                    No key-value pairs added yet.
+                  </Typography.Text>
                 )}
                 <Button
                   type="dashed"
@@ -172,7 +199,12 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
             )}
 
             {item.options && item.options.length > 0 && (
-              <Collapse className="mt-2">
+              <Collapse
+                className="mt-2"
+                expandIcon={({ isActive }) => (
+                  <DownOutlined rotate={isActive ? 180 : 0} />
+                )}
+              >
                 <Panel header="Sub-options" key="1">
                   {renderNestedOptions(item.options, currentPath)}
                 </Panel>
@@ -187,14 +219,29 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   return (
     <div
       className="nested-option-modal"
-      style={{ height: 500, overflowY: "auto", padding: "20px", width: "100%" }}
+      style={{
+        height: "calc(100vh - 200px)",
+        overflowY: "auto",
+        padding: "20px",
+        width: "100%",
+      }}
     >
-      {renderNestedOptions(options)}
+      <Title level={3}>Nested Options</Title>
+      {options.length === 0 ? (
+        <Card>
+          <Typography.Text type="secondary">
+            No options added yet. Click "Add Root Option" to start.
+          </Typography.Text>
+        </Card>
+      ) : (
+        renderNestedOptions(options)
+      )}
       <Button
-        type="dashed"
+        type="primary"
         onClick={() => handleNestedOptionAdd(fieldIndex, [])}
         icon={<PlusOutlined />}
         className="mt-4"
+        size="large"
       >
         Add Root Option
       </Button>
@@ -202,4 +249,4 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   );
 };
 
-export default NestedOptionModal;
+export default NestedOption;
