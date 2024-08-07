@@ -169,7 +169,7 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
           label={<span className="font-semibold">Nested Options</span>}
         >
           <div className="border p-4 rounded-lg bg-gray-50">
-            <Button onClick={showModal} className="w-full mb-2">
+            <Button onClick={showModal} className="w-full ">
               Manage Nested Options
             </Button>
             <Modal
@@ -178,11 +178,7 @@ const FieldComponent: React.FC<FieldComponentProps> = ({
               onOk={handleModalOk}
               onCancel={handleModalCancel}
               width={1400}
-              footer={[
-                <Button key="back" onClick={handleModalCancel}>
-                  Close
-                </Button>,
-              ]}
+              footer={[]}
             >
               <NestedOptionModal
                 options={field.options as NestedOptionType[]}

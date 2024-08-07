@@ -1,6 +1,5 @@
-// NestedOption.tsx
-
-import React from "react";
+import React, { useState } from "react";
+import { Button, Modal } from "antd";
 import { NestedOptionType } from "./types";
 import NestedOptionModal from "./NestedOptionModal";
 
@@ -48,23 +47,42 @@ const NestedOption: React.FC<NestedOptionProps> = ({
   handleNestedOptionKeyValuePairChange,
   handleNestedOptionKeyValuePairRemove,
 }) => {
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const showModal = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalVisible(false);
+  };
+
   return (
     <div>
-      <NestedOptionModal
-        options={options}
-        fieldIndex={fieldIndex}
-        handleNestedOptionAdd={handleNestedOptionAdd}
-        handleNestedOptionRemove={handleNestedOptionRemove}
-        handleNestedOptionChange={handleNestedOptionChange}
-        handleNestedOptionPackageToggle={handleNestedOptionPackageToggle}
-        handleNestedOptionKeyValuePairAdd={handleNestedOptionKeyValuePairAdd}
-        handleNestedOptionKeyValuePairChange={
-          handleNestedOptionKeyValuePairChange
-        }
-        handleNestedOptionKeyValuePairRemove={
-          handleNestedOptionKeyValuePairRemove
-        }
-      />
+      <Button onClick={showModal}>Manage Nested Options</Button>
+      <Modal
+        title="Manage Nested Options"
+        visible={isModalVisible}
+        onCancel={handleModalClose}
+        width={1200}
+        footer={null}
+      >
+        <NestedOptionModal
+          options={options}
+          fieldIndex={fieldIndex}
+          handleNestedOptionAdd={handleNestedOptionAdd}
+          handleNestedOptionRemove={handleNestedOptionRemove}
+          handleNestedOptionChange={handleNestedOptionChange}
+          handleNestedOptionPackageToggle={handleNestedOptionPackageToggle}
+          handleNestedOptionKeyValuePairAdd={handleNestedOptionKeyValuePairAdd}
+          handleNestedOptionKeyValuePairChange={
+            handleNestedOptionKeyValuePairChange
+          }
+          handleNestedOptionKeyValuePairRemove={
+            handleNestedOptionKeyValuePairRemove
+          }
+        />
+      </Modal>
     </div>
   );
 };

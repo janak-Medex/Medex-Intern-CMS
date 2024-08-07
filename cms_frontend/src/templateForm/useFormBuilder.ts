@@ -192,7 +192,7 @@ const useFormBuilder = (
                         current = current[path[i]].options;
                     }
 
-                    current.push({
+                    current?.push({
                         label: "",
                         isPackage: false,
                         options: [],
