@@ -1,5 +1,3 @@
-// NestedOptionModal.tsx
-
 import React, { useState } from "react";
 import {
   Collapse,
@@ -137,89 +135,96 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
         >
           <Space direction="vertical" className="w-full" size="large">
             {item.isPackage && (
-              <Card className="mt-2" style={{ background: "#f0f2f5" }}>
-                <Title level={5}>Key-Value Pairs</Title>
-                {Object.entries(item.keyValuePairs || {}).map(
-                  ([key, value], pairIndex) => (
-                    <Space key={pairIndex} className="mb-2">
-                      <Input
-                        value={key}
-                        onChange={(e) =>
-                          handleNestedOptionKeyValuePairChange(
-                            fieldIndex,
-                            currentPath,
-                            pairIndex,
-                            "key",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Key"
-                        style={{ width: 200 }}
-                      />
-                      {["image", "video", "file"].includes(
-                        key.toLowerCase()
-                      ) ? (
-                        <Upload
-                          beforeUpload={(file) => {
-                            handleNestedOptionKeyValuePairChange(
-                              fieldIndex,
-                              currentPath,
-                              pairIndex,
-                              "value",
-                              file
-                            );
-                            return false;
-                          }}
-                          accept={getAcceptType(key)}
-                        >
-                          <Button icon={<UploadOutlined />}>
-                            {value instanceof File ? value.name : "Upload"}
-                          </Button>
-                        </Upload>
-                      ) : (
-                        <Input
-                          value={value as string}
-                          onChange={(e) =>
-                            handleNestedOptionKeyValuePairChange(
-                              fieldIndex,
-                              currentPath,
-                              pairIndex,
-                              "value",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Value"
-                          style={{ width: 200 }}
-                        />
-                      )}
-                      <Tooltip title="Remove Key-Value Pair">
-                        <Button
-                          type="text"
-                          danger
-                          icon={<MinusCircleOutlined />}
-                          onClick={() =>
-                            handleNestedOptionKeyValuePairRemove(
-                              fieldIndex,
-                              currentPath,
-                              pairIndex
-                            )
-                          }
-                        />
-                      </Tooltip>
-                    </Space>
-                  )
-                )}
-                <Button
-                  type="dashed"
-                  onClick={() =>
-                    handleNestedOptionKeyValuePairAdd(fieldIndex, currentPath)
-                  }
-                  icon={<PlusOutlined />}
-                  className="mt-2"
-                >
-                  Add Key-Value Pair
-                </Button>
-              </Card>
+              <Collapse className="mt-2">
+                <Panel header="Package Details" key="1">
+                  <Card style={{ background: "#f0f2f5" }}>
+                    <Title level={5}>Key-Value Pairs</Title>
+                    {Object.entries(item.keyValuePairs || {}).map(
+                      ([key, value], pairIndex) => (
+                        <Space key={pairIndex} className="mb-2">
+                          <Input
+                            value={key}
+                            onChange={(e) =>
+                              handleNestedOptionKeyValuePairChange(
+                                fieldIndex,
+                                currentPath,
+                                pairIndex,
+                                "key",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Key"
+                            style={{ width: 200 }}
+                          />
+                          {["image", "video", "file"].includes(
+                            key.toLowerCase()
+                          ) ? (
+                            <Upload
+                              beforeUpload={(file) => {
+                                handleNestedOptionKeyValuePairChange(
+                                  fieldIndex,
+                                  currentPath,
+                                  pairIndex,
+                                  "value",
+                                  file
+                                );
+                                return false;
+                              }}
+                              accept={getAcceptType(key)}
+                            >
+                              <Button icon={<UploadOutlined />}>
+                                {value instanceof File ? value.name : "Upload"}
+                              </Button>
+                            </Upload>
+                          ) : (
+                            <Input
+                              value={value as string}
+                              onChange={(e) =>
+                                handleNestedOptionKeyValuePairChange(
+                                  fieldIndex,
+                                  currentPath,
+                                  pairIndex,
+                                  "value",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Value"
+                              style={{ width: 200 }}
+                            />
+                          )}
+                          <Tooltip title="Remove Key-Value Pair">
+                            <Button
+                              type="text"
+                              danger
+                              icon={<MinusCircleOutlined />}
+                              onClick={() =>
+                                handleNestedOptionKeyValuePairRemove(
+                                  fieldIndex,
+                                  currentPath,
+                                  pairIndex
+                                )
+                              }
+                            />
+                          </Tooltip>
+                        </Space>
+                      )
+                    )}
+                    <Button
+                      type="dashed"
+                      onClick={() =>
+                        handleNestedOptionKeyValuePairAdd(
+                          fieldIndex,
+                          currentPath
+                        )
+                      }
+                      icon={<PlusOutlined />}
+                      className="mt-2"
+                    >
+                      Add Key-Value Pair
+                    </Button>
+                  </Card>
+                </Panel>
+              </Collapse>
             )}
 
             {item.options && item.options.length > 0 && (
@@ -240,7 +245,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     });
   };
 
-  const getAcceptType = (key: string) => {
+  const getAcceptType = (key: string): string => {
     const lowerKey = key.toLowerCase();
     if (lowerKey.includes("image")) return "image/*";
     if (lowerKey.includes("video")) return "video/*";
@@ -251,7 +256,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     <div
       className="nested-option-modal"
       style={{
-        height: "calc(100vh - 200px)",
+        height: "calc(100vh - 100px)",
         overflowY: "auto",
         padding: "20px",
         width: "100%",
@@ -285,10 +290,12 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
           </Button>
         </div>
         {showPreview && (
-          <div className="w-1/2 pl-4">
-            <Card title="Preview" className="sticky top-0">
-              <NestedOptionPreview options={options} />
-            </Card>
+          <div className="w-1/2 pl-4" style={{ height: "500px" }}>
+            <div className="h-full">
+              <Card title="Preview" className="sticky top-0">
+                <NestedOptionPreview options={options} />
+              </Card>
+            </div>
           </div>
         )}
       </div>
