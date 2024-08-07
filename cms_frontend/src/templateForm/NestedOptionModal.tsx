@@ -1,6 +1,6 @@
-// NestedOption.tsx
+// NestedOptionModal.tsx
+
 import React from "react";
-import { NestedOptionType } from "./types";
 import {
   Collapse,
   Input,
@@ -16,11 +16,12 @@ import {
   MinusCircleOutlined,
   DownOutlined,
 } from "@ant-design/icons";
+import { NestedOptionType } from "./types";
 
 const { Panel } = Collapse;
 const { Title } = Typography;
 
-interface NestedOptionProps {
+interface NestedOptionModalProps {
   options: NestedOptionType[];
   fieldIndex: number;
   handleNestedOptionAdd: (fieldIndex: number, path: number[]) => void;
@@ -53,7 +54,7 @@ interface NestedOptionProps {
   ) => void;
 }
 
-const NestedOption: React.FC<NestedOptionProps> = ({
+const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   options,
   fieldIndex,
   handleNestedOptionAdd,
@@ -133,11 +134,11 @@ const NestedOption: React.FC<NestedOptionProps> = ({
             {item.isPackage && (
               <Card className="mt-2" style={{ background: "#f0f2f5" }}>
                 <Title level={5}>Key-Value Pairs</Title>
-                {item.keyValuePairs && item.keyValuePairs.length > 0 ? (
-                  item.keyValuePairs.map((pair, pairIndex) => (
+                {Object.entries(item.keyValuePairs || {}).map(
+                  ([key, value], pairIndex) => (
                     <Space key={pairIndex} className="mb-2">
                       <Input
-                        value={pair.key}
+                        value={key}
                         onChange={(e) =>
                           handleNestedOptionKeyValuePairChange(
                             fieldIndex,
@@ -151,7 +152,7 @@ const NestedOption: React.FC<NestedOptionProps> = ({
                         style={{ width: 200 }}
                       />
                       <Input
-                        value={pair.value}
+                        value={value as string}
                         onChange={(e) =>
                           handleNestedOptionKeyValuePairChange(
                             fieldIndex,
@@ -179,11 +180,7 @@ const NestedOption: React.FC<NestedOptionProps> = ({
                         />
                       </Tooltip>
                     </Space>
-                  ))
-                ) : (
-                  <Typography.Text type="secondary">
-                    No key-value pairs added yet.
-                  </Typography.Text>
+                  )
                 )}
                 <Button
                   type="dashed"
@@ -249,4 +246,4 @@ const NestedOption: React.FC<NestedOptionProps> = ({
   );
 };
 
-export default NestedOption;
+export default NestedOptionModal;

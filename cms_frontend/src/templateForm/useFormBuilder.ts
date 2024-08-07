@@ -233,43 +233,39 @@ const useFormBuilder = (
         },
         [updateNestedOptions]
     );
-
+    const handleNestedOptionPackageToggle = useCallback(
+        (fieldIndex: number, path: number[], isPackage: boolean) => {
+            updateNestedOptions(fieldIndex, path, (option) => ({
+                ...option,
+                isPackage,
+                keyValuePairs: isPackage ? (option.keyValuePairs || {}) : undefined
+            }));
+        },
+        [updateNestedOptions]
+    );
     const handleNestedOptionKeyValuePairAdd = useCallback(
         (fieldIndex: number, path: number[]) => {
-            updateNestedOptions(fieldIndex, path, (option) => {
-                const newKeyValuePairs = Array.isArray(option.keyValuePairs)
-                    ? [...option.keyValuePairs]
-                    : [];
-
-                newKeyValuePairs.push({ key: '', value: '' });
-
-                return {
-                    ...option,
-                    keyValuePairs: newKeyValuePairs
-                };
-            });
+            updateNestedOptions(fieldIndex, path, (option) => ({
+                ...option,
+                keyValuePairs: { ...option.keyValuePairs, "": "" }
+            }));
         },
         [updateNestedOptions]
     );
 
     const handleNestedOptionKeyValuePairChange = useCallback(
-        (fieldIndex: number, path: number[], pairIndex: number, key: "key" | "value", value: string) => {
+        (fieldIndex: number, path: number[], pairIndex: number, key: "key" | "value", value: string | File | File[]) => {
             updateNestedOptions(fieldIndex, path, (option) => {
-                const newKeyValuePairs = Array.isArray(option.keyValuePairs)
-                    ? [...option.keyValuePairs]
-                    : [];
-
-                if (newKeyValuePairs[pairIndex]) {
-                    newKeyValuePairs[pairIndex] = {
-                        ...newKeyValuePairs[pairIndex],
-                        [key]: value,
-                    };
+                const keyValuePairs = { ...option.keyValuePairs };
+                const entries = Object.entries(keyValuePairs);
+                if (key === "key") {
+                    const [, oldValue] = entries[pairIndex];
+                    delete keyValuePairs[entries[pairIndex][0]];
+                    keyValuePairs[value as string] = oldValue;
+                } else {
+                    keyValuePairs[entries[pairIndex][0]] = value;
                 }
-
-                return {
-                    ...option,
-                    keyValuePairs: newKeyValuePairs,
-                };
+                return { ...option, keyValuePairs };
             });
         },
         [updateNestedOptions]
@@ -278,21 +274,19 @@ const useFormBuilder = (
     const handleNestedOptionKeyValuePairRemove = useCallback(
         (fieldIndex: number, path: number[], pairIndex: number) => {
             updateNestedOptions(fieldIndex, path, (option) => {
-                const newKeyValuePairs = Array.isArray(option.keyValuePairs)
-                    ? option.keyValuePairs.filter((_, index) => index !== pairIndex)
-                    : [];
+                const newKeyValuePairs = { ...option.keyValuePairs };
+                const entries = Object.entries(newKeyValuePairs);
 
-                return {
-                    ...option,
-                    keyValuePairs: newKeyValuePairs,
-                };
+                if (entries.length > pairIndex) {
+                    const [keyToRemove] = entries[pairIndex];
+                    delete newKeyValuePairs[keyToRemove];
+                }
+
+                return { ...option, keyValuePairs: newKeyValuePairs };
             });
         },
         [updateNestedOptions]
     );
-
-
-
 
 
 
@@ -401,17 +395,6 @@ const useFormBuilder = (
             return newFields;
         });
     }, []);
-
-    const handleNestedOptionPackageToggle = useCallback(
-        (fieldIndex: number, path: number[], isPackage: boolean) => {
-            updateNestedOptions(fieldIndex, path, (option) => ({
-                ...option,
-                isPackage,
-                keyValuePairs: isPackage ? (option.keyValuePairs || []) : undefined
-            }));
-        },
-        [updateNestedOptions]
-    );
 
     const handleKeyValuePairAdd = useCallback((fieldIndex: number) => {
         setFields((prevFields) => {
