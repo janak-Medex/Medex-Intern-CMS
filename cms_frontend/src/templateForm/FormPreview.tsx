@@ -24,11 +24,6 @@ const renderFilePreview = (key: string, value: string | File) => {
   if (typeof value === "string") {
     const filePath = value.split("uploads\\")[1] || value;
     const fileUrl = `${baseImageUrl}${filePath}`;
-    console.log("String Value Detected:");
-    console.log("Key:", key);
-    console.log("Value:", value);
-    console.log("File Path:", filePath);
-    console.log("File URL:", fileUrl);
 
     const isImage = key.toLowerCase().includes("image");
     const isVideo = key.toLowerCase().includes("video");

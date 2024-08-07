@@ -1,6 +1,6 @@
 // NestedOption.tsx
-import React from "react";
 
+import React from "react";
 import { NestedOptionType } from "./types";
 import NestedOptionModal from "./NestedOptionModal";
 
@@ -28,7 +28,7 @@ interface NestedOptionProps {
     path: number[],
     pairIndex: number,
     key: "key" | "value",
-    value: string
+    value: string | File | File[]
   ) => void;
   handleNestedOptionKeyValuePairRemove: (
     fieldIndex: number,

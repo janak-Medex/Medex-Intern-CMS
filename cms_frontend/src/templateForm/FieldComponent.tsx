@@ -58,7 +58,7 @@ export interface FieldComponentProps {
     path: number[],
     pairIndex: number,
     key: "key" | "value",
-    value: string
+    value: string | File | File[]
   ) => void;
   handleNestedOptionKeyValuePairRemove: (
     fieldIndex: number,
