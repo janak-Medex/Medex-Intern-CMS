@@ -1,4 +1,7 @@
-
+export type KeyValuePair = {
+    key: string;
+    value: string | File | File[];
+}
 export interface NestedOptionType {
     label: string;
     isPackage: boolean;
@@ -6,7 +9,6 @@ export interface NestedOptionType {
     keyValuePairs?: { [key: string]: string | File | File[] };
 }
 
-export type KeyValuePair = { key: string; value: string | File | File[]; };
 
 
 export interface FieldType {

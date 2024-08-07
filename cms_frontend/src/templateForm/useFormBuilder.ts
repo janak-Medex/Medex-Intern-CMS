@@ -115,13 +115,15 @@ const useFormBuilder = (
             fieldName: "",
             placeholder: "",
             options: [],
+            keyValuePairs: [],
         };
-        if (newField.type === "Nested select") {
-            newField.options = [{ label: "", isPackage: false, options: [] }];
-        }
-        setFields((prevFields) => [...prevFields, newField]);
-        setExpandedFields((prev) => ({ ...prev, [fields.length]: true }));
-    }, [fields.length]);
+        setFields((prevFields) => {
+            const newFields = [...prevFields, newField];
+            setExpandedFields((prev) => ({ ...prev, [newFields.length - 1]: true }));
+            return newFields;
+        });
+    }, []);
+
 
     const removeField = useCallback((index: number) => {
         setFields((prevFields) => prevFields.filter((_, i) => i !== index));
@@ -173,15 +175,35 @@ const useFormBuilder = (
 
     const handleNestedOptionAdd = useCallback(
         (fieldIndex: number, path: number[]) => {
-            updateNestedOptions(fieldIndex, path, (option) => {
-                const newOption: NestedOptionType = { label: "", isPackage: false, options: [] };
-                if (option.options) {
-                    return { ...option, options: [...option.options, newOption] };
+            setFields((prevFields) => {
+                const newFields = [...prevFields];
+                const field = newFields[fieldIndex];
+
+                if (field.type === "Nested select") {
+                    if (!field.options) {
+                        field.options = [];
+                    }
+
+                    let current: any = field.options;
+                    for (let i = 0; i < path.length; i++) {
+                        if (!current[path[i]]) {
+                            current[path[i]] = { options: [] };
+                        }
+                        current = current[path[i]].options;
+                    }
+
+                    current?.push({
+                        label: "",
+                        isPackage: false,
+                        options: [],
+                        keyValuePairs: {},
+                    });
                 }
-                return { ...option, options: [newOption] };
+
+                return newFields;
             });
         },
-        [updateNestedOptions]
+        []
     );
 
     const handleNestedOptionRemove = useCallback(
@@ -253,10 +275,13 @@ const useFormBuilder = (
         (fieldIndex: number, path: number[], pairIndex: number) => {
             updateNestedOptions(fieldIndex, path, (option) => {
                 const newKeyValuePairs = { ...option.keyValuePairs };
-                const keys = Object.keys(newKeyValuePairs);
-                if (keys[pairIndex]) {
-                    delete newKeyValuePairs[keys[pairIndex]];
+                const entries = Object.entries(newKeyValuePairs);
+
+                if (entries.length > pairIndex) {
+                    const [keyToRemove] = entries[pairIndex];
+                    delete newKeyValuePairs[keyToRemove];
                 }
+
                 return { ...option, keyValuePairs: newKeyValuePairs };
             });
         },
@@ -345,52 +370,6 @@ const useFormBuilder = (
         }
     }, [formBuilderRef]);
 
-    const handleKeyValuePairAdd = useCallback((fieldIndex: number) => {
-        setFields((prevFields) => {
-            const newFields = [...prevFields];
-            if (newFields[fieldIndex].type === 'keyValuePair') {
-                if (!newFields[fieldIndex].keyValuePairs) {
-                    newFields[fieldIndex].keyValuePairs = [];
-                }
-                newFields[fieldIndex].keyValuePairs?.push({ key: '', value: '' });
-            }
-            return newFields;
-        });
-    }, []);
-
-    const handleKeyValuePairChange = useCallback(
-        (fieldIndex: number,
-            pairIndex: number,
-            key: "key" | "value",
-            value: string | File | File[]) => {
-            setFields((prevFields) => {
-                const newFields = [...prevFields];
-                const field = newFields[fieldIndex];
-                if (field && field.keyValuePairs) {
-                    field.keyValuePairs[pairIndex] = {
-                        ...field.keyValuePairs[pairIndex],
-                        [key]: value,
-                    };
-                }
-                return newFields;
-            });
-        },
-        []
-    );
-
-    const handleKeyValuePairRemove = useCallback(
-        (fieldIndex: number, pairIndex: number) => {
-            setFields((prevFields) => {
-                const newFields = [...prevFields];
-                const field = newFields[fieldIndex];
-                if (field && field.keyValuePairs) {
-                    field.keyValuePairs.splice(pairIndex, 1);
-                }
-                return newFields;
-            });
-        },
-        []
-    );
     const handleOptionAdd = useCallback((fieldIndex: number) => {
         setFields((prevFields) => {
             const newFields = [...prevFields];
@@ -416,6 +395,51 @@ const useFormBuilder = (
             return newFields;
         });
     }, []);
+
+    const handleKeyValuePairAdd = useCallback((fieldIndex: number) => {
+        setFields((prevFields) => {
+            const newFields = [...prevFields];
+            if (newFields[fieldIndex].type === 'keyValuePair') {
+                if (!newFields[fieldIndex].keyValuePairs) {
+                    newFields[fieldIndex].keyValuePairs = [];
+                }
+                newFields[fieldIndex].keyValuePairs?.push({ key: '', value: '' });
+            }
+            return newFields;
+        });
+    }, []);
+
+    const handleKeyValuePairChange = useCallback(
+        (fieldIndex: number, pairIndex: number, key: "key" | "value", value: string | File | File[]) => {
+            setFields((prevFields) => {
+                const newFields = [...prevFields];
+                const field = newFields[fieldIndex];
+                if (field && field.keyValuePairs) {
+                    field.keyValuePairs[pairIndex] = {
+                        ...field.keyValuePairs[pairIndex],
+                        [key]: value,
+                    };
+                }
+                return newFields;
+            });
+        },
+        []
+    );
+
+    const handleKeyValuePairRemove = useCallback(
+        (fieldIndex: number, pairIndex: number) => {
+            setFields((prevFields) => {
+                const newFields = [...prevFields];
+                const field = newFields[fieldIndex];
+                if (field && field.keyValuePairs) {
+                    field.keyValuePairs = field.keyValuePairs.filter((_, index) => index !== pairIndex);
+                }
+                return newFields;
+            });
+        },
+        []
+    );
+
 
 
 

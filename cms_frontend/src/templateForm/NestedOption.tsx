@@ -1,178 +1,88 @@
-// NestedOption.tsx
-
-import React from "react";
-import { Input, Button, Switch, Space, Upload } from "antd";
-import {
-  PlusOutlined,
-  MinusCircleOutlined,
-  FolderOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import React, { useState } from "react";
+import { Button, Modal } from "antd";
 import { NestedOptionType } from "./types";
+import NestedOptionModal from "./NestedOptionModal";
 
 interface NestedOptionProps {
-  option: NestedOptionType;
-  path: number[];
-  onAdd: (path: number[]) => void;
-  onRemove: (path: number[]) => void;
-  onChange: (path: number[], value: string | File | File[]) => void;
-  onPackageToggle: (path: number[], isPackage: boolean) => void;
-
-  onKeyValuePairAdd: (path: number[]) => void;
-  onKeyValuePairChange: (
+  options: NestedOptionType[];
+  fieldIndex: number;
+  handleNestedOptionAdd: (fieldIndex: number, path: number[]) => void;
+  handleNestedOptionRemove: (fieldIndex: number, path: number[]) => void;
+  handleNestedOptionChange: (
+    fieldIndex: number,
+    path: number[],
+    value: string
+  ) => void;
+  handleNestedOptionPackageToggle: (
+    fieldIndex: number,
+    path: number[],
+    isPackage: boolean
+  ) => void;
+  handleNestedOptionKeyValuePairAdd: (
+    fieldIndex: number,
+    path: number[]
+  ) => void;
+  handleNestedOptionKeyValuePairChange: (
+    fieldIndex: number,
     path: number[],
     pairIndex: number,
     key: "key" | "value",
     value: string | File | File[]
   ) => void;
-  onKeyValuePairRemove: (path: number[], pairIndex: number) => void;
+  handleNestedOptionKeyValuePairRemove: (
+    fieldIndex: number,
+    path: number[],
+    pairIndex: number
+  ) => void;
 }
 
 const NestedOption: React.FC<NestedOptionProps> = ({
-  option,
-  path,
-  onAdd,
-  onRemove,
-  onChange,
-  onPackageToggle,
-  onKeyValuePairAdd,
-  onKeyValuePairChange,
-  onKeyValuePairRemove,
+  options,
+  fieldIndex,
+  handleNestedOptionAdd,
+  handleNestedOptionRemove,
+  handleNestedOptionChange,
+  handleNestedOptionPackageToggle,
+  handleNestedOptionKeyValuePairAdd,
+  handleNestedOptionKeyValuePairChange,
+  handleNestedOptionKeyValuePairRemove,
 }) => {
-  const getAcceptType = (key: string) => {
-    const lowerKey = key.toLowerCase();
-    if (lowerKey.includes("image")) return "image/*";
-    if (lowerKey.includes("video")) return "video/*";
-    return "*/*";
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const showModal = () => {
+    setIsModalVisible(true);
   };
 
-  const isUploadField = (key: string) => {
-    const lowerKey = key.toLowerCase();
-    return ["image", "images", "video", "videos", "file", "files"].some(
-      (type) => lowerKey.includes(type)
-    );
+  const handleModalClose = () => {
+    setIsModalVisible(false);
   };
 
   return (
-    <div className="mb-3 ml-6">
-      <div className="flex items-center space-x-2 p-2 rounded-lg bg-white shadow-sm">
-        <FolderOutlined className="text-blue-500" />
-        <Input
-          value={option.label}
-          onChange={(e) => onChange(path, e.target.value)}
-          placeholder={`Group ${path.join(".")}`}
-          className="flex-grow"
+    <div>
+      <Button onClick={showModal}>Manage Nested Options</Button>
+      <Modal
+        title="Manage Nested Options"
+        visible={isModalVisible}
+        onCancel={handleModalClose}
+        width={1200}
+        footer={null}
+      >
+        <NestedOptionModal
+          options={options}
+          fieldIndex={fieldIndex}
+          handleNestedOptionAdd={handleNestedOptionAdd}
+          handleNestedOptionRemove={handleNestedOptionRemove}
+          handleNestedOptionChange={handleNestedOptionChange}
+          handleNestedOptionPackageToggle={handleNestedOptionPackageToggle}
+          handleNestedOptionKeyValuePairAdd={handleNestedOptionKeyValuePairAdd}
+          handleNestedOptionKeyValuePairChange={
+            handleNestedOptionKeyValuePairChange
+          }
+          handleNestedOptionKeyValuePairRemove={
+            handleNestedOptionKeyValuePairRemove
+          }
         />
-        <Space>
-          <Switch
-            checked={option.isPackage}
-            onChange={(checked) => onPackageToggle(path, checked)}
-            checkedChildren="Package"
-            unCheckedChildren="Option"
-          />
-          <Button
-            type="text"
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={() => onAdd(path)}
-            className="text-green-500"
-          />
-          <Button
-            type="text"
-            size="small"
-            danger
-            icon={<MinusCircleOutlined />}
-            onClick={() => onRemove(path)}
-          />
-        </Space>
-      </div>
-      {option.isPackage ? (
-        <div className="mt-2 pl-4">
-          {Object.entries(option.keyValuePairs || {}).map(
-            ([key, value], index) => (
-              <div key={index} className="flex items-center space-x-2 mb-2">
-                <Input
-                  value={key}
-                  onChange={(e) =>
-                    onKeyValuePairChange(path, index, "key", e.target.value)
-                  }
-                  placeholder="Key"
-                  className="flex-1"
-                />
-                {isUploadField(key) ? (
-                  <Upload
-                    beforeUpload={(file) => {
-                      const newValue = key.toLowerCase().endsWith("s")
-                        ? [...(Array.isArray(value) ? value : []), file]
-                        : file;
-                      onKeyValuePairChange(path, index, "value", newValue);
-                      return false;
-                    }}
-                    accept={getAcceptType(key)}
-                    multiple={key.toLowerCase().endsWith("s")}
-                  >
-                    <Button icon={<UploadOutlined />}>
-                      {Array.isArray(value)
-                        ? `${value.length} file(s) selected`
-                        : value instanceof File
-                        ? value.name
-                        : "Upload"}
-                    </Button>
-                  </Upload>
-                ) : (
-                  <Input
-                    value={typeof value === "string" ? value : undefined}
-                    onChange={(e) =>
-                      onKeyValuePairChange(path, index, "value", e.target.value)
-                    }
-                    placeholder="Value"
-                    className="flex-1"
-                  />
-                )}
-                <Button
-                  type="text"
-                  danger
-                  icon={<MinusCircleOutlined />}
-                  onClick={() => onKeyValuePairRemove(path, index)}
-                />
-              </div>
-            )
-          )}
-          <Button
-            type="dashed"
-            onClick={() => onKeyValuePairAdd(path)}
-            className="w-full mt-2"
-            icon={<PlusOutlined />}
-          >
-            Add Key-Value Pair
-          </Button>
-        </div>
-      ) : (
-        <div className="mt-2 pl-4">
-          {option.options?.map((subOption, index) => (
-            <NestedOption
-              key={index}
-              option={subOption}
-              path={[...path, index]}
-              onAdd={onAdd}
-              onRemove={onRemove}
-              onChange={onChange}
-              onPackageToggle={onPackageToggle}
-              onKeyValuePairAdd={onKeyValuePairAdd}
-              onKeyValuePairChange={onKeyValuePairChange}
-              onKeyValuePairRemove={onKeyValuePairRemove}
-            />
-          ))}
-          <Button
-            type="dashed"
-            onClick={() => onAdd(path)}
-            className="w-full mt-2"
-            icon={<PlusOutlined />}
-          >
-            Add Option
-          </Button>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 };
