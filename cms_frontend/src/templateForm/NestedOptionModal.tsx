@@ -252,8 +252,9 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     data: NestedOptionType[],
     parentPath: number[] = [],
     level: number = 0
-  ) =>
-    data.map((item, index) => {
+  ): React.ReactNode => {
+    console.log("Rendering tree nodes with data:", data);
+    return data.map((item, index) => {
       const currentPath = [...parentPath, index];
       const key = currentPath.join("-");
       const color = getColor(level);
@@ -353,6 +354,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
         </TreeNode>
       );
     });
+  };
 
   const handleAddOption = (values: any) => {
     const { label, isPackage } = values;
