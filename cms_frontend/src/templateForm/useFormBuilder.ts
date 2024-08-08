@@ -227,8 +227,8 @@ const useFormBuilder = (
                 label: typeof value === 'string'
                     ? value
                     : Array.isArray(value)
-                        ? value.map(file => file.name).join(', ')
-                        : value.name
+                        ? value.map(file => file?.name || 'Unnamed file').join(', ')
+                        : value?.name || 'Unnamed file'
             }));
         },
         [updateNestedOptions]

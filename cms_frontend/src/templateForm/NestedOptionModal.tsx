@@ -13,6 +13,7 @@ import {
   message,
   Tooltip,
   Drawer,
+  TreeSelect,
 } from "antd";
 import {
   PlusOutlined,
@@ -24,6 +25,7 @@ import {
   CaretDownOutlined,
   CaretRightOutlined,
   SaveOutlined,
+  ImportOutlined,
 } from "@ant-design/icons";
 import { FaBox, FaFolder, FaFile } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
@@ -157,8 +159,61 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
 }) => {
   const [selectedPath, setSelectedPath] = useState<number[]>([]);
   const [addModalVisible, setAddModalVisible] = useState(false);
+  const [importModalVisible, setImportModalVisible] = useState(false);
   const [previewDrawerVisible, setPreviewDrawerVisible] = useState(false);
   const [form] = Form.useForm();
+  const [importForm] = Form.useForm();
+
+  const handleImportOption = (values: { fromPath: string; toPath: string }) => {
+    const fromPath = values.fromPath.split("-").map(Number);
+    const toPath = values.toPath.split("-").map(Number);
+
+    const importedItem = findItemByPath(options, fromPath);
+    if (importedItem) {
+      importNestedOption(importedItem, toPath);
+      setImportModalVisible(false);
+      importForm.resetFields();
+      message.success("Option imported successfully");
+    }
+  };
+
+  const importNestedOption = (item: NestedOptionType, path: number[]) => {
+    handleNestedOptionAdd(fieldIndex, path);
+    const newPath = [
+      ...path,
+      (findItemByPath(options, path)?.options?.length || 0) - 1,
+    ];
+    handleNestedOptionChange(fieldIndex, newPath, item.label);
+    handleNestedOptionPackageToggle(fieldIndex, newPath, item.isPackage);
+
+    // Import key-value pairs if any
+    if (item.keyValuePairs) {
+      Object.entries(item.keyValuePairs).forEach(([key, value], index) => {
+        handleNestedOptionKeyValuePairAdd(fieldIndex, newPath);
+        handleNestedOptionKeyValuePairChange(
+          fieldIndex,
+          newPath,
+          index,
+          "key",
+          key
+        );
+        handleNestedOptionKeyValuePairChange(
+          fieldIndex,
+          newPath,
+          index,
+          "value",
+          value
+        );
+      });
+    }
+
+    // Recursively import nested options
+    if (item.options) {
+      item.options.forEach((nestedItem) => {
+        importNestedOption(nestedItem, newPath);
+      });
+    }
+  };
 
   const getColor = (level: number): string => {
     const colors = ["#1890ff", "#52c41a", "#722ed1", "#fa8c16", "#eb2f96"];
@@ -223,6 +278,18 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
                           e.stopPropagation();
                           setSelectedPath(currentPath);
                           setAddModalVisible(true);
+                        }}
+                      />
+                    </Tooltip>
+                    <Tooltip title="Import">
+                      <StyledIconButton
+                        size="small"
+                        type="text"
+                        icon={<ImportOutlined style={{ color }} />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPath(currentPath);
+                          setImportModalVisible(true);
                         }}
                       />
                     </Tooltip>
@@ -409,6 +476,32 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     );
   };
 
+  const renderTreeSelectOptions = (
+    data: NestedOptionType[],
+    parentPath: number[] = []
+  ): any[] => {
+    return data.map((item, index) => {
+      const currentPath = [...parentPath, index];
+      const value = currentPath.join("-");
+      const title = (
+        <Space>
+          {item.isPackage ? <FaBox /> : <FaFolder />}
+          {item.label}
+        </Space>
+      );
+
+      if (item.options && item.options.length > 0) {
+        return {
+          title,
+          value,
+          children: renderTreeSelectOptions(item.options, currentPath),
+        };
+      }
+
+      return { title, value };
+    });
+  };
+
   return (
     <StyledContainer>
       <StyledSidebar>
@@ -430,6 +523,13 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
               icon={<EyeOutlined />}
             >
               Show Preview
+            </Button>
+            <Button
+              type="primary"
+              // onClick={}
+              icon={<SaveOutlined />}
+            >
+              Save Form
             </Button>
           </Space>
         </StyledHeader>
@@ -457,41 +557,92 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
           <Title level={3}>Edit Option</Title>
         </StyledHeader>
         <AnimatePresence mode="wait">{renderEditSection()}</AnimatePresence>
-      </StyledSidebar>
 
-      <Modal
-        title="Add New Option"
-        visible={addModalVisible}
-        onCancel={() => setAddModalVisible(false)}
-        footer={null}
-      >
-        <Form form={form} onFinish={handleAddOption} layout="vertical">
-          <Form.Item name="label" label="Label" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="isPackage"
-            label="Is Package"
-            valuePropName="checked"
+        <Modal
+          title="Add New Option"
+          visible={addModalVisible}
+          onCancel={() => setAddModalVisible(false)}
+          footer={null}
+        >
+          <Form form={form} onFinish={handleAddOption} layout="vertical">
+            <Form.Item name="label" label="Label" rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="isPackage"
+              label="Is Package"
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+                Add
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        <Modal
+          title="Import Option"
+          visible={importModalVisible}
+          onCancel={() => setImportModalVisible(false)}
+          footer={null}
+        >
+          <Form
+            form={importForm}
+            onFinish={handleImportOption}
+            layout="vertical"
           >
-            <Switch />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
-              Add
-            </Button>
-          </Form.Item>
-        </Form>
-      </Modal>
-      <Drawer
-        title="Nested Option Preview"
-        placement="right"
-        onClose={() => setPreviewDrawerVisible(false)}
-        visible={previewDrawerVisible}
-        width={600}
-      >
-        <NestedOptionPreview options={options} />
-      </Drawer>
+            <Form.Item
+              name="fromPath"
+              label="Import From"
+              rules={[{ required: true }]}
+            >
+              <TreeSelect
+                style={{ width: "100%" }}
+                dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
+                treeData={renderTreeSelectOptions(options)}
+                placeholder="Select source option"
+                treeDefaultExpandAll
+              />
+            </Form.Item>
+            <Form.Item
+              name="toPath"
+              label="Import To"
+              initialValue={selectedPath.join("-")}
+              rules={[{ required: true }]}
+            >
+              <TreeSelect
+                style={{ width: "100%" }}
+                dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
+                treeData={renderTreeSelectOptions(options)}
+                placeholder="Select destination option"
+                treeDefaultExpandAll
+              />
+            </Form.Item>
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<ImportOutlined />}
+              >
+                Import
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        <Drawer
+          title="Nested Option Preview"
+          placement="right"
+          onClose={() => setPreviewDrawerVisible(false)}
+          visible={previewDrawerVisible}
+          width={600}
+        >
+          <NestedOptionPreview options={options} />
+        </Drawer>
+      </StyledSidebar>
     </StyledContainer>
   );
 };
