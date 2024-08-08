@@ -257,14 +257,16 @@ const useFormBuilder = (
         (fieldIndex: number, path: number[], pairIndex: number, key: "key" | "value", value: string | File | File[]) => {
             updateNestedOptions(fieldIndex, path, (option) => {
                 const keyValuePairs = { ...option.keyValuePairs };
-                const entries = Object.entries(keyValuePairs);
+                const keys = Object.keys(keyValuePairs);
+
                 if (key === "key") {
-                    const [, oldValue] = entries[pairIndex];
-                    delete keyValuePairs[entries[pairIndex][0]];
+                    const oldValue = keyValuePairs[keys[pairIndex]];
+                    delete keyValuePairs[keys[pairIndex]];
                     keyValuePairs[value as string] = oldValue;
                 } else {
-                    keyValuePairs[entries[pairIndex][0]] = value;
+                    keyValuePairs[keys[pairIndex]] = value;
                 }
+
                 return { ...option, keyValuePairs };
             });
         },

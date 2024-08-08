@@ -14,6 +14,7 @@ import {
   Tooltip,
   Drawer,
   TreeSelect,
+  Popconfirm,
 } from "antd";
 import {
   PlusOutlined,
@@ -164,13 +165,11 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   const [form] = Form.useForm();
   const [importForm] = Form.useForm();
 
-  const handleImportOption = (values: { fromPath: string; toPath: string }) => {
+  const handleImportOption = (values: { fromPath: string }) => {
     const fromPath = values.fromPath.split("-").map(Number);
-    const toPath = values.toPath.split("-").map(Number);
-
     const importedItem = findItemByPath(options, fromPath);
     if (importedItem) {
-      importNestedOption(importedItem, toPath);
+      importNestedOption(importedItem, selectedPath);
       setImportModalVisible(false);
       importForm.resetFields();
       message.success("Option imported successfully");
@@ -187,7 +186,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     handleNestedOptionPackageToggle(fieldIndex, newPath, item.isPackage);
 
     // Import key-value pairs if any
-    if (item.keyValuePairs) {
+    if (item.isPackage && item.keyValuePairs) {
       Object.entries(item.keyValuePairs).forEach(([key, value], index) => {
         handleNestedOptionKeyValuePairAdd(fieldIndex, newPath);
         handleNestedOptionKeyValuePairChange(
@@ -209,8 +208,37 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
 
     // Recursively import nested options
     if (item.options) {
-      item.options.forEach((nestedItem) => {
-        importNestedOption(nestedItem, newPath);
+      item.options.forEach((nestedItem, index) => {
+        const nestedNewPath = [...newPath, index];
+        if (nestedItem.isPackage) {
+          handleNestedOptionAdd(fieldIndex, nestedNewPath);
+          handleNestedOptionChange(fieldIndex, nestedNewPath, nestedItem.label);
+          handleNestedOptionPackageToggle(fieldIndex, nestedNewPath, true);
+
+          if (nestedItem.keyValuePairs) {
+            Object.entries(nestedItem.keyValuePairs).forEach(
+              ([key, value], pairIndex) => {
+                handleNestedOptionKeyValuePairAdd(fieldIndex, nestedNewPath);
+                handleNestedOptionKeyValuePairChange(
+                  fieldIndex,
+                  nestedNewPath,
+                  pairIndex,
+                  "key",
+                  key
+                );
+                handleNestedOptionKeyValuePairChange(
+                  fieldIndex,
+                  nestedNewPath,
+                  pairIndex,
+                  "value",
+                  value
+                );
+              }
+            );
+          }
+        } else {
+          importNestedOption(nestedItem, nestedNewPath);
+        }
       });
     }
   };
@@ -293,18 +321,25 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
                         }}
                       />
                     </Tooltip>
-                    <Tooltip title="Remove">
-                      <StyledIconButton
-                        size="small"
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleNestedOptionRemove(fieldIndex, currentPath);
-                        }}
-                      />
-                    </Tooltip>
+                    <Popconfirm
+                      title="Are you sure you want to delete this option?"
+                      onConfirm={(e) => {
+                        e?.stopPropagation();
+                        handleNestedOptionRemove(fieldIndex, currentPath);
+                      }}
+                      okText="Yes"
+                      cancelText="No"
+                    >
+                      <Tooltip title="Remove">
+                        <StyledIconButton
+                          size="small"
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </Tooltip>
+                    </Popconfirm>
                   </Space>
                 </Space>
               </motion.div>
@@ -426,7 +461,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     if (path.length === 0) return null;
     let current = data[path[0]];
     for (let i = 1; i < path.length; i++) {
-      if (!current.options) return null;
+      if (!current?.options) return null;
       current = current.options[path[i]];
     }
     return current;
@@ -506,7 +541,6 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     <StyledContainer>
       <StyledSidebar>
         <StyledHeader>
-          <Title level={3}>Nested Options</Title>
           <Space>
             <Button
               type="primary"
@@ -526,7 +560,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
             </Button>
             <Button
               type="primary"
-              // onClick={}
+              // onClick={} // Implement save functionality
               icon={<SaveOutlined />}
             >
               Save Form
@@ -604,20 +638,6 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
                 dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
                 treeData={renderTreeSelectOptions(options)}
                 placeholder="Select source option"
-                treeDefaultExpandAll
-              />
-            </Form.Item>
-            <Form.Item
-              name="toPath"
-              label="Import To"
-              initialValue={selectedPath.join("-")}
-              rules={[{ required: true }]}
-            >
-              <TreeSelect
-                style={{ width: "100%" }}
-                dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
-                treeData={renderTreeSelectOptions(options)}
-                placeholder="Select destination option"
                 treeDefaultExpandAll
               />
             </Form.Item>
