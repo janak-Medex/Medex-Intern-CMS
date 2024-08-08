@@ -458,7 +458,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     data: NestedOptionType[],
     path: number[]
   ): NestedOptionType | null => {
-    if (path.length === 0) return null;
+    if (path.length === 0 || data.length === 0) return null;
     let current = data[path[0]];
     for (let i = 1; i < path.length; i++) {
       if (!current?.options) return null;

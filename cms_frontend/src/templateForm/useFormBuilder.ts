@@ -177,29 +177,29 @@ const useFormBuilder = (
         (fieldIndex: number, path: number[]) => {
             setFields((prevFields) => {
                 const newFields = [...prevFields];
-                const field = newFields[fieldIndex];
-
-                if (field.type === "Nested select") {
-                    if (!field.options) {
-                        field.options = [];
-                    }
-
-                    let current: any = field.options;
-                    for (let i = 0; i < path.length; i++) {
-                        if (!current[path[i]]) {
-                            current[path[i]] = { options: [] };
+                if (newFields[fieldIndex] && path.length > 0) {
+                    const field = newFields[fieldIndex];
+                    if (field.type === "Nested select") {
+                        if (!field.options) {
+                            field.options = [];
                         }
-                        current = current[path[i]].options;
+                        let currentOptions: NestedOptionType[] = field.options?.filter(opt => typeof opt === 'object') as NestedOptionType[]; for (let i = 0; i < path.length; i++) {
+                            const pathIndex = path[i];
+                            if (pathIndex < 0 || pathIndex > currentOptions?.length) {
+                                // Handle the case where the path index is out of bounds
+                                return newFields;
+                            } else {
+                                currentOptions = currentOptions?.[pathIndex]?.options || [];
+                            }
+                        }
+                        currentOptions?.push({
+                            label: "",
+                            isPackage: false,
+                            options: [],
+                            keyValuePairs: {},
+                        });
                     }
-
-                    current?.push({
-                        label: "",
-                        isPackage: false,
-                        options: [],
-                        keyValuePairs: {},
-                    });
                 }
-
                 return newFields;
             });
         },
