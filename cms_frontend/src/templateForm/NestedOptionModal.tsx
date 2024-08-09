@@ -265,9 +265,10 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
         // Recursively import nested options
         if (item.options && item.options.length > 0) {
           item.options.forEach((nestedItem, _index) => {
-            importOptionsRecursively(parentNode.options, nestedItem, [
+            // Ensure parentNode.options is always treated as an array
+            importOptionsRecursively(parentNode.options ?? [], nestedItem, [
               ...path,
-              parentNode.options?.indexOf(nestedItem),
+              parentNode.options?.indexOf(nestedItem) ?? -1,
             ]);
           });
         }
