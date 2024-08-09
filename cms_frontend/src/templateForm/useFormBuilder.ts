@@ -156,7 +156,7 @@ const useFormBuilder = (
         },
         []
     );
-    const updateNestedOptions = useCallback((
+    const updateNestedOptions = (
         fieldIndex: number,
         path: number[],
         updateFn: (option: NestedOptionType) => NestedOptionType
@@ -164,42 +164,52 @@ const useFormBuilder = (
         setFields((prevFields) => {
             const newFields = [...prevFields];
             let current: any = newFields[fieldIndex].options || [];
-            for (let i = 0; i < path.length - 1; i++) {
-                current = current[path[i]]?.options || [];
-            }
+            const pathToParent = path.slice(0, -1);
             const lastIndex = path[path.length - 1];
-            current[lastIndex] = updateFn(current[lastIndex] || {});
+
+            for (let i = 0; i < pathToParent.length; i++) {
+                if (!current[pathToParent[i]]) {
+                    current[pathToParent[i]] = { options: [] };
+                }
+                current = current[pathToParent[i]].options;
+            }
+
+            if (!current[lastIndex]) {
+                current[lastIndex] = { options: [] };
+            }
+            current[lastIndex] = updateFn(current[lastIndex]);
+
             return newFields;
         });
-    }, []);
+    };
 
     const handleNestedOptionAdd = useCallback(
         (fieldIndex: number, path: number[]) => {
             setFields((prevFields) => {
                 const newFields = [...prevFields];
-                const field = newFields[fieldIndex];
-
-                if (field.type === "Nested select") {
-                    if (!field.options) {
-                        field.options = [];
-                    }
-
-                    let current: any = field.options;
-                    for (let i = 0; i < path.length; i++) {
-                        if (!current[path[i]]) {
-                            current[path[i]] = { options: [] };
+                if (newFields[fieldIndex] && path.length > 0) {
+                    const field = newFields[fieldIndex];
+                    if (field.type === "Nested select") {
+                        if (!field.options) {
+                            field.options = [];
                         }
-                        current = current[path[i]].options;
+                        let currentOptions: NestedOptionType[] = field.options?.filter(opt => typeof opt === 'object') as NestedOptionType[]; for (let i = 0; i < path.length; i++) {
+                            const pathIndex = path[i];
+                            if (pathIndex < 0 || pathIndex > currentOptions?.length) {
+                                // Handle the case where the path index is out of bounds
+                                return newFields;
+                            } else {
+                                currentOptions = currentOptions?.[pathIndex]?.options || [];
+                            }
+                        }
+                        currentOptions?.push({
+                            label: "",
+                            isPackage: false,
+                            options: [],
+                            keyValuePairs: {},
+                        });
                     }
-
-                    current?.push({
-                        label: "",
-                        isPackage: false,
-                        options: [],
-                        keyValuePairs: {},
-                    });
                 }
-
                 return newFields;
             });
         },
@@ -227,8 +237,8 @@ const useFormBuilder = (
                 label: typeof value === 'string'
                     ? value
                     : Array.isArray(value)
-                        ? value.map(file => file.name).join(', ')
-                        : value.name
+                        ? value.map(file => file?.name || 'Unnamed file').join(', ')
+                        : value?.name || 'Unnamed file'
             }));
         },
         [updateNestedOptions]
@@ -257,14 +267,16 @@ const useFormBuilder = (
         (fieldIndex: number, path: number[], pairIndex: number, key: "key" | "value", value: string | File | File[]) => {
             updateNestedOptions(fieldIndex, path, (option) => {
                 const keyValuePairs = { ...option.keyValuePairs };
-                const entries = Object.entries(keyValuePairs);
+                const keys = Object.keys(keyValuePairs);
+
                 if (key === "key") {
-                    const [, oldValue] = entries[pairIndex];
-                    delete keyValuePairs[entries[pairIndex][0]];
+                    const oldValue = keyValuePairs[keys[pairIndex]];
+                    delete keyValuePairs[keys[pairIndex]];
                     keyValuePairs[value as string] = oldValue;
                 } else {
-                    keyValuePairs[entries[pairIndex][0]] = value;
+                    keyValuePairs[keys[pairIndex]] = value;
                 }
+
                 return { ...option, keyValuePairs };
             });
         },

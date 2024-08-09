@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Tree,
   Input,
@@ -13,6 +13,9 @@ import {
   message,
   Tooltip,
   Drawer,
+  TreeSelect,
+  Popconfirm,
+  TreeSelectProps,
 } from "antd";
 import {
   PlusOutlined,
@@ -24,6 +27,7 @@ import {
   CaretDownOutlined,
   CaretRightOutlined,
   SaveOutlined,
+  ImportOutlined,
 } from "@ant-design/icons";
 import { FaBox, FaFolder, FaFile } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
@@ -33,6 +37,7 @@ import NestedOptionPreview from "./NestedOptionPreview";
 
 const { Title, Text } = Typography;
 const { TreeNode } = Tree;
+
 const StyledContainer = styled.div`
   display: flex;
   gap: 20px;
@@ -111,6 +116,15 @@ const ScrollableContent = styled.div`
   height: 100%;
 `;
 
+const StyledTreeSelect = styled(TreeSelect)`
+  .ant-select-tree-node-content-wrapper.ant-select-tree-node-content-wrapper-normal {
+    &.ant-select-tree-node-disabled {
+      color: #d9d9d9;
+      cursor: not-allowed;
+    }
+  }
+`;
+
 interface NestedOptionModalProps {
   options: NestedOptionType[];
   fieldIndex: number;
@@ -144,6 +158,14 @@ interface NestedOptionModalProps {
   ) => void;
 }
 
+interface TreeSelectOptionType {
+  title: React.ReactNode;
+  value: string;
+  disabled: boolean;
+  selectable: boolean;
+  children?: TreeSelectOptionType[];
+}
+
 const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   options,
   fieldIndex,
@@ -157,212 +179,355 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
 }) => {
   const [selectedPath, setSelectedPath] = useState<number[]>([]);
   const [addModalVisible, setAddModalVisible] = useState(false);
+  const [importModalVisible, setImportModalVisible] = useState(false);
   const [previewDrawerVisible, setPreviewDrawerVisible] = useState(false);
   const [form] = Form.useForm();
+  const [importForm] = Form.useForm();
+  const [localOptions, setLocalOptions] = useState<NestedOptionType[]>(options);
 
-  const getColor = (level: number): string => {
-    const colors = ["#1890ff", "#52c41a", "#722ed1", "#fa8c16", "#eb2f96"];
-    return colors[level % colors.length];
-  };
+  useEffect(() => {
+    setLocalOptions(options);
+  }, [options]);
 
-  const renderTreeNodes = (
-    data: NestedOptionType[],
-    parentPath: number[] = [],
-    level: number = 0
-  ) =>
-    data.map((item, index) => {
-      const currentPath = [...parentPath, index];
-      const key = currentPath.join("-");
-      const color = getColor(level);
+  const findItemByPath = useCallback(
+    (data: NestedOptionType[], path: number[]): NestedOptionType | null => {
+      if (path.length === 0 || data.length === 0) return null;
+      let current = data[path[0]];
+      for (let i = 1; i < path.length; i++) {
+        if (!current?.options) return null;
+        current = current.options[path[i]];
+      }
+      return current;
+    },
+    []
+  );
 
-      const icon = item.isPackage ? (
-        <FaBox style={{ color }} />
-      ) : item.options && item.options.length > 0 ? (
-        <FaFolder style={{ color }} />
-      ) : (
-        <FaFile style={{ color }} />
-      );
+  const updateLocalOptions = useCallback(
+    (updatedItem: NestedOptionType, path: number[]) => {
+      setLocalOptions((prevOptions) => {
+        const newOptions = [...prevOptions];
+        let current = newOptions;
+        for (let i = 0; i < path.length - 1; i++) {
+          if (!current[path[i]].options) {
+            current[path[i]].options = [];
+          }
+          current = current[path[i]].options!;
+        }
+        current[path[path.length - 1]] = updatedItem;
+        return newOptions;
+      });
+    },
+    []
+  );
+
+  const handleLocalKeyValuePairChange = useCallback(
+    (
+      path: number[],
+      pairIndex: number,
+      key: "key" | "value",
+      value: string | File | File[]
+    ) => {
+      setLocalOptions((prevOptions) => {
+        const newOptions = JSON.parse(JSON.stringify(prevOptions));
+        const item = findItemByPath(newOptions, path);
+        if (item && item.isPackage) {
+          if (!item.keyValuePairs) {
+            item.keyValuePairs = {};
+          }
+          const pairs = Object.entries(item.keyValuePairs);
+          if (key === "key") {
+            const [, oldValue] = pairs[pairIndex];
+            pairs[pairIndex] = [value as string, oldValue];
+          } else {
+            const [oldKey] = pairs[pairIndex];
+            pairs[pairIndex] = [oldKey, value];
+          }
+          item.keyValuePairs = Object.fromEntries(pairs);
+        }
+        return newOptions;
+      });
+    },
+    [findItemByPath]
+  );
+
+  const handleLocalKeyValuePairAdd = useCallback(
+    (path: number[]) => {
+      const item = findItemByPath(localOptions, path);
+      if (item && item.isPackage) {
+        const updatedItem = { ...item };
+        if (!updatedItem.keyValuePairs) {
+          updatedItem.keyValuePairs = {};
+        }
+        const newKey = `key${
+          Object.keys(updatedItem.keyValuePairs).length + 1
+        }`;
+        updatedItem.keyValuePairs[newKey] = "";
+        updateLocalOptions(updatedItem, path);
+        handleNestedOptionKeyValuePairAdd(fieldIndex, path);
+      }
+    },
+    [
+      localOptions,
+      findItemByPath,
+      updateLocalOptions,
+      handleNestedOptionKeyValuePairAdd,
+      fieldIndex,
+    ]
+  );
+
+  const handleLocalKeyValuePairRemove = useCallback(
+    (path: number[], pairIndex: number) => {
+      const item = findItemByPath(localOptions, path);
+      if (item && item.isPackage) {
+        const updatedItem = { ...item };
+        if (updatedItem.keyValuePairs) {
+          const pairs = Object.entries(updatedItem.keyValuePairs);
+          pairs.splice(pairIndex, 1);
+          updatedItem.keyValuePairs = Object.fromEntries(pairs);
+          updateLocalOptions(updatedItem, path);
+          handleNestedOptionKeyValuePairRemove(fieldIndex, path, pairIndex);
+        }
+      }
+    },
+    [
+      localOptions,
+      findItemByPath,
+      updateLocalOptions,
+      handleNestedOptionKeyValuePairRemove,
+      fieldIndex,
+    ]
+  );
+
+  const renderKeyValuePairs = useCallback(
+    (path: number[]) => {
+      const item = findItemByPath(localOptions, path);
+      if (!item || !item.isPackage) return null;
+
+      const keyValuePairs = item.keyValuePairs || {};
 
       return (
-        <TreeNode
-          key={key}
-          title={
-            <StyledCard
-              hoverable
-              size="small"
-              style={{ borderLeft: `4px solid ${color}` }}
-            >
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Space align="center">
-                  {icon}
-                  <Text strong style={{ color }}>
-                    {item.label}
-                  </Text>
-                  <Space size="small">
-                    <Tooltip title="Edit">
-                      <StyledIconButton
-                        size="small"
-                        type="text"
-                        icon={<EditOutlined style={{ color }} />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedPath(currentPath);
-                        }}
-                      />
-                    </Tooltip>
-                    <Tooltip title="Add child">
-                      <StyledIconButton
-                        size="small"
-                        type="text"
-                        icon={<PlusOutlined style={{ color }} />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedPath(currentPath);
-                          setAddModalVisible(true);
-                        }}
-                      />
-                    </Tooltip>
-                    <Tooltip title="Remove">
-                      <StyledIconButton
-                        size="small"
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleNestedOptionRemove(fieldIndex, currentPath);
-                        }}
-                      />
-                    </Tooltip>
-                  </Space>
-                </Space>
-              </motion.div>
-            </StyledCard>
-          }
-          icon={null}
-        >
-          {item.options &&
-            item.options.length > 0 &&
-            renderTreeNodes(item.options, currentPath, level + 1)}
-        </TreeNode>
+        <Card title="Key-Value Pairs" size="small" className="mt-4">
+          {Object.entries(keyValuePairs).map(([key, value], pairIndex) => (
+            <Space key={pairIndex} className="mb-2">
+              <Input
+                value={key}
+                onChange={(e) =>
+                  handleLocalKeyValuePairChange(
+                    path,
+                    pairIndex,
+                    "key",
+                    e.target.value
+                  )
+                }
+                onBlur={() =>
+                  handleNestedOptionKeyValuePairChange(
+                    fieldIndex,
+                    path,
+                    pairIndex,
+                    "key",
+                    key
+                  )
+                }
+                placeholder="Key"
+                style={{ width: 150 }}
+              />
+              {["image", "video", "file"].includes(key.toLowerCase()) ? (
+                <Upload
+                  beforeUpload={(file) => {
+                    handleLocalKeyValuePairChange(
+                      path,
+                      pairIndex,
+                      "value",
+                      file
+                    );
+                    handleNestedOptionKeyValuePairChange(
+                      fieldIndex,
+                      path,
+                      pairIndex,
+                      "value",
+                      file
+                    );
+                    return false;
+                  }}
+                  accept={getAcceptType(key)}
+                >
+                  <Button icon={<UploadOutlined />}>
+                    {value instanceof File ? value.name : "Upload"}
+                  </Button>
+                </Upload>
+              ) : (
+                <Input
+                  value={value as string}
+                  onChange={(e) =>
+                    handleLocalKeyValuePairChange(
+                      path,
+                      pairIndex,
+                      "value",
+                      e.target.value
+                    )
+                  }
+                  onBlur={() =>
+                    handleNestedOptionKeyValuePairChange(
+                      fieldIndex,
+                      path,
+                      pairIndex,
+                      "value",
+                      value
+                    )
+                  }
+                  placeholder="Value"
+                  style={{ width: 150 }}
+                />
+              )}
+              <StyledIconButton
+                type="text"
+                danger
+                icon={<MinusCircleOutlined />}
+                onClick={() => handleLocalKeyValuePairRemove(path, pairIndex)}
+              />
+            </Space>
+          ))}
+          <Button
+            type="dashed"
+            onClick={() => handleLocalKeyValuePairAdd(path)}
+            icon={<PlusOutlined />}
+            className="mt-2"
+          >
+            Add Key-Value Pair
+          </Button>
+        </Card>
       );
-    });
+    },
+    [
+      localOptions,
+      findItemByPath,
+      handleLocalKeyValuePairChange,
+      handleLocalKeyValuePairRemove,
+      handleLocalKeyValuePairAdd,
+      fieldIndex,
+      handleNestedOptionKeyValuePairChange,
+    ]
+  );
 
-  const handleAddOption = (values: any) => {
-    const { label, isPackage } = values;
-    handleNestedOptionAdd(fieldIndex, selectedPath);
-    const newPath = [
-      ...selectedPath,
-      (findItemByPath(options, selectedPath)?.options?.length || 0) - 1,
-    ];
-    handleNestedOptionChange(fieldIndex, newPath, label);
-    handleNestedOptionPackageToggle(fieldIndex, newPath, isPackage);
-    setAddModalVisible(false);
-    form.resetFields();
-    message.success("Option added successfully");
+  const handleImportOption = (values: { fromPath: string }) => {
+    const fromPath = values.fromPath.split("-").map(Number);
+    const importedItem = findItemByPath(options, fromPath);
+    if (importedItem && importedItem.isPackage) {
+      importNestedOption(importedItem, selectedPath);
+      setImportModalVisible(false);
+      importForm.resetFields();
+      message.success("Package imported successfully");
+    } else {
+      message.error("Only packages can be imported");
+    }
   };
 
-  const renderKeyValuePairs = (item: NestedOptionType, path: number[]) => (
-    <Card title="Key-Value Pairs" size="small" className="mt-4">
-      {Object.entries(item.keyValuePairs || {}).map(
-        ([key, value], pairIndex) => (
-          <Space key={pairIndex} className="mb-2">
-            <Input
-              value={key}
-              onChange={(e) =>
+  const importNestedOption = (item: NestedOptionType, path: number[]) => {
+    // Function to find a parent node by path
+    const findParentNode = (
+      nodes: NestedOptionType[],
+      path: number[]
+    ): NestedOptionType | undefined => {
+      let currentNodes = nodes;
+      for (let i = 0; i < path.length - 1; i++) {
+        const index = path[i];
+        if (currentNodes[index]) {
+          currentNodes = currentNodes[index].options || [];
+        } else {
+          return undefined;
+        }
+      }
+      return currentNodes[path[path.length - 1]];
+    };
+
+    // Function to recursively import options
+    const importOptionsRecursively = (
+      nodes: NestedOptionType[],
+      item: NestedOptionType,
+      path: number[]
+    ) => {
+      const parentNode = findParentNode(nodes, path);
+      if (parentNode) {
+        // Add the new option
+        parentNode.options = parentNode.options || [];
+        parentNode.options.push(item);
+
+        // Handle key-value pairs if the option is a package
+        if (item.isPackage && item.keyValuePairs) {
+          console.log(
+            "Adding Key-Value Pairs for package:",
+            item.label,
+            "at path:",
+            path
+          );
+          Object.entries(item.keyValuePairs).forEach(
+            ([key, value], pairIndex) => {
+              const isValidKey = typeof key === "string" && key.trim() !== "";
+              const isValidValue =
+                value !== null &&
+                value !== undefined &&
+                (typeof value === "string" ? value.trim() !== "" : true);
+
+              if (isValidKey && isValidValue) {
+                handleNestedOptionKeyValuePairAdd(fieldIndex, path);
                 handleNestedOptionKeyValuePairChange(
                   fieldIndex,
                   path,
                   pairIndex,
                   "key",
-                  e.target.value
-                )
-              }
-              placeholder="Key"
-              style={{ width: 150 }}
-            />
-            {["image", "video", "file"].includes(key.toLowerCase()) ? (
-              <Upload
-                beforeUpload={(file) => {
-                  handleNestedOptionKeyValuePairChange(
-                    fieldIndex,
-                    path,
-                    pairIndex,
-                    "value",
-                    file
-                  );
-                  return false;
-                }}
-                accept={getAcceptType(key)}
-              >
-                <Button icon={<UploadOutlined />}>
-                  {value instanceof File ? value.name : "Upload"}
-                </Button>
-              </Upload>
-            ) : (
-              <Input
-                value={value as string}
-                onChange={(e) =>
-                  handleNestedOptionKeyValuePairChange(
-                    fieldIndex,
-                    path,
-                    pairIndex,
-                    "value",
-                    e.target.value
-                  )
-                }
-                placeholder="Value"
-                style={{ width: 150 }}
-              />
-            )}
-            <StyledIconButton
-              type="text"
-              danger
-              icon={<MinusCircleOutlined />}
-              onClick={() =>
-                handleNestedOptionKeyValuePairRemove(
+                  key
+                );
+                handleNestedOptionKeyValuePairChange(
                   fieldIndex,
                   path,
-                  pairIndex
-                )
+                  pairIndex,
+                  "value",
+                  value
+                );
+                console.log(
+                  "Adding Key-Value Pair:",
+                  key,
+                  value,
+                  "at path:",
+                  path
+                );
               }
-            />
-          </Space>
-        )
-      )}
-      <Button
-        type="dashed"
-        onClick={() => handleNestedOptionKeyValuePairAdd(fieldIndex, path)}
-        icon={<PlusOutlined />}
-        className="mt-2"
-      >
-        Add Key-Value Pair
-      </Button>
-    </Card>
-  );
+            }
+          );
+        }
 
-  const getAcceptType = (key: string): string => {
-    const lowerKey = key.toLowerCase();
-    if (lowerKey.includes("image")) return "image/*";
-    if (lowerKey.includes("video")) return "video/*";
-    return "*/*";
-  };
+        // Recursively import nested options
+        if (item.options && item.options.length > 0) {
+          item.options.forEach((nestedItem, index) => {
+            if (nestedItem.label.trim() !== "" || nestedItem.isPackage) {
+              importOptionsRecursively(parentNode.options ?? [], nestedItem, [
+                ...path,
+                index,
+              ]);
+            }
+          });
+        }
 
-  const findItemByPath = (
-    data: NestedOptionType[],
-    path: number[]
-  ): NestedOptionType | null => {
-    if (path.length === 0) return null;
-    let current = data[path[0]];
-    for (let i = 1; i < path.length; i++) {
-      if (!current.options) return null;
-      current = current.options[path[i]];
-    }
-    return current;
+        // Remove empty options
+        parentNode.options = parentNode.options.filter(
+          (option) => option.label.trim() !== "" || option.isPackage
+        );
+      }
+    };
+
+    // Start import process
+    console.log("Importing option:", item.label, "at path:", path);
+    console.log("Current item data:", item);
+
+    handleNestedOptionAdd(fieldIndex, path);
+
+    importOptionsRecursively(options, item, path);
+
+    // Log the final structure after import
+    console.log(
+      "Final structure after import:",
+      JSON.stringify(options, null, 2)
+    );
   };
 
   const renderEditSection = () => {
@@ -402,18 +567,211 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
                 }
               />
             </Form.Item>
-            {item.isPackage && renderKeyValuePairs(item, selectedPath)}
+            {item.isPackage && renderKeyValuePairs(selectedPath)}
           </Form>
         </motion.div>
       </ScrollableContent>
     );
   };
 
+  const handleAddOption = (values: any) => {
+    const { label, isPackage } = values;
+    if (selectedPath.length === 0) {
+      // Adding a root option
+      const newIndex = options.length;
+      handleNestedOptionAdd(fieldIndex, []);
+      handleNestedOptionChange(fieldIndex, [newIndex], label);
+      handleNestedOptionPackageToggle(fieldIndex, [newIndex], isPackage);
+    } else {
+      // Adding a child option
+      handleNestedOptionAdd(fieldIndex, selectedPath);
+      const newPath = [
+        ...selectedPath,
+        (findItemByPath(options, selectedPath)?.options?.length || 0) - 1,
+      ];
+      handleNestedOptionChange(fieldIndex, newPath, label);
+      handleNestedOptionPackageToggle(fieldIndex, newPath, isPackage);
+    }
+    setAddModalVisible(false);
+    form.resetFields();
+    message.success("Option added successfully");
+  };
+
+  const getColor = (level: number): string => {
+    const colors = ["#1890ff", "#52c41a", "#722ed1", "#fa8c16", "#eb2f96"];
+    return colors[level % colors.length];
+  };
+
+  const renderTreeNodes = (
+    data: NestedOptionType[],
+    parentPath: number[] = [],
+    level: number = 0
+  ): React.ReactNode => {
+    return data.map((item, index) => {
+      const currentPath = [...parentPath, index];
+      const key = currentPath.join("-");
+      const color = getColor(level);
+
+      const icon = item.isPackage ? (
+        <FaBox style={{ color }} />
+      ) : item.options && item.options.length > 0 ? (
+        <FaFolder style={{ color }} />
+      ) : (
+        <FaFile style={{ color }} />
+      );
+
+      return (
+        <TreeNode
+          key={key}
+          title={
+            <StyledCard
+              hoverable={item.isPackage}
+              size="small"
+              style={{ borderLeft: `4px solid ${color}` }}
+              onClick={(e) => {
+                if (item.isPackage) {
+                  e.stopPropagation();
+                  setSelectedPath(currentPath);
+                }
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Space align="center">
+                  {icon}
+                  <Input
+                    value={item.label}
+                    style={{ color, border: "none", background: "transparent" }}
+                  />
+                  <Space size="small">
+                    <Tooltip title="Edit">
+                      <StyledIconButton
+                        size="small"
+                        type="text"
+                        icon={<EditOutlined style={{ color }} />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPath(currentPath);
+                        }}
+                      />
+                    </Tooltip>
+                    <Tooltip title="Add child">
+                      <StyledIconButton
+                        size="small"
+                        type="text"
+                        icon={<PlusOutlined style={{ color }} />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPath(currentPath);
+                          setAddModalVisible(true);
+                        }}
+                      />
+                    </Tooltip>
+                    <Tooltip title="Import">
+                      <StyledIconButton
+                        size="small"
+                        type="text"
+                        icon={<ImportOutlined style={{ color }} />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPath(currentPath);
+                          setImportModalVisible(true);
+                        }}
+                      />
+                    </Tooltip>
+                    <Popconfirm
+                      title="Are you sure you want to delete this option?"
+                      onConfirm={(e) => {
+                        e?.stopPropagation();
+                        handleNestedOptionRemove(fieldIndex, currentPath);
+                      }}
+                      okText="Yes"
+                      cancelText="No"
+                    >
+                      <Tooltip title="Remove">
+                        <StyledIconButton
+                          size="small"
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </Tooltip>
+                    </Popconfirm>
+                  </Space>
+                </Space>
+              </motion.div>
+            </StyledCard>
+          }
+          icon={null}
+        >
+          {item.options &&
+            item.options.length > 0 &&
+            renderTreeNodes(item.options, currentPath, level + 1)}
+        </TreeNode>
+      );
+    });
+  };
+
+  const getAcceptType = (key: string): string => {
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.includes("image")) return "image/*";
+    if (lowerKey.includes("video")) return "video/*";
+    return "*/*";
+  };
+
+  const renderTreeSelectOptions = (
+    data: NestedOptionType[],
+    parentPath: number[] = []
+  ): TreeSelectOptionType[] => {
+    return data.map((item, index) => {
+      const currentPath = [...parentPath, index];
+      const value = currentPath.join("-");
+      const title = (
+        <Space>
+          {item.isPackage ? <FaBox /> : <FaFolder />}
+          {item.label}
+        </Space>
+      );
+
+      const node: TreeSelectOptionType = {
+        value,
+        title,
+        disabled: !item.isPackage, // Disable the node if it's not a package
+        selectable: item.isPackage, // Make the node selectable only if it's a package
+      };
+
+      if (item.options && item.options.length > 0) {
+        return {
+          ...node,
+          children: renderTreeSelectOptions(item.options, currentPath),
+        };
+      }
+
+      return node;
+    });
+  };
+
+  const filterTreeNode: TreeSelectProps["filterTreeNode"] = (input, node) => {
+    const title = node.title;
+    if (typeof title === "string") {
+      return title.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+    } else if (React.isValidElement(title)) {
+      const label = title.props.children[1];
+      if (typeof label === "string") {
+        return label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+      }
+    }
+    return false;
+  };
+
   return (
     <StyledContainer>
       <StyledSidebar>
         <StyledHeader>
-          <Title level={3}>Nested Options</Title>
           <Space>
             <Button
               type="primary"
@@ -431,6 +789,13 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
             >
               Show Preview
             </Button>
+            {/* <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={updateKeyValuePairsState}
+            >
+              Save Form
+            </Button> */}
           </Space>
         </StyledHeader>
         <StyledTreeContainer className="custom-scrollbar">
@@ -457,41 +822,80 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
           <Title level={3}>Edit Option</Title>
         </StyledHeader>
         <AnimatePresence mode="wait">{renderEditSection()}</AnimatePresence>
-      </StyledSidebar>
 
-      <Modal
-        title="Add New Option"
-        visible={addModalVisible}
-        onCancel={() => setAddModalVisible(false)}
-        footer={null}
-      >
-        <Form form={form} onFinish={handleAddOption} layout="vertical">
-          <Form.Item name="label" label="Label" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="isPackage"
-            label="Is Package"
-            valuePropName="checked"
+        <Modal
+          title="Add New Option"
+          visible={addModalVisible}
+          onCancel={() => setAddModalVisible(false)}
+          footer={null}
+        >
+          <Form form={form} onFinish={handleAddOption} layout="vertical">
+            <Form.Item name="label" label="Label" rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="isPackage"
+              label="Is Package"
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+                Add
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        <Modal
+          title="Import Option"
+          visible={importModalVisible}
+          onCancel={() => setImportModalVisible(false)}
+          footer={null}
+        >
+          <Form
+            form={importForm}
+            onFinish={handleImportOption}
+            layout="vertical"
           >
-            <Switch />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
-              Add
-            </Button>
-          </Form.Item>
-        </Form>
-      </Modal>
-      <Drawer
-        title="Nested Option Preview"
-        placement="right"
-        onClose={() => setPreviewDrawerVisible(false)}
-        visible={previewDrawerVisible}
-        width={600}
-      >
-        <NestedOptionPreview options={options} />
-      </Drawer>
+            <Form.Item
+              name="fromPath"
+              label="Import From"
+              rules={[{ required: true }]}
+            >
+              <StyledTreeSelect
+                style={{ width: "100%" }}
+                dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
+                treeData={renderTreeSelectOptions(options)}
+                placeholder="Select source package"
+                treeDefaultExpandAll
+                showSearch
+                filterTreeNode={filterTreeNode}
+              />
+            </Form.Item>
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<ImportOutlined />}
+              >
+                Import
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        <Drawer
+          title="Nested Option Preview"
+          placement="right"
+          onClose={() => setPreviewDrawerVisible(false)}
+          visible={previewDrawerVisible}
+          width={600}
+        >
+          <NestedOptionPreview options={options} />
+        </Drawer>
+      </StyledSidebar>
     </StyledContainer>
   );
 };
