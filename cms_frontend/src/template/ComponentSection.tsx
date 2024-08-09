@@ -80,6 +80,7 @@ const ComponentSection: React.FC<ComponentSectionProps> = ({
                 setFormData={handleSetFormData}
                 handleSubmit={handleSubmit}
                 refetchData={refetchData}
+                inner_component={activeComponent.inner_component || 1}
               />
             </div>
           )}

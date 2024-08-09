@@ -20,6 +20,7 @@ interface FormComponentProps {
   setFormData: (data: { [key: string]: any }[]) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   refetchData: () => Promise<void>;
+  inner_component: number;
 }
 
 const FormComponent: React.FC<FormComponentProps> = ({
@@ -28,6 +29,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   formData,
   setFormData,
   refetchData,
+  inner_component,
 }) => {
   const [selectedFilePreviews, setSelectedFilePreviews] = useState<{
     [key: string]: any[][];
@@ -216,7 +218,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
     formPayload.append("data", JSON.stringify(dataArray));
     formPayload.append("is_active", "true");
-    formPayload.append("inner_component", "1");
+    formPayload.append("inner_component", inner_component.toString());
 
     try {
       const response = await submitFormData(formPayload);
