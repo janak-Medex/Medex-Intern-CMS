@@ -5,8 +5,9 @@ import {
   AiOutlineVideoCamera,
   AiOutlineFile,
   AiOutlineEdit,
+  AiOutlineDelete,
 } from "react-icons/ai";
-import { Image, message, Spin } from "antd";
+import { Image, message, Spin, Popconfirm } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import Cookies from "js-cookie";
 import { submitFormData } from "../api/form.api";
@@ -337,6 +338,32 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }
   };
 
+  const handleDeleteField = (index: number, key: string) => {
+    const newData = [...formData];
+    delete newData[index][key];
+    setFormData(newData);
+
+    // Remove errors for the deleted field
+    setErrors((prevErrors) => {
+      const newErrors = { ...prevErrors };
+      if (newErrors[key]) {
+        newErrors[key] = newErrors[key].filter((_, i) => i !== index);
+      }
+      return newErrors;
+    });
+
+    // Remove file previews for the deleted field
+    setSelectedFilePreviews((prev) => {
+      const newPreviews = { ...prev };
+      if (newPreviews[key]) {
+        delete newPreviews[key][index];
+      }
+      return newPreviews;
+    });
+
+    message.success(`Field "${key}" deleted successfully`);
+  };
+
   const getFieldComponent = (index: number, key: string, value: any) => {
     if (
       key.includes("image") ||
@@ -357,7 +384,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         : "*/*";
 
       return (
-        <div key={`${index}-${key}`} className="mb-8">
+        <div key={`${index}-${key}`} className="mb-8 relative">
           <label className="block text-gray-800 font-semibold mb-2">
             {key}
           </label>
@@ -441,12 +468,26 @@ const FormComponent: React.FC<FormComponentProps> = ({
           {errors[key]?.[index] && (
             <p className="text-red-500 text-sm mt-1">{errors[key][index]}</p>
           )}
+          <Popconfirm
+            title="Are you sure you want to delete this field?"
+            onConfirm={() => handleDeleteField(index, key)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <button
+              type="button"
+              className="absolute top-0 right-0 text-red-500 hover:text-red-700"
+              disabled={isSubmitting}
+            >
+              <AiOutlineDelete size={20} />
+            </button>
+          </Popconfirm>
         </div>
       );
     } else if (key.toLowerCase().includes("_list") || /\blist\b/i.test(key)) {
       const inputKey = `${index}-${key}`;
       return (
-        <div className="mb-8 ">
+        <div className="mb-8 relative">
           <label className="block text-gray-800 font-semibold mb-2">
             {key}
           </label>
@@ -531,11 +572,25 @@ const FormComponent: React.FC<FormComponentProps> = ({
           {errors[key]?.[index] && (
             <p className="text-red-500 text-sm mt-1">{errors[key][index]}</p>
           )}
+          <Popconfirm
+            title="Are you sure you want to delete this field?"
+            onConfirm={() => handleDeleteField(index, key)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <button
+              type="button"
+              className="absolute top-0 right-0 text-red-500 hover:text-red-700"
+              disabled={isSubmitting}
+            >
+              <AiOutlineDelete size={20} />
+            </button>
+          </Popconfirm>
         </div>
       );
     } else {
       return (
-        <div key={`${index}-${key}`} className="mb-4">
+        <div key={`${index}-${key}`} className="mb-4 relative">
           <label className="block text-gray-800 font-semibold mb-2">
             {key}
           </label>
@@ -551,6 +606,20 @@ const FormComponent: React.FC<FormComponentProps> = ({
           {errors[key]?.[index] && (
             <p className="text-red-500 text-sm mt-1">{errors[key][index]}</p>
           )}
+          <Popconfirm
+            title="Are you sure you want to delete this field?"
+            onConfirm={() => handleDeleteField(index, key)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <button
+              type="button"
+              className="absolute top-0 right-0 text-red-500 hover:text-red-700"
+              disabled={isSubmitting}
+            >
+              <AiOutlineDelete size={20} />
+            </button>
+          </Popconfirm>
         </div>
       );
     }
