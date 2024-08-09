@@ -15,6 +15,7 @@ import {
   Drawer,
   TreeSelect,
   Popconfirm,
+  TreeSelectProps,
 } from "antd";
 import {
   PlusOutlined,
@@ -36,6 +37,7 @@ import NestedOptionPreview from "./NestedOptionPreview";
 
 const { Title, Text } = Typography;
 const { TreeNode } = Tree;
+
 const StyledContainer = styled.div`
   display: flex;
   gap: 20px;
@@ -114,6 +116,15 @@ const ScrollableContent = styled.div`
   height: 100%;
 `;
 
+const StyledTreeSelect = styled(TreeSelect)`
+  .ant-select-tree-node-content-wrapper.ant-select-tree-node-content-wrapper-normal {
+    &.ant-select-tree-node-disabled {
+      color: #d9d9d9;
+      cursor: not-allowed;
+    }
+  }
+`;
+
 interface NestedOptionModalProps {
   options: NestedOptionType[];
   fieldIndex: number;
@@ -147,6 +158,14 @@ interface NestedOptionModalProps {
   ) => void;
 }
 
+interface TreeSelectOptionType {
+  title: React.ReactNode;
+  value: string;
+  disabled: boolean;
+  selectable: boolean;
+  children?: TreeSelectOptionType[];
+}
+
 const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   options,
   fieldIndex,
@@ -169,7 +188,6 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   >({});
 
   useEffect(() => {
-    // Update keyValuePairsState when options change
     const newKeyValuePairsState: Record<
       string,
       Record<string, string | File | File[]>
@@ -216,15 +234,32 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     handleNestedOptionChange(fieldIndex, newPath, item.label);
     handleNestedOptionPackageToggle(fieldIndex, newPath, item.isPackage);
 
-    // Import key-value pairs if any
     if (item.isPackage && item.keyValuePairs) {
-      setKeyValuePairsState((prevState) => ({
-        ...prevState,
-        [newPath.join("-")]: { ...item.keyValuePairs },
-      }));
+      Object.entries(item.keyValuePairs).forEach(([key, value], index) => {
+        handleNestedOptionKeyValuePairAdd(fieldIndex, newPath);
+        handleNestedOptionKeyValuePairChange(
+          fieldIndex,
+          newPath,
+          index,
+          "key",
+          key
+        );
+        handleNestedOptionKeyValuePairChange(
+          fieldIndex,
+          newPath,
+          index,
+          "value",
+          value
+        );
+      });
     }
 
-    // We don't import nested options for packages
+    if (item.options && item.options.length > 0) {
+      item.options.forEach((nestedItem, index) => {
+        const nestedPath = [...newPath, index];
+        importNestedOption(nestedItem, nestedPath);
+      });
+    }
   };
 
   const handleAddOption = (values: any) => {
@@ -375,7 +410,6 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     parentPath: number[] = [],
     level: number = 0
   ): React.ReactNode => {
-    console.log("Rendering tree nodes with data:", data);
     return data.map((item, index) => {
       const currentPath = [...parentPath, index];
       const key = currentPath.join("-");
@@ -394,9 +428,15 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
           key={key}
           title={
             <StyledCard
-              hoverable
+              hoverable={item.isPackage}
               size="small"
               style={{ borderLeft: `4px solid ${color}` }}
+              onClick={(e) => {
+                if (item.isPackage) {
+                  e.stopPropagation();
+                  setSelectedPath(currentPath);
+                }
+              }}
             >
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -405,9 +445,10 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
               >
                 <Space align="center">
                   {icon}
-                  <Text strong style={{ color }}>
-                    {item.label}
-                  </Text>
+                  <Input
+                    value={item.label}
+                    style={{ color, border: "none", background: "transparent" }}
+                  />
                   <Space size="small">
                     <Tooltip title="Edit">
                       <StyledIconButton
@@ -501,7 +542,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   const renderTreeSelectOptions = (
     data: NestedOptionType[],
     parentPath: number[] = []
-  ): any[] => {
+  ): TreeSelectOptionType[] => {
     return data.map((item, index) => {
       const currentPath = [...parentPath, index];
       const value = currentPath.join("-");
@@ -512,16 +553,35 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
         </Space>
       );
 
+      const node: TreeSelectOptionType = {
+        value,
+        title,
+        disabled: !item.isPackage, // Disable the node if it's not a package
+        selectable: item.isPackage, // Make the node selectable only if it's a package
+      };
+
       if (item.options && item.options.length > 0) {
         return {
-          title,
-          value,
+          ...node,
           children: renderTreeSelectOptions(item.options, currentPath),
         };
       }
 
-      return { title, value };
+      return node;
     });
+  };
+
+  const filterTreeNode: TreeSelectProps["filterTreeNode"] = (input, node) => {
+    const title = node.title;
+    if (typeof title === "string") {
+      return title.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+    } else if (React.isValidElement(title)) {
+      const label = title.props.children[1];
+      if (typeof label === "string") {
+        return label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+      }
+    }
+    return false;
   };
 
   return (
@@ -545,11 +605,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
             >
               Show Preview
             </Button>
-            <Button
-              type="primary"
-              // onClick={} // Implement save functionality
-              icon={<SaveOutlined />}
-            >
+            <Button type="primary" icon={<SaveOutlined />}>
               Save Form
             </Button>
           </Space>
@@ -620,12 +676,14 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
               label="Import From"
               rules={[{ required: true }]}
             >
-              <TreeSelect
+              <StyledTreeSelect
                 style={{ width: "100%" }}
                 dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
                 treeData={renderTreeSelectOptions(options)}
-                placeholder="Select source option"
+                placeholder="Select source package"
                 treeDefaultExpandAll
+                showSearch
+                filterTreeNode={filterTreeNode}
               />
             </Form.Item>
             <Form.Item>
