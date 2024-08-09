@@ -184,7 +184,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   const [form] = Form.useForm();
   const [importForm] = Form.useForm();
   const [keyValuePairsState, setKeyValuePairsState] = useState<
-    Record<string, Record<string, string | File | File[]>>
+    Record<string, Record<string, string | File | File[] | any[]>>
   >({});
 
   useEffect(() => {
@@ -254,22 +254,53 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
         parentNode.options = parentNode.options || [];
         parentNode.options.push(item);
 
-        // Preserve key-value pairs
-        if (item.keyValuePairs) {
-          parentNode.keyValuePairs = {
-            ...parentNode.keyValuePairs,
-            ...item.keyValuePairs,
-          };
+        // Handle key-value pairs if the option is a package
+        if (item.isPackage && item.keyValuePairs) {
+          console.log(
+            "Adding Key-Value Pairs for package:",
+            item.label,
+            "at path:",
+            path
+          );
+          Object.entries(item.keyValuePairs).forEach(
+            ([key, value], pairIndex) => {
+              if (key.trim() !== "" && value.trim() !== "") {
+                handleNestedOptionKeyValuePairAdd(fieldIndex, path);
+                handleNestedOptionKeyValuePairChange(
+                  fieldIndex,
+                  path,
+                  pairIndex,
+                  "key",
+                  key
+                );
+                handleNestedOptionKeyValuePairChange(
+                  fieldIndex,
+                  path,
+                  pairIndex,
+                  "value",
+                  value
+                );
+                console.log(
+                  "Adding Key-Value Pair:",
+                  key,
+                  value,
+                  "at path:",
+                  path
+                );
+              }
+            }
+          );
         }
 
         // Recursively import nested options
         if (item.options && item.options.length > 0) {
-          item.options.forEach((nestedItem, _index) => {
-            // Ensure parentNode.options is always treated as an array
-            importOptionsRecursively(parentNode.options ?? [], nestedItem, [
-              ...path,
-              parentNode.options?.indexOf(nestedItem) ?? -1,
-            ]);
+          item.options.forEach((nestedItem, index) => {
+            if (nestedItem.label.trim() !== "" || nestedItem.isPackage) {
+              importOptionsRecursively(parentNode.options ?? [], nestedItem, [
+                ...path,
+                index,
+              ]);
+            }
           });
         }
 
@@ -281,6 +312,11 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     };
 
     // Start import process
+    console.log("Importing option:", item.label, "at path:", path);
+    console.log("Current item data:", item);
+
+    handleNestedOptionAdd(fieldIndex, path);
+
     importOptionsRecursively(options, item, path);
 
     // Log the final structure after import
@@ -288,20 +324,6 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
       "Final structure after import:",
       JSON.stringify(options, null, 2)
     );
-  };
-
-  const handleAddOption = (values: any) => {
-    const { label, isPackage } = values;
-    handleNestedOptionAdd(fieldIndex, selectedPath);
-    const newPath = [
-      ...selectedPath,
-      (findItemByPath(options, selectedPath)?.options?.length || 0) - 1,
-    ];
-    handleNestedOptionChange(fieldIndex, newPath, label);
-    handleNestedOptionPackageToggle(fieldIndex, newPath, isPackage);
-    setAddModalVisible(false);
-    form.resetFields();
-    message.success("Option added successfully");
   };
 
   const renderKeyValuePairs = (path: number[]) => {
@@ -427,7 +449,19 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
       </ScrollableContent>
     );
   };
-
+  const handleAddOption = (values: any) => {
+    const { label, isPackage } = values;
+    handleNestedOptionAdd(fieldIndex, selectedPath);
+    const newPath = [
+      ...selectedPath,
+      (findItemByPath(options, selectedPath)?.options?.length || 0) - 1,
+    ];
+    handleNestedOptionChange(fieldIndex, newPath, label);
+    handleNestedOptionPackageToggle(fieldIndex, newPath, isPackage);
+    setAddModalVisible(false);
+    form.resetFields();
+    message.success("Option added successfully");
+  };
   const getColor = (level: number): string => {
     const colors = ["#1890ff", "#52c41a", "#722ed1", "#fa8c16", "#eb2f96"];
     return colors[level % colors.length];
