@@ -227,38 +227,27 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
       key: "key" | "value",
       value: string | File | File[]
     ) => {
-      const item = findItemByPath(localOptions, path);
-      if (item && item.isPackage) {
-        const updatedItem = { ...item };
-        if (!updatedItem.keyValuePairs) {
-          updatedItem.keyValuePairs = {};
+      setLocalOptions((prevOptions) => {
+        const newOptions = JSON.parse(JSON.stringify(prevOptions));
+        const item = findItemByPath(newOptions, path);
+        if (item && item.isPackage) {
+          if (!item.keyValuePairs) {
+            item.keyValuePairs = {};
+          }
+          const pairs = Object.entries(item.keyValuePairs);
+          if (key === "key") {
+            const [, oldValue] = pairs[pairIndex];
+            pairs[pairIndex] = [value as string, oldValue];
+          } else {
+            const [oldKey] = pairs[pairIndex];
+            pairs[pairIndex] = [oldKey, value];
+          }
+          item.keyValuePairs = Object.fromEntries(pairs);
         }
-        const pairs = Object.entries(updatedItem.keyValuePairs);
-        if (key === "key") {
-          const [, oldValue] = pairs[pairIndex];
-          pairs[pairIndex] = [value as string, oldValue];
-        } else {
-          const [oldKey] = pairs[pairIndex];
-          pairs[pairIndex] = [oldKey, value];
-        }
-        updatedItem.keyValuePairs = Object.fromEntries(pairs);
-        updateLocalOptions(updatedItem, path);
-        handleNestedOptionKeyValuePairChange(
-          fieldIndex,
-          path,
-          pairIndex,
-          key,
-          value
-        );
-      }
+        return newOptions;
+      });
     },
-    [
-      localOptions,
-      findItemByPath,
-      updateLocalOptions,
-      handleNestedOptionKeyValuePairChange,
-      fieldIndex,
-    ]
+    [findItemByPath]
   );
 
   const handleLocalKeyValuePairAdd = useCallback(
@@ -330,6 +319,15 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
                     e.target.value
                   )
                 }
+                onBlur={() =>
+                  handleNestedOptionKeyValuePairChange(
+                    fieldIndex,
+                    path,
+                    pairIndex,
+                    "key",
+                    key
+                  )
+                }
                 placeholder="Key"
                 style={{ width: 150 }}
               />
@@ -337,6 +335,13 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
                 <Upload
                   beforeUpload={(file) => {
                     handleLocalKeyValuePairChange(
+                      path,
+                      pairIndex,
+                      "value",
+                      file
+                    );
+                    handleNestedOptionKeyValuePairChange(
+                      fieldIndex,
                       path,
                       pairIndex,
                       "value",
@@ -359,6 +364,15 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
                       pairIndex,
                       "value",
                       e.target.value
+                    )
+                  }
+                  onBlur={() =>
+                    handleNestedOptionKeyValuePairChange(
+                      fieldIndex,
+                      path,
+                      pairIndex,
+                      "value",
+                      value
                     )
                   }
                   placeholder="Value"
@@ -390,6 +404,8 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
       handleLocalKeyValuePairChange,
       handleLocalKeyValuePairRemove,
       handleLocalKeyValuePairAdd,
+      fieldIndex,
+      handleNestedOptionKeyValuePairChange,
     ]
   );
 
