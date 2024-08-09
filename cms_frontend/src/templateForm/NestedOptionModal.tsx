@@ -226,40 +226,92 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   };
 
   const importNestedOption = (item: NestedOptionType, path: number[]) => {
+    // Log the item and the current path before adding the new option
+    console.log("Importing option:", item.label, "at path:", path);
+    console.log("Current item data:", item);
+
+    // Add the new option
     handleNestedOptionAdd(fieldIndex, path);
-    const newPath = [
-      ...path,
-      (findItemByPath(options, path)?.options?.length || 0) - 1,
-    ];
+
+    // Find the correct new path by getting the length of the options array after adding the new option
+    const parentOption = findItemByPath(options, path);
+    const newIndex = parentOption?.options?.length
+      ? parentOption.options.length - 1
+      : 0;
+    const newPath = [...path, newIndex];
+
+    // Log the new path after adding the option
+    console.log("New Path:", newPath);
+
+    // Update the new option's label and package status
     handleNestedOptionChange(fieldIndex, newPath, item.label);
     handleNestedOptionPackageToggle(fieldIndex, newPath, item.isPackage);
 
+    // Handle key-value pairs if the option is a package
     if (item.isPackage && item.keyValuePairs) {
-      Object.entries(item.keyValuePairs).forEach(([key, value], index) => {
+      console.log(
+        "Adding Key-Value Pairs for package:",
+        item.label,
+        "at path:",
+        newPath
+      );
+      Object.entries(item.keyValuePairs).forEach(([key, value], pairIndex) => {
+        // Ensure key-value pairs are added correctly
         handleNestedOptionKeyValuePairAdd(fieldIndex, newPath);
         handleNestedOptionKeyValuePairChange(
           fieldIndex,
           newPath,
-          index,
+          pairIndex,
           "key",
           key
         );
         handleNestedOptionKeyValuePairChange(
           fieldIndex,
           newPath,
-          index,
+          pairIndex,
           "value",
           value
         );
+
+        // Log each key-value pair being added
+        console.log("Adding Key-Value Pair:", key, value, "at path:", newPath);
       });
     }
 
+    // Recursively import nested options
     if (item.options && item.options.length > 0) {
-      item.options.forEach((nestedItem, index) => {
-        const nestedPath = [...newPath, index];
-        importNestedOption(nestedItem, nestedPath);
+      console.log(
+        "Importing nested options for:",
+        item.label,
+        "at path:",
+        newPath
+      );
+      item.options.forEach((nestedItem) => {
+        importNestedOption(nestedItem, newPath);
       });
+
+      // After importing nested options, remove empty options
+      const updatedParentOption = findItemByPath(options, path);
+      if (updatedParentOption) {
+        updatedParentOption.options = updatedParentOption.options.filter(
+          (option) => option.label.trim() !== "" || option.isPackage
+        );
+      }
+    } else if (item.options && item.options.length === 0 && item.isPackage) {
+      // Remove empty package options
+      const updatedParentOption = findItemByPath(options, path);
+      if (updatedParentOption) {
+        updatedParentOption.options = updatedParentOption.options.filter(
+          (option) => option.label.trim() !== "" || option.isPackage
+        );
+      }
     }
+
+    // Log the final structure after all nested options are imported
+    console.log(
+      "Final structure after import:",
+      JSON.stringify(options, null, 2)
+    );
   };
 
   const handleAddOption = (values: any) => {
