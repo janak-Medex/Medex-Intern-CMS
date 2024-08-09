@@ -462,7 +462,13 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
           );
           Object.entries(item.keyValuePairs).forEach(
             ([key, value], pairIndex) => {
-              if (key.trim() !== "" && value.trim() !== "") {
+              const isValidKey = typeof key === "string" && key.trim() !== "";
+              const isValidValue =
+                value !== null &&
+                value !== undefined &&
+                (typeof value === "string" ? value.trim() !== "" : true);
+
+              if (isValidKey && isValidValue) {
                 handleNestedOptionKeyValuePairAdd(fieldIndex, path);
                 handleNestedOptionKeyValuePairChange(
                   fieldIndex,
