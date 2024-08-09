@@ -156,7 +156,7 @@ const useFormBuilder = (
         },
         []
     );
-    const updateNestedOptions = useCallback((
+    const updateNestedOptions = (
         fieldIndex: number,
         path: number[],
         updateFn: (option: NestedOptionType) => NestedOptionType
@@ -164,14 +164,24 @@ const useFormBuilder = (
         setFields((prevFields) => {
             const newFields = [...prevFields];
             let current: any = newFields[fieldIndex].options || [];
-            for (let i = 0; i < path.length - 1; i++) {
-                current = current[path[i]]?.options || [];
-            }
+            const pathToParent = path.slice(0, -1);
             const lastIndex = path[path.length - 1];
-            current[lastIndex] = updateFn(current[lastIndex] || {});
+
+            for (let i = 0; i < pathToParent.length; i++) {
+                if (!current[pathToParent[i]]) {
+                    current[pathToParent[i]] = { options: [] };
+                }
+                current = current[pathToParent[i]].options;
+            }
+
+            if (!current[lastIndex]) {
+                current[lastIndex] = { options: [] };
+            }
+            current[lastIndex] = updateFn(current[lastIndex]);
+
             return newFields;
         });
-    }, []);
+    };
 
     const handleNestedOptionAdd = useCallback(
         (fieldIndex: number, path: number[]) => {

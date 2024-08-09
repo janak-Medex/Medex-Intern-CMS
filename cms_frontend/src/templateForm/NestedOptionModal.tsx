@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Tree,
   Input,
@@ -164,15 +164,46 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   const [previewDrawerVisible, setPreviewDrawerVisible] = useState(false);
   const [form] = Form.useForm();
   const [importForm] = Form.useForm();
+  const [keyValuePairsState, setKeyValuePairsState] = useState<
+    Record<string, Record<string, string | File | File[]>>
+  >({});
+
+  useEffect(() => {
+    // Update keyValuePairsState when options change
+    const newKeyValuePairsState: Record<
+      string,
+      Record<string, string | File | File[]>
+    > = {};
+    const updateKeyValuePairs = (
+      items: NestedOptionType[],
+      parentPath: number[] = []
+    ) => {
+      items.forEach((item, index) => {
+        const currentPath = [...parentPath, index];
+        if (item.isPackage && item.keyValuePairs) {
+          newKeyValuePairsState[currentPath.join("-")] = {
+            ...item.keyValuePairs,
+          };
+        }
+        if (item.options) {
+          updateKeyValuePairs(item.options, currentPath);
+        }
+      });
+    };
+    updateKeyValuePairs(options);
+    setKeyValuePairsState(newKeyValuePairsState);
+  }, [options]);
 
   const handleImportOption = (values: { fromPath: string }) => {
     const fromPath = values.fromPath.split("-").map(Number);
     const importedItem = findItemByPath(options, fromPath);
-    if (importedItem) {
+    if (importedItem && importedItem.isPackage) {
       importNestedOption(importedItem, selectedPath);
       setImportModalVisible(false);
       importForm.resetFields();
-      message.success("Option imported successfully");
+      message.success("Package imported successfully");
+    } else {
+      message.error("Only packages can be imported");
     }
   };
 
@@ -187,60 +218,151 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
 
     // Import key-value pairs if any
     if (item.isPackage && item.keyValuePairs) {
-      Object.entries(item.keyValuePairs).forEach(([key, value], index) => {
-        handleNestedOptionKeyValuePairAdd(fieldIndex, newPath);
-        handleNestedOptionKeyValuePairChange(
-          fieldIndex,
-          newPath,
-          index,
-          "key",
-          key
-        );
-        handleNestedOptionKeyValuePairChange(
-          fieldIndex,
-          newPath,
-          index,
-          "value",
-          value
-        );
-      });
+      setKeyValuePairsState((prevState) => ({
+        ...prevState,
+        [newPath.join("-")]: { ...item.keyValuePairs },
+      }));
     }
 
-    // Recursively import nested options
-    if (item.options) {
-      item.options.forEach((nestedItem, index) => {
-        const nestedNewPath = [...newPath, index];
-        if (nestedItem.isPackage) {
-          handleNestedOptionAdd(fieldIndex, nestedNewPath);
-          handleNestedOptionChange(fieldIndex, nestedNewPath, nestedItem.label);
-          handleNestedOptionPackageToggle(fieldIndex, nestedNewPath, true);
+    // We don't import nested options for packages
+  };
 
-          if (nestedItem.keyValuePairs) {
-            Object.entries(nestedItem.keyValuePairs).forEach(
-              ([key, value], pairIndex) => {
-                handleNestedOptionKeyValuePairAdd(fieldIndex, nestedNewPath);
+  const handleAddOption = (values: any) => {
+    const { label, isPackage } = values;
+    handleNestedOptionAdd(fieldIndex, selectedPath);
+    const newPath = [
+      ...selectedPath,
+      (findItemByPath(options, selectedPath)?.options?.length || 0) - 1,
+    ];
+    handleNestedOptionChange(fieldIndex, newPath, label);
+    handleNestedOptionPackageToggle(fieldIndex, newPath, isPackage);
+    setAddModalVisible(false);
+    form.resetFields();
+    message.success("Option added successfully");
+  };
+
+  const renderKeyValuePairs = (path: number[]) => {
+    const keyValuePairs = keyValuePairsState[path.join("-")] || {};
+    return (
+      <Card title="Key-Value Pairs" size="small" className="mt-4">
+        {Object.entries(keyValuePairs).map(([key, value], pairIndex) => (
+          <Space key={pairIndex} className="mb-2">
+            <Input
+              value={key}
+              onChange={(e) =>
                 handleNestedOptionKeyValuePairChange(
                   fieldIndex,
-                  nestedNewPath,
+                  path,
                   pairIndex,
                   "key",
-                  key
-                );
-                handleNestedOptionKeyValuePairChange(
-                  fieldIndex,
-                  nestedNewPath,
-                  pairIndex,
-                  "value",
-                  value
-                );
+                  e.target.value
+                )
               }
-            );
-          }
-        } else {
-          importNestedOption(nestedItem, nestedNewPath);
-        }
-      });
-    }
+              placeholder="Key"
+              style={{ width: 150 }}
+            />
+            {["image", "video", "file"].includes(key.toLowerCase()) ? (
+              <Upload
+                beforeUpload={(file) => {
+                  handleNestedOptionKeyValuePairChange(
+                    fieldIndex,
+                    path,
+                    pairIndex,
+                    "value",
+                    file
+                  );
+                  return false;
+                }}
+                accept={getAcceptType(key)}
+              >
+                <Button icon={<UploadOutlined />}>
+                  {value instanceof File ? value.name : "Upload"}
+                </Button>
+              </Upload>
+            ) : (
+              <Input
+                value={value as string}
+                onChange={(e) =>
+                  handleNestedOptionKeyValuePairChange(
+                    fieldIndex,
+                    path,
+                    pairIndex,
+                    "value",
+                    e.target.value
+                  )
+                }
+                placeholder="Value"
+                style={{ width: 150 }}
+              />
+            )}
+            <StyledIconButton
+              type="text"
+              danger
+              icon={<MinusCircleOutlined />}
+              onClick={() =>
+                handleNestedOptionKeyValuePairRemove(
+                  fieldIndex,
+                  path,
+                  pairIndex
+                )
+              }
+            />
+          </Space>
+        ))}
+        <Button
+          type="dashed"
+          onClick={() => handleNestedOptionKeyValuePairAdd(fieldIndex, path)}
+          icon={<PlusOutlined />}
+          className="mt-2"
+        >
+          Add Key-Value Pair
+        </Button>
+      </Card>
+    );
+  };
+
+  const renderEditSection = () => {
+    const item = findItemByPath(options, selectedPath);
+    if (!item) return <Text>No item selected</Text>;
+
+    return (
+      <ScrollableContent className="custom-scrollbar">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Form layout="vertical">
+            <Form.Item label="Option Label">
+              <Input
+                value={item.label}
+                onChange={(e) =>
+                  handleNestedOptionChange(
+                    fieldIndex,
+                    selectedPath,
+                    e.target.value
+                  )
+                }
+                placeholder="Option Label"
+              />
+            </Form.Item>
+            <Form.Item label="Is Package">
+              <Switch
+                checked={item.isPackage}
+                onChange={(checked) =>
+                  handleNestedOptionPackageToggle(
+                    fieldIndex,
+                    selectedPath,
+                    checked
+                  )
+                }
+              />
+            </Form.Item>
+            {item.isPackage && renderKeyValuePairs(selectedPath)}
+          </Form>
+        </motion.div>
+      </ScrollableContent>
+    );
   };
 
   const getColor = (level: number): string => {
@@ -356,99 +478,6 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     });
   };
 
-  const handleAddOption = (values: any) => {
-    const { label, isPackage } = values;
-    handleNestedOptionAdd(fieldIndex, selectedPath);
-    const newPath = [
-      ...selectedPath,
-      (findItemByPath(options, selectedPath)?.options?.length || 0) - 1,
-    ];
-    handleNestedOptionChange(fieldIndex, newPath, label);
-    handleNestedOptionPackageToggle(fieldIndex, newPath, isPackage);
-    setAddModalVisible(false);
-    form.resetFields();
-    message.success("Option added successfully");
-  };
-
-  const renderKeyValuePairs = (item: NestedOptionType, path: number[]) => (
-    <Card title="Key-Value Pairs" size="small" className="mt-4">
-      {Object.entries(item.keyValuePairs || {}).map(
-        ([key, value], pairIndex) => (
-          <Space key={pairIndex} className="mb-2">
-            <Input
-              value={key}
-              onChange={(e) =>
-                handleNestedOptionKeyValuePairChange(
-                  fieldIndex,
-                  path,
-                  pairIndex,
-                  "key",
-                  e.target.value
-                )
-              }
-              placeholder="Key"
-              style={{ width: 150 }}
-            />
-            {["image", "video", "file"].includes(key.toLowerCase()) ? (
-              <Upload
-                beforeUpload={(file) => {
-                  handleNestedOptionKeyValuePairChange(
-                    fieldIndex,
-                    path,
-                    pairIndex,
-                    "value",
-                    file
-                  );
-                  return false;
-                }}
-                accept={getAcceptType(key)}
-              >
-                <Button icon={<UploadOutlined />}>
-                  {value instanceof File ? value.name : "Upload"}
-                </Button>
-              </Upload>
-            ) : (
-              <Input
-                value={value as string}
-                onChange={(e) =>
-                  handleNestedOptionKeyValuePairChange(
-                    fieldIndex,
-                    path,
-                    pairIndex,
-                    "value",
-                    e.target.value
-                  )
-                }
-                placeholder="Value"
-                style={{ width: 150 }}
-              />
-            )}
-            <StyledIconButton
-              type="text"
-              danger
-              icon={<MinusCircleOutlined />}
-              onClick={() =>
-                handleNestedOptionKeyValuePairRemove(
-                  fieldIndex,
-                  path,
-                  pairIndex
-                )
-              }
-            />
-          </Space>
-        )
-      )}
-      <Button
-        type="dashed"
-        onClick={() => handleNestedOptionKeyValuePairAdd(fieldIndex, path)}
-        icon={<PlusOutlined />}
-        className="mt-2"
-      >
-        Add Key-Value Pair
-      </Button>
-    </Card>
-  );
-
   const getAcceptType = (key: string): string => {
     const lowerKey = key.toLowerCase();
     if (lowerKey.includes("image")) return "image/*";
@@ -467,50 +496,6 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
       current = current.options[path[i]];
     }
     return current;
-  };
-
-  const renderEditSection = () => {
-    const item = findItemByPath(options, selectedPath);
-    if (!item) return <Text>No item selected</Text>;
-
-    return (
-      <ScrollableContent className="custom-scrollbar">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Form layout="vertical">
-            <Form.Item label="Option Label">
-              <Input
-                value={item.label}
-                onChange={(e) =>
-                  handleNestedOptionChange(
-                    fieldIndex,
-                    selectedPath,
-                    e.target.value
-                  )
-                }
-                placeholder="Option Label"
-              />
-            </Form.Item>
-            <Form.Item label="Is Package">
-              <Switch
-                checked={item.isPackage}
-                onChange={(checked) =>
-                  handleNestedOptionPackageToggle(
-                    fieldIndex,
-                    selectedPath,
-                    checked
-                  )
-                }
-              />
-            </Form.Item>
-            {item.isPackage && renderKeyValuePairs(item, selectedPath)}
-          </Form>
-        </motion.div>
-      </ScrollableContent>
-    );
   };
 
   const renderTreeSelectOptions = (
