@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Tree,
   Input,
@@ -183,34 +183,215 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
   const [previewDrawerVisible, setPreviewDrawerVisible] = useState(false);
   const [form] = Form.useForm();
   const [importForm] = Form.useForm();
-  const [keyValuePairsState, setKeyValuePairsState] = useState<
-    Record<string, Record<string, string | File | File[] | any[]>>
-  >({});
+  const [localOptions, setLocalOptions] = useState<NestedOptionType[]>(options);
 
   useEffect(() => {
-    const newKeyValuePairsState: Record<
-      string,
-      Record<string, string | File | File[]>
-    > = {};
-    const updateKeyValuePairs = (
-      items: NestedOptionType[],
-      parentPath: number[] = []
-    ) => {
-      items.forEach((item, index) => {
-        const currentPath = [...parentPath, index];
-        if (item.isPackage && item.keyValuePairs) {
-          newKeyValuePairsState[currentPath.join("-")] = {
-            ...item.keyValuePairs,
-          };
-        }
-        if (item.options) {
-          updateKeyValuePairs(item.options, currentPath);
-        }
-      });
-    };
-    updateKeyValuePairs(options);
-    setKeyValuePairsState(newKeyValuePairsState);
+    setLocalOptions(options);
   }, [options]);
+
+  const findItemByPath = useCallback(
+    (data: NestedOptionType[], path: number[]): NestedOptionType | null => {
+      if (path.length === 0 || data.length === 0) return null;
+      let current = data[path[0]];
+      for (let i = 1; i < path.length; i++) {
+        if (!current?.options) return null;
+        current = current.options[path[i]];
+      }
+      return current;
+    },
+    []
+  );
+
+  const updateLocalOptions = useCallback(
+    (updatedItem: NestedOptionType, path: number[]) => {
+      setLocalOptions((prevOptions) => {
+        const newOptions = [...prevOptions];
+        let current = newOptions;
+        for (let i = 0; i < path.length - 1; i++) {
+          if (!current[path[i]].options) {
+            current[path[i]].options = [];
+          }
+          current = current[path[i]].options!;
+        }
+        current[path[path.length - 1]] = updatedItem;
+        return newOptions;
+      });
+    },
+    []
+  );
+
+  const handleLocalKeyValuePairChange = useCallback(
+    (
+      path: number[],
+      pairIndex: number,
+      key: "key" | "value",
+      value: string | File | File[]
+    ) => {
+      const item = findItemByPath(localOptions, path);
+      if (item && item.isPackage) {
+        const updatedItem = { ...item };
+        if (!updatedItem.keyValuePairs) {
+          updatedItem.keyValuePairs = {};
+        }
+        const pairs = Object.entries(updatedItem.keyValuePairs);
+        if (key === "key") {
+          const [, oldValue] = pairs[pairIndex];
+          pairs[pairIndex] = [value as string, oldValue];
+        } else {
+          const [oldKey] = pairs[pairIndex];
+          pairs[pairIndex] = [oldKey, value];
+        }
+        updatedItem.keyValuePairs = Object.fromEntries(pairs);
+        updateLocalOptions(updatedItem, path);
+        handleNestedOptionKeyValuePairChange(
+          fieldIndex,
+          path,
+          pairIndex,
+          key,
+          value
+        );
+      }
+    },
+    [
+      localOptions,
+      findItemByPath,
+      updateLocalOptions,
+      handleNestedOptionKeyValuePairChange,
+      fieldIndex,
+    ]
+  );
+
+  const handleLocalKeyValuePairAdd = useCallback(
+    (path: number[]) => {
+      const item = findItemByPath(localOptions, path);
+      if (item && item.isPackage) {
+        const updatedItem = { ...item };
+        if (!updatedItem.keyValuePairs) {
+          updatedItem.keyValuePairs = {};
+        }
+        const newKey = `key${
+          Object.keys(updatedItem.keyValuePairs).length + 1
+        }`;
+        updatedItem.keyValuePairs[newKey] = "";
+        updateLocalOptions(updatedItem, path);
+        handleNestedOptionKeyValuePairAdd(fieldIndex, path);
+      }
+    },
+    [
+      localOptions,
+      findItemByPath,
+      updateLocalOptions,
+      handleNestedOptionKeyValuePairAdd,
+      fieldIndex,
+    ]
+  );
+
+  const handleLocalKeyValuePairRemove = useCallback(
+    (path: number[], pairIndex: number) => {
+      const item = findItemByPath(localOptions, path);
+      if (item && item.isPackage) {
+        const updatedItem = { ...item };
+        if (updatedItem.keyValuePairs) {
+          const pairs = Object.entries(updatedItem.keyValuePairs);
+          pairs.splice(pairIndex, 1);
+          updatedItem.keyValuePairs = Object.fromEntries(pairs);
+          updateLocalOptions(updatedItem, path);
+          handleNestedOptionKeyValuePairRemove(fieldIndex, path, pairIndex);
+        }
+      }
+    },
+    [
+      localOptions,
+      findItemByPath,
+      updateLocalOptions,
+      handleNestedOptionKeyValuePairRemove,
+      fieldIndex,
+    ]
+  );
+
+  const renderKeyValuePairs = useCallback(
+    (path: number[]) => {
+      const item = findItemByPath(localOptions, path);
+      if (!item || !item.isPackage) return null;
+
+      const keyValuePairs = item.keyValuePairs || {};
+
+      return (
+        <Card title="Key-Value Pairs" size="small" className="mt-4">
+          {Object.entries(keyValuePairs).map(([key, value], pairIndex) => (
+            <Space key={pairIndex} className="mb-2">
+              <Input
+                value={key}
+                onChange={(e) =>
+                  handleLocalKeyValuePairChange(
+                    path,
+                    pairIndex,
+                    "key",
+                    e.target.value
+                  )
+                }
+                placeholder="Key"
+                style={{ width: 150 }}
+              />
+              {["image", "video", "file"].includes(key.toLowerCase()) ? (
+                <Upload
+                  beforeUpload={(file) => {
+                    handleLocalKeyValuePairChange(
+                      path,
+                      pairIndex,
+                      "value",
+                      file
+                    );
+                    return false;
+                  }}
+                  accept={getAcceptType(key)}
+                >
+                  <Button icon={<UploadOutlined />}>
+                    {value instanceof File ? value.name : "Upload"}
+                  </Button>
+                </Upload>
+              ) : (
+                <Input
+                  value={value as string}
+                  onChange={(e) =>
+                    handleLocalKeyValuePairChange(
+                      path,
+                      pairIndex,
+                      "value",
+                      e.target.value
+                    )
+                  }
+                  placeholder="Value"
+                  style={{ width: 150 }}
+                />
+              )}
+              <StyledIconButton
+                type="text"
+                danger
+                icon={<MinusCircleOutlined />}
+                onClick={() => handleLocalKeyValuePairRemove(path, pairIndex)}
+              />
+            </Space>
+          ))}
+          <Button
+            type="dashed"
+            onClick={() => handleLocalKeyValuePairAdd(path)}
+            icon={<PlusOutlined />}
+            className="mt-2"
+          >
+            Add Key-Value Pair
+          </Button>
+        </Card>
+      );
+    },
+    [
+      localOptions,
+      findItemByPath,
+      handleLocalKeyValuePairChange,
+      handleLocalKeyValuePairRemove,
+      handleLocalKeyValuePairAdd,
+    ]
+  );
 
   const handleImportOption = (values: { fromPath: string }) => {
     const fromPath = values.fromPath.split("-").map(Number);
@@ -224,6 +405,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
       message.error("Only packages can be imported");
     }
   };
+
   const importNestedOption = (item: NestedOptionType, path: number[]) => {
     // Function to find a parent node by path
     const findParentNode = (
@@ -326,86 +508,6 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     );
   };
 
-  const renderKeyValuePairs = (path: number[]) => {
-    const keyValuePairs = keyValuePairsState[path.join("-")] || {};
-    return (
-      <Card title="Key-Value Pairs" size="small" className="mt-4">
-        {Object.entries(keyValuePairs).map(([key, value], pairIndex) => (
-          <Space key={pairIndex} className="mb-2">
-            <Input
-              value={key}
-              onChange={(e) =>
-                handleNestedOptionKeyValuePairChange(
-                  fieldIndex,
-                  path,
-                  pairIndex,
-                  "key",
-                  e.target.value
-                )
-              }
-              placeholder="Key"
-              style={{ width: 150 }}
-            />
-            {["image", "video", "file"].includes(key.toLowerCase()) ? (
-              <Upload
-                beforeUpload={(file) => {
-                  handleNestedOptionKeyValuePairChange(
-                    fieldIndex,
-                    path,
-                    pairIndex,
-                    "value",
-                    file
-                  );
-                  return false;
-                }}
-                accept={getAcceptType(key)}
-              >
-                <Button icon={<UploadOutlined />}>
-                  {value instanceof File ? value.name : "Upload"}
-                </Button>
-              </Upload>
-            ) : (
-              <Input
-                value={value as string}
-                onChange={(e) =>
-                  handleNestedOptionKeyValuePairChange(
-                    fieldIndex,
-                    path,
-                    pairIndex,
-                    "value",
-                    e.target.value
-                  )
-                }
-                placeholder="Value"
-                style={{ width: 150 }}
-              />
-            )}
-            <StyledIconButton
-              type="text"
-              danger
-              icon={<MinusCircleOutlined />}
-              onClick={() =>
-                handleNestedOptionKeyValuePairRemove(
-                  fieldIndex,
-                  path,
-                  pairIndex
-                )
-              }
-            />
-          </Space>
-        ))}
-        <Button
-          type="dashed"
-          onClick={() => handleNestedOptionKeyValuePairAdd(fieldIndex, path)}
-          icon={<PlusOutlined />}
-          className="mt-2"
-        >
-          Add Key-Value Pair
-        </Button>
-      </Card>
-    );
-  };
-
   const renderEditSection = () => {
     const item = findItemByPath(options, selectedPath);
     if (!item) return <Text>No item selected</Text>;
@@ -449,6 +551,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
       </ScrollableContent>
     );
   };
+
   const handleAddOption = (values: any) => {
     const { label, isPackage } = values;
     handleNestedOptionAdd(fieldIndex, selectedPath);
@@ -462,6 +565,7 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     form.resetFields();
     message.success("Option added successfully");
   };
+
   const getColor = (level: number): string => {
     const colors = ["#1890ff", "#52c41a", "#722ed1", "#fa8c16", "#eb2f96"];
     return colors[level % colors.length];
@@ -588,19 +692,6 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
     return "*/*";
   };
 
-  const findItemByPath = (
-    data: NestedOptionType[],
-    path: number[]
-  ): NestedOptionType | null => {
-    if (path.length === 0 || data.length === 0) return null;
-    let current = data[path[0]];
-    for (let i = 1; i < path.length; i++) {
-      if (!current?.options) return null;
-      current = current.options[path[i]];
-    }
-    return current;
-  };
-
   const renderTreeSelectOptions = (
     data: NestedOptionType[],
     parentPath: number[] = []
@@ -667,9 +758,13 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
             >
               Show Preview
             </Button>
-            <Button type="primary" icon={<SaveOutlined />}>
+            {/* <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={updateKeyValuePairsState}
+            >
               Save Form
-            </Button>
+            </Button> */}
           </Space>
         </StyledHeader>
         <StyledTreeContainer className="custom-scrollbar">
