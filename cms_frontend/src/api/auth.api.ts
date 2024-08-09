@@ -27,29 +27,46 @@ export const login = async (
     password,
   });
   if (response.status === 200) {
+
     const { accessToken } = response.data;
+    console.log("Setting access token:", accessToken);
     Cookies.set("access_token", accessToken, {
-      expires: 7, // 7 days
+      expires: 1, // 1 day
       path: "/",
     });
+    console.log("Access token after set:", Cookies.get("access_token"));
+    window.dispatchEvent(new Event('auth-change'));
     return response.data;
   }
   throw new Error("Invalid login Credentials");
 };
 
 export const logout = async (): Promise<void> => {
+  console.log("Logout function called");
   try {
     await axiosInstance.post("/user/logout", null, {
       headers: {
         'Authorization': `Bearer ${Cookies.get('access_token')}`
       }
     });
+    console.log("Removing access token");
     Cookies.remove("access_token");
+    console.log("Access token after removal:", Cookies.get("access_token"));
+    window.dispatchEvent(new Event('auth-change'));
   } catch (error) {
-    console.error("Error logging out", error);
+    console.error("Error during logout:", error);
     throw error;
   }
 };
+
+export const isAuthenticated = (): boolean => {
+  const token = Cookies.get('access_token');
+  console.log("Checking authentication, token:", token);
+  return !!token;
+};
+
+
+
 export const createUser = async (userData: { user_name: string; password: string; is_active: boolean }): Promise<User> => {
   const response = await axiosInstance.post('/user/register', userData, {
     headers: {

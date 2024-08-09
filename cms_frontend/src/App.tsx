@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,27 +8,50 @@ import {
 import Login from "./login/cms.login";
 import CreateTemplate from "./template/CreateTemplate";
 import ProtectedRoute from "./routes/protected.route";
-import Cookies from "js-cookie";
 import Template from "./template/Template";
 import { ToastContainer } from "react-toastify";
-import { logout } from "./api/auth.api";
+import { logout, isAuthenticated } from "./api/auth.api";
+import Cookies from "js-cookie";
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    !!Cookies.get("access_token")
-  );
+  const [isAuth, setIsAuth] = useState<boolean>(() => {
+    const auth = isAuthenticated();
+    console.log("Initial auth state:", auth);
+    return auth;
+  });
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const newAuthState = isAuthenticated();
+      console.log("Auth state changed:", newAuthState);
+      setIsAuth(newAuthState);
+    };
+
+    window.addEventListener("auth-change", handleAuthChange);
+
+    return () => {
+      window.removeEventListener("auth-change", handleAuthChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log("isAuth state changed:", isAuth);
+    console.log("Current access token:", Cookies.get("access_token"));
+  }, [isAuth]);
 
   const handleLogin = useCallback(() => {
-    setIsAuthenticated(true);
+    console.log("Login callback triggered");
+    setIsAuth(true);
   }, []);
 
   const handleLogout = useCallback(async () => {
+    console.log("Logout callback triggered");
     try {
       await logout();
-      setIsAuthenticated(false);
+      setIsAuth(false);
     } catch (error) {
       console.error("Error during logout:", error);
-      setIsAuthenticated(false);
+      setIsAuth(false);
     }
   }, []);
 
@@ -40,7 +63,7 @@ function App() {
           <Route
             path="/"
             element={
-              isAuthenticated ? (
+              isAuth ? (
                 <Navigate to="/template" replace />
               ) : (
                 <Login onLogin={handleLogin} />
@@ -51,7 +74,7 @@ function App() {
             path="/template"
             element={
               <ProtectedRoute
-                isAuthenticated={isAuthenticated}
+                isAuthenticated={isAuth}
                 element={<Template onLogout={handleLogout} />}
               />
             }
@@ -60,7 +83,7 @@ function App() {
             path="/template/:template_name"
             element={
               <ProtectedRoute
-                isAuthenticated={isAuthenticated}
+                isAuthenticated={isAuth}
                 element={<CreateTemplate onLogout={handleLogout} />}
               />
             }
