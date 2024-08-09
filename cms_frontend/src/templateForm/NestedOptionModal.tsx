@@ -554,13 +554,22 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
 
   const handleAddOption = (values: any) => {
     const { label, isPackage } = values;
-    handleNestedOptionAdd(fieldIndex, selectedPath);
-    const newPath = [
-      ...selectedPath,
-      (findItemByPath(options, selectedPath)?.options?.length || 0) - 1,
-    ];
-    handleNestedOptionChange(fieldIndex, newPath, label);
-    handleNestedOptionPackageToggle(fieldIndex, newPath, isPackage);
+    if (selectedPath.length === 0) {
+      // Adding a root option
+      const newIndex = options.length;
+      handleNestedOptionAdd(fieldIndex, []);
+      handleNestedOptionChange(fieldIndex, [newIndex], label);
+      handleNestedOptionPackageToggle(fieldIndex, [newIndex], isPackage);
+    } else {
+      // Adding a child option
+      handleNestedOptionAdd(fieldIndex, selectedPath);
+      const newPath = [
+        ...selectedPath,
+        (findItemByPath(options, selectedPath)?.options?.length || 0) - 1,
+      ];
+      handleNestedOptionChange(fieldIndex, newPath, label);
+      handleNestedOptionPackageToggle(fieldIndex, newPath, isPackage);
+    }
     setAddModalVisible(false);
     form.resetFields();
     message.success("Option added successfully");
