@@ -254,52 +254,17 @@ const NestedOptionModal: React.FC<NestedOptionModalProps> = ({
         parentNode.options = parentNode.options || [];
         parentNode.options.push(item);
 
-        // Handle key-value pairs if the option is a package
-        if (item.isPackage && item.keyValuePairs) {
-          console.log(
-            "Adding Key-Value Pairs for package:",
-            item.label,
-            "at path:",
-            path
-          );
-          Object.entries(item.keyValuePairs).forEach(
-            ([key, value], pairIndex) => {
-              handleNestedOptionKeyValuePairAdd(fieldIndex, path);
-              handleNestedOptionKeyValuePairChange(
-                fieldIndex,
-                path,
-                pairIndex,
-                "key",
-                key
-              );
-              handleNestedOptionKeyValuePairChange(
-                fieldIndex,
-                path,
-                pairIndex,
-                "value",
-                value
-              );
-              console.log(
-                "Adding Key-Value Pair:",
-                key,
-                value,
-                "at path:",
-                path
-              );
-            }
-          );
+        // Preserve key-value pairs
+        if (item.keyValuePairs) {
+          parentNode.keyValuePairs = {
+            ...parentNode.keyValuePairs,
+            ...item.keyValuePairs,
+          };
         }
 
         // Recursively import nested options
         if (item.options && item.options.length > 0) {
-          console.log(
-            "Importing nested options for:",
-            item.label,
-            "at path:",
-            path
-          );
-
-          item.options.forEach((nestedItem: any) => {
+          item.options.forEach((nestedItem, _index) => {
             importOptionsRecursively(parentNode.options, nestedItem, [
               ...path,
               parentNode.options?.indexOf(nestedItem),
